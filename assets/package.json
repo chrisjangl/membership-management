@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "css":
+      "node-sass src/scss/main.scss css/member-admin.css --output-style compressed",
+    "watch": "npm run css -- --watch"
+  },
+  "dependencies": {
+    "node-sass": "^8.0.0"
+  }
+}

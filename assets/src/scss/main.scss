@@ -1,0 +1,38 @@
+.dcm-metabox {
+    .form-section {
+        max-width: 500px;
+        margin-bottom: 20px;
+    }
+
+    .form-row {
+        margin-bottom: 10px;
+        display: flex;
+        flex-wrap: wrap;
+
+        .form-group {
+            // padding: 15px;
+            flex: 1;
+            
+            &.half {
+                &:first-child {
+                    padding-right: 10px;
+                }
+
+                &:last-child {
+                    padding-left: 10px;
+                }
+            }
+        }
+
+        label {
+            display: block;
+            width: 100%;
+        }
+        
+        input {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+    }
+}

@@ -10,5 +10,8 @@
  /**
   * Member
   */
-  include( 'includes/class-contact.php' );
-  include( 'includes/class-member.php' );
+//   include( 'includes/class-contact.php' );
+  include( 'includes/register-post-type.php' );
+
+//   include( 'includes/functions-user-role.php');
+  
