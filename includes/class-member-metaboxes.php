@@ -53,7 +53,7 @@ class Member_metaboxes {
         && 'post-new.php' != $hook ) {
             return;
         }
-        wp_enqueue_style( 'dc_member_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member-admin.css', array(), '1.0' );
+        wp_enqueue_style( 'dc_member_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
     }
 
     
@@ -153,6 +153,8 @@ class Member_metaboxes {
 
     /**
      * Create the metabox for the WP user
+     * 
+     * TODO: Show a link to the WP User profile if the user exists.
      */
     function create_metabox_wp_user() {
 

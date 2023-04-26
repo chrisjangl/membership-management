@@ -7,11 +7,14 @@
  * Version: 0.0.1
  */
 
- /**
-  * Member
-  */
-//   include( 'includes/class-contact.php' );
-  include( 'includes/register-post-type.php' );
+/**
+ * Member
+ */
+include( 'includes/register-post-type.php' );
 
-//   include( 'includes/functions-user-role.php');
+/**
+ * My Account
+ */
+include( 'includes/my-account.php' );
+
   

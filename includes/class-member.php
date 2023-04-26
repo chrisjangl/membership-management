@@ -20,6 +20,7 @@ class DC_Member extends WP_User {
 	// protected static $db_table_name = 'custom_lms_exam_strations';
 	static $instance;
 
+	// TODO: change this to construct using user ID, post ID or email
 	function __construct( $email = null ) {
 
 		// check if email is registered to WP user
@@ -54,59 +55,12 @@ class DC_Member extends WP_User {
 		new Member_metaboxes();
 
 	}
-
-	/**
-	 * Get an array of info about the Student
-	 *
-	 * @param int $student_ID
-	 *
-	 * @return array $member[
-	 *                  'id'
-	 *                  'first_name'
-	 *                  'last_name'
-	 *                  'email'
-	 *                  'dob'
-	 *                  'address' => [
-	 *                      'street1'
-	 *                      'street2'
-	 *                      'city'
-	 *                      'state'
-	 *                      'zip'
-	 *                  ]
-	 *              ]
-	 */
-	function get_member_info( $member_ID ) {
-
-		// make sure we have a Member ID to work with
-		if ( !$member_ID ) {
-			return false;
-		}
-
-		$member_info = [];
-
-		$member['id'] = $member_ID;
-		$member['first_name'] = $wordpress_user->get('user_firstname');
-		$member['last_name'] = $wordpress_user->get('user_lastname');
-		$member['email'] = $wordpress_user->get('user_email');
-		$member['phone'] = get_user_meta( $student_ID, 'clms_dob', true );
-
-		// TODO: need check if we only have the full address as one string or parsed
-		$member['address'] = array(
-			'street1'   =>  get_user_meta( $student_ID, 'clms_street1', true ),
-			'street2'   =>  get_user_meta( $student_ID, 'clms_street2', true ),
-			'city'      =>  get_user_meta( $student_ID, 'clms_city', true ),
-			'state'     =>  get_user_meta( $student_ID, 'clms_state', true ),
-			'zip'       =>  get_user_meta( $student_ID, 'clms_zip', true ),
-		);
-
-		return $student;
-
-	}
+	
+	
 
 	function get_wp_user_id() {
 		return $this->member_id;
 	}
-
 
 }
 
