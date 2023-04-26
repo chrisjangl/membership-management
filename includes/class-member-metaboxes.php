@@ -61,18 +61,20 @@ class Member_metaboxes {
     /** 
      * callback to create Contact Info metabox
      * 
+     * TODO: make email required
+     * 
      * @uses DC_Member
     */
     function create_metabox_contact_info() {
 
         require_once('class-member.php');
 
-        // Check WSET to see how I'm storing Student data
-        $first_name = get_post_meta( get_the_id(), 'dc_member_first_name', true );
-        $last_name = get_post_meta( get_the_id(), 'dc_member_last_name', true );
-        $mailing_address = get_post_meta( get_the_id(), 'dc_member_mailing_address', true );
+        $user_id = get_post_meta( get_the_id(), 'dc_member_wp_user_id', true );
+        $first_name = get_user_meta( $user_id, 'dc_member_first_name', true );
+        $last_name = get_user_meta( $user_id, 'dc_member_last_name', true );
+        $mailing_address = get_user_meta( $user_id, 'dc_member_mailing_address', true );
         $email = get_post_meta( get_the_id(), 'dc_member_email', true );
-        $phone = get_post_meta( get_the_id(), 'dc_member_phone', true );
+        $phone = get_user_meta( $user_id, 'dc_member_phone', true );
 
         // nonces for the fields
         wp_nonce_field( basename( __FILE__ ), 'dc_member_first_name_nonce' );
@@ -106,7 +108,7 @@ class Member_metaboxes {
                 <!-- Email -->
                 <div class="form-row">
                     <label for="dc_member_email">Email:</label>
-                    <input type="email" name="dc_member_email" id="dc_member_email" <?php echo !empty( $email ) ? ' value="' . $email . '"' : 'placeholder="member@example.com"'; ?> />
+                    <input type="email" name="dc_member_email" id="dc_member_email" <?php echo !empty( $email ) ? ' value="' . $email . '"' : 'placeholder="member@example.com"'; ?> required />
                 </div>
 
                 <!-- Phone -->
@@ -149,31 +151,6 @@ class Member_metaboxes {
         <?
     }
 
-    function create_metabox_sponsor() {
-        $sponsor_meta = get_post_meta( get_the_id(), "dc_events_sponsor", true );
-        $has_sponsor  = isset( $sponsor_meta['hassponsor'] ) ? $sponsor_meta['hassponsor'] : null;
-        $sponsor  = isset( $sponsor_meta['info'] ) ? $sponsor_meta['info'] : null;
-        ?>
-        <h3>Sponsor</h3>
-        <?php wp_nonce_field( basename( __FILE__ ), 'dc_events_sponsor_nonce' ); ?>
-        <!-- Venue Name -->
-        <p>
-            <label for="">This event will be sponsored:</label>
-            <input type="checkbox" name="dc_events_sponsor[hassponsor]" id="dc_events_sponsor_sponsor" value="1" <?php checked( $has_sponsor, 1 ); ?> />
-        </p>
-        <div id="dc-events-sponsor-info">
-            <h4>Sponsor Info</h4>
-            <p>
-                <input type="text" name="dc_events_sponsor[info][name]" id="dc_events_sponsor_name" <?php echo !empty( $sponsor['name'] ) ? 'value="' . $sponsor['name'] . '" ' : 'placeholder="Sponsor\'s Name"'; ?> />
-            </p>
-            <p>
-                <input type="text" name="dc_events_sponsor[info][website]" id="dc_events_sponsor_website" <?php echo !empty( $sponsor['website'] ) ? 'value="' . $sponsor['website'] . '" ' : 'placeholder="Sponsor\'s Website"'; ?> />
-            </p>
-
-        </div>
-        <?php
-    }
-
     /**
      * Create the metabox for the WP user
      */
@@ -192,7 +169,8 @@ class Member_metaboxes {
      * Create the metabox for the membership status
      */
     function create_metabox_membership_status() {
-        $membership_status = get_post_meta( get_the_id(), "dc_membership_status", true );
+        $user_id = get_post_meta( get_the_id(), 'dc_member_wp_user_id', true );
+        $membership_status = get_user_meta( $user_id, "dc_membership_status", true );
         ?>
         <h3>Membership Status</h3>
         <?php wp_nonce_field( basename( __FILE__ ), 'dc_membership_status_nonce' ); ?>
@@ -218,18 +196,21 @@ class Member_metaboxes {
             return $post_id;
         }
 
-        $metakeys = array(
+        $post_metakeys = array(
+            'dc_member_email',
+        );
+        
+        $user_metakeys = array(
             'dc_member_first_name',
             'dc_member_last_name',
-            'dc_member_mailing_address',
-            'dc_member_email',
             'dc_member_phone',
+            'dc_member_mailing_address',
             'dc_membership_status'
         );
 
-    
-
-        foreach ( $metakeys as $meta_key ) {
+        
+        // loop through post fields and save the data
+        foreach ( $post_metakeys as $meta_key ) {
 
             //check our nonce to maker sure this came from Edit a Grouped page 
             if ( !isset( $_POST[$meta_key.'_nonce'] ) || !wp_verify_nonce( $_POST[$meta_key.'_nonce'], basename( __FILE__  ) ) ) {
@@ -262,12 +243,51 @@ class Member_metaboxes {
             }
         }
 
-        // Create or update the WP User for this member based on the email address
-        include_once( 'class-member.php');
-        $email = get_post_meta( $post_id, 'dc_member_email', true );
-        $member = new \DC_Member( $email );
-        
-        $user_ID = $member->get_wp_user_id();
-    }
+        // check if we have a user for this member, and create one if not
+        if ( ! $user_id = get_post_meta( $post_id, 'dc_member_wp_user_id', true ) ) {
 
+            $email = get_post_meta( $post_id, 'dc_member_email', true );
+            
+            include_once( 'class-member.php');
+            $member = new \DC_Member( $email );
+
+            $user_id = $member->get_wp_user_id();
+            update_post_meta( $post_id, 'dc_member_wp_user_id', $user_id );
+        }
+
+        // store the post ID in the user's meta
+        update_user_meta( $user_id, 'dc_member_post_id', $post_id );
+
+        // loop through the user fields and save the data to the corresponding user
+        foreach ( $user_metakeys as $meta_key ) {
+            
+            //check our nonce to maker sure this came from Edit  page 
+            if ( !isset( $_POST[$meta_key.'_nonce'] ) || !wp_verify_nonce( $_POST[$meta_key.'_nonce'], basename( __FILE__  ) ) ) {
+                continue;
+            }
+
+            // get posted data
+            $new_meta_value = ( isset( $_POST[$meta_key] )  ? $_POST[$meta_key] : '' );
+
+            // get meta value of the user
+            $meta_value = get_user_meta( $user_id, $meta_key, true);
+            
+            // if new meta was added, and there was no previous value, add it
+            if ( $new_meta_value && empty( $meta_value ) ) {
+                update_user_meta( $user_id, $meta_key, $new_meta_value );
+            }
+
+            // if there was  existing meta, but it doesn't match the new meta, update it
+            elseif ( $new_meta_value && $new_meta_value != $meta_value ) {
+                update_user_meta( $user_id, $meta_key, $new_meta_value );
+            }
+
+            // if there is no new meta, but an old one exists, delete it
+            elseif ( '' == $new_meta_value && $meta_value ) {
+                delete_user_meta( $user_id, $meta_key, $meta_value );
+            }
+
+
+        }
+    }
 }
