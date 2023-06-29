@@ -189,6 +189,9 @@ class Member_metaboxes {
 
     }
 
+    /**
+     * TODO: I'm repeating this exact code in wp-content/plugins/dc-membership/includes/importer.php, dc_membership_importer_handler_import(). How can I make it DRY?
+     */
     function save_meta( $post_id, $post ) {
         
         $post_type = get_post_type_object( $post->post_type );

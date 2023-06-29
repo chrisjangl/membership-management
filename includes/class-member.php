@@ -7,8 +7,8 @@ use \DC_Membership_Users\create_member_as_user;
  * 
  * TODO: Need to convert this from a singleton-eque class to a regular class
  * 
- * @todo: create user role (here? or in contact? or both?)
- * @todo: create way to check if user is member
+ * TODO: create method to check if user is member
+ * TODO: this class should only be a Member object; get rid of developer helpers (post type, etc.)
  * 
  */
 
@@ -21,6 +21,7 @@ class DC_Member extends WP_User {
 	static $instance;
 
 	// TODO: change this to construct using user ID, post ID or email
+	// TODO: Should we return something?
 	function __construct( $email = null ) {
 
 		// check if email is registered to WP user
@@ -48,16 +49,13 @@ class DC_Member extends WP_User {
 			}
 		}
 		
-		// if not, create a WP user, giving it a role of "Organizational Member"
-
 		// register meta boxes
+		// TODO: move this elsewhere
 		require_once( 'class-member-metaboxes.php' );
 		new Member_metaboxes();
 
 	}
 	
-	
-
 	function get_wp_user_id() {
 		return $this->member_id;
 	}
