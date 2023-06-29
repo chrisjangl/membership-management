@@ -20,3 +20,9 @@ include( 'includes/register-post-type.php' );
  * My Account
  */
 include( 'includes/my-account.php' );
+
+/**
+ * Importer
+ */
+include( 'includes/importer.php' );
+  
