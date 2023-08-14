@@ -39,8 +39,6 @@ function dcms_my_account_shortcode() {
         if ( \DC_Membership_Users\is_organizational_member( $user_id ) ) {
             // if so, display My Account page
             ?>
-            <h2>My Account</h2>
-            <hr>
             <h3>Membership Status</h3>
             <p>Your membership is: <b><?= $membership_status; ?></b>.</p>
             <?php
@@ -133,12 +131,6 @@ function dcms_my_account_shortcode() {
             <p>You are not a member.</p>
             <?php
         }
-
-
-        // if so, display My Account page
-        ?>
-        Membership status
-        <?php
 
         // get the user's info
         return ob_get_clean();
