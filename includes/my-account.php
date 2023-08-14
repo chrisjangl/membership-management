@@ -40,7 +40,7 @@ function dcms_my_account_shortcode() {
             // if so, display My Account page
             ?>
             <h3>Membership Status</h3>
-            <p>Your membership is: <b><?= $membership_status; ?></b>.</p>
+            <p>Your membership is: <b><?php echo $membership_status; ?></b>.</p>
             <?php
 
             // nonces for the fields
@@ -117,7 +117,7 @@ function dcms_my_account_shortcode() {
 
                 </div>
 
-                <input type="hidden" name="user_id" value="<?= $user_id; ?>" />
+                <input type="hidden" name="user_id" value=" <?php echo $user_id; ?>" />
                 <input type="submit" name="update_own_info" value="Update Info" />
             </form>
 
