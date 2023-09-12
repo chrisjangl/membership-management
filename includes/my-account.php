@@ -15,8 +15,12 @@ function dcms_my_account_shortcode() {
 
     // check if user is logged in
     if ( ! is_user_logged_in() ) {
+
+        ob_start();
         // if not, display login form
-        return wp_login_form();
+        echo wp_login_form();
+
+        return ob_get_clean();
     } else {
 
         // get current user's ID
@@ -44,11 +48,7 @@ function dcms_my_account_shortcode() {
             <?php
 
             // nonces for the fields
-            wp_nonce_field( basename( __FILE__ ), 'dc_member_first_name_nonce' );
-            wp_nonce_field( basename( __FILE__ ), 'dc_member_last_name_nonce' );
-            wp_nonce_field( basename( __FILE__ ), 'dc_member_mailing_address_nonce' );
-            wp_nonce_field( basename( __FILE__ ), 'dc_member_email_nonce' );
-            wp_nonce_field( basename( __FILE__ ), 'dc_member_phone_nonce' );
+            wp_nonce_field( basename( __FILE__ ), 'dcmm_member_update_nonce' );
             ?>
 
             <form action="" method="post" id="update-own-info">
@@ -117,7 +117,7 @@ function dcms_my_account_shortcode() {
 
                 </div>
 
-                <input type="hidden" name="user_id" value=" <?php echo $user_id; ?>" />
+                <input type="hidden" name="user_id" value="<?php echo $user_id; ?>" />
                 <input type="submit" name="update_own_info" value="Update Info" />
             </form>
 
@@ -144,57 +144,64 @@ add_shortcode( 'dcms_my_account', 'dcms_my_account_shortcode' );
  */
 function update_user_data() {
 
-    // get the user's ID
+    // get the logged-in user's ID
     $user_id = get_current_user_id();
 
-    // get the form data
-    parse_str( $_POST['formData'], $form_data );
+    // if we have a User ID from the update form, sanitize it
+    if ( isset( $_POST['user_id'] ) ) {
+        $user_id_to_edit = sanitize_text_field( $_POST['user_id'] );
+    } 
 
     // check that our user's ID matches the one passed in the AJAX request
-    if ( $user_id == $form_data['user_id'] ) {
+    if ( $user_id == $user_id_to_edit ) {
 
         // get the user's info
         $user_info = get_userdata( $user_id );
+        
         // get the user's CPT post ID
         $CPT_post_id = get_user_meta( $user_id, 'dc_member_post_id', true );
 
         // get the nonces
-        $dc_member_first_name_nonce = $_POST['dc_member_first_name_nonce'];
-        $dc_member_last_name_nonce = $_POST['dc_member_last_name_nonce'];
-        $dc_member_mailing_address_nonce = $_POST['dc_member_mailing_address_nonce'];
-        $dc_member_email_nonce = $_POST['dc_member_email_nonce'];
-        $dc_member_phone_nonce = $_POST['dc_member_phone_nonce'];
+        $dcmm_member_update_nonce = isset( $_POST['dcmm_member_update_nonce'] ) 
+            ? sanitize_key( $_POST['dcmm_member_update_nonce'] )
+            : false;
         
         // verify the nonce
-        if ( wp_verify_nonce( $dc_member_first_name_nonce, basename( __FILE__ ) ) && wp_verify_nonce( $dc_member_last_name_nonce, basename( __FILE__ ) ) && wp_verify_nonce( $dc_member_mailing_address_nonce, basename( __FILE__ ) ) && wp_verify_nonce( $dc_member_email_nonce, basename( __FILE__ ) ) && wp_verify_nonce( $dc_member_phone_nonce, basename( __FILE__ ) ) ) {
+        if ( wp_verify_nonce( $dcmm_member_update_nonce, basename( __FILE__ ) ) ) {
 
-            
-            // get the user's first name and sanitize it
-            $first_name = sanitize_text_field( $form_data['dc_member_first_name'] );
+            // get the user's info; check if it's set, then sanitize it if so:
+
+            // user's first name
+            $first_name = isset( $_POST['first_name'] ) ? sanitize_text_field( $_POST['first_name'] ) : false;
 
             // update the user's first name
             update_user_meta( $user_id, 'dc_member_first_name', $first_name );
 
-            // get the user's last name and sanitize it
-            $last_name = sanitize_text_field( $form_data['dc_member_last_name'] );
+            // user's last name 
+            $last_name = isset( $_POST['last_name'] ) ? sanitize_text_field( $_POST['last_name'] ) : false;
 
             // update the user's last name
             update_user_meta( $user_id, 'dc_member_last_name', $last_name );
 
-            // get the user's mailing address and sanitize it
-            $mailing_address = sanitize_text_field( $form_data['dc_member_mailing_address'] );
+            // (maybe) get the user's mailing address and sanitize it
+            $mailing_address = [];
+            $mailing_address['street1'] = isset( $_POST['street1'] ) ? sanitize_text_field( $_POST['street1'] ) : null;
+            $mailing_address['street2'] = isset( $_POST['street2'] ) ? sanitize_text_field( $_POST['street2'] ) : null;
+            $mailing_address['city'] = isset( $_POST['city'] ) ? sanitize_text_field( $_POST['city'] ) : null;
+            $mailing_address['state'] = isset( $_POST['state'] ) ? sanitize_text_field( $_POST['state'] ) : null;
+            $mailing_address['zip'] = isset( $_POST['zip'] ) ? sanitize_text_field( $_POST['zip'] ) : null;
 
             // update the user's mailing address
             update_user_meta( $user_id, 'dc_member_mailing_address', $mailing_address );
 
-            // get the user's email address and sanitize it
-            $email = sanitize_email( $form_data['dc_member_email'] );
+            // email
+            $email = isset( $_POST['email'] ) ? sanitize_email( $_POST['email'] ) : false;
 
             // update the user's email address
             update_post_meta( $CPT_post_id, 'dc_member_email', $email );
 
-            // get the user's phone number and sanitize it
-            $phone = sanitize_text_field( $form_data['dc_member_phone'] );
+            // phone
+            $phone = isset( $_POST['phone'] ) ? sanitize_text_field( $_POST['phone'] ) : false;
 
             // update the user's phone number
             update_user_meta( $user_id, 'dc_member_phone', $phone );
@@ -203,9 +210,8 @@ function update_user_data() {
 
             wp_die();
         } else {
-            // return false;
+            return false;
         }
-
     }
 }
 // register the ajax action

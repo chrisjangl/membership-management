@@ -6,16 +6,19 @@ jQuery( document ).ready( function() {
         event.preventDefault();
 
         // get the form data
-        var formData = jQuery( this ).serialize();
+        var userId = jQuery( 'input[name="user_id"]' ).val(),
+            firstName = jQuery( '#dc_member_first_name' ).val(),
+            lastName = jQuery( '#dc_member_last_name' ).val(),
+            email = jQuery( '#dc_member_email' ).val(),
+            phone = jQuery( '#dc_member_phone' ).val(),
+            street1 = jQuery( '#dc_member_mailing_address_street1' ).val(),
+            street2 = jQuery( '#dc_member_mailing_address_street2' ).val(),
+            city = jQuery( '#dc_member_mailing_address_city' ).val(),
+            state = jQuery( '#dc_member_mailing_address_state' ).val(),
+            zip = jQuery( '#dc_member_mailing_address_zip' ).val();
 
         // get the nonce
-        var dc_member_first_name_nonce = jQuery( '#dc_member_first_name_nonce' ).val(),
-            dc_member_last_name_nonce = jQuery( '#dc_member_last_name_nonce' ).val(),
-            dc_member_mailing_address_nonce = jQuery( '#dc_member_mailing_address_nonce' ).val(),
-            dc_member_email_nonce = jQuery( '#dc_member_email_nonce' ).val(),
-            dc_member_phone_nonce = jQuery( '#dc_member_phone_nonce' ).val(),
-            dc_member_first_name = jQuery( '#dc_member_first_name' ).val(),
-            dc_member_last_name = jQuery( '#dc_member_last_name' ).val();
+        var dcmm_member_update_nonce = jQuery( '#dcmm_member_update_nonce' ).val();
 
         // send the data via ajax
         jQuery.ajax({
@@ -23,12 +26,17 @@ jQuery( document ).ready( function() {
             url: dc_membership.ajax_url,
             data: {
                 action: 'dcms_update_own_info',
-                formData: formData,
-                dc_member_first_name_nonce: dc_member_first_name_nonce,
-                dc_member_last_name_nonce: dc_member_last_name_nonce,
-                dc_member_mailing_address_nonce: dc_member_mailing_address_nonce,
-                dc_member_email_nonce: dc_member_email_nonce,
-                dc_member_phone_nonce: dc_member_phone_nonce
+                user_id: userId,
+                first_name: firstName,
+                last_name: lastName,
+                email: email,
+                phone: phone,
+                street1: street1,
+                street2: street2,
+                city: city,
+                state: state,
+                zip: zip,
+                dcmm_member_update_nonce: dcmm_member_update_nonce,
             },
             // while the ajax is running, display a loading message & disable the submit button
             beforeSend: function() {

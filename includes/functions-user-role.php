@@ -105,7 +105,8 @@ function is_organizational_member( $user_ID ) {
  * 
  * Requires 'edit_user' capabilities
  * 
- * @TODO: create custom capability to edit students without having the 'edit_user' capability
+ * @TODO: create custom capability to edit members without having the 'edit_user' capability
+ * @TODO: need to be able to update member's user meta here
  *
  * @param int $user_id
  *
@@ -113,13 +114,6 @@ function is_organizational_member( $user_ID ) {
  */
 function save_user_fields( $user_id ) {
     if ( !current_user_can('edit_user', $user_id) ) return false;
-
-    // update_user_meta($user_id, 'clms_dob', esc_attr($_POST['clms_dob']));
-    // update_user_meta($user_id, 'clms_street1', esc_attr($_POST['clms_street1']));
-    // update_user_meta($user_id, 'clms_street2', esc_attr($_POST['clms_street2']));
-    // update_user_meta($user_id, 'clms_city', esc_attr($_POST['clms_city']));
-    // update_user_meta($user_id, 'clms_state', esc_attr($_POST['clms_state']));
-    // update_user_meta($user_id, 'clms_zip', esc_attr($_POST['clms_zip']));
 	
 }
 add_action( 'personal_options_update', __NAMESPACE__ . '\\save_user_fields' );

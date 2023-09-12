@@ -189,6 +189,7 @@ class Member_metaboxes {
 
     }
 
+    // @TODO: reuse this between here & the AJAX save user info in my-account.php
     function save_meta( $post_id, $post ) {
         
         $post_type = get_post_type_object( $post->post_type );
@@ -214,32 +215,37 @@ class Member_metaboxes {
         // loop through post fields and save the data
         foreach ( $post_metakeys as $meta_key ) {
 
-            //check our nonce to maker sure this came from Edit a Grouped page 
-            if ( !isset( $_POST[$meta_key.'_nonce'] ) || !wp_verify_nonce( $_POST[$meta_key.'_nonce'], basename( __FILE__  ) ) ) {
+            $nonce_key = $meta_key . '_nonce';
+
+            // get and sanitize the nonce, if we have one
+            if ( isset( $_POST[$nonce_key] ) ) {
+                $nonce = sanitize_key( $_POST[$nonce_key] );
+            } else {
                 continue;
             }
 
-            //get posted data
-            $new_meta_value = ( isset( $_POST[$meta_key] )  ? $_POST[$meta_key] : '' );
-
-            if ( $meta_key == 'dc_events_date' ) {
-                $new_meta_value = strtotime( $new_meta_value );
+            // check our nonce to make sure this came from Edit screen 
+            if ( !wp_verify_nonce( $nonce, basename( __FILE__  ) ) ) {
+                continue;
             }
 
-            //get meta value of the post
+            // get posted data
+            $new_meta_value = ( isset( $_POST[$meta_key] )  ? sanitize_text_field( $_POST[$meta_key] ) : '' );
+
+            // get meta value of the post
             $meta_value = get_post_meta( $post_id, $meta_key, true );
 
-            //if new meta was added, and there was no previous value, add it
+            // if new meta was added, and there was no previous value, add it
             if ( $new_meta_value && empty( $meta_value ) ) {
                 add_post_meta( $post_id, $meta_key, $new_meta_value, true );
             }
 
-            //if there was  existing meta, but it doesn't match the new meta, update it
+            // if there was existing meta, but it doesn't match the new meta, update it
             elseif ( $new_meta_value && $new_meta_value != $meta_value ) {
                 update_post_meta( $post_id, $meta_key, $new_meta_value );
             }
 
-            //if there is no new meta, but an old one exists, delete it
+            // if there is no new meta, but an old one exists, delete it
             elseif ( '' == $new_meta_value && $meta_value ) {
                 delete_post_meta( $post_id, $meta_key, $meta_value );
             }
@@ -263,13 +269,22 @@ class Member_metaboxes {
         // loop through the user fields and save the data to the corresponding user
         foreach ( $user_metakeys as $meta_key ) {
             
-            //check our nonce to maker sure this came from Edit  page 
-            if ( !isset( $_POST[$meta_key.'_nonce'] ) || !wp_verify_nonce( $_POST[$meta_key.'_nonce'], basename( __FILE__  ) ) ) {
+            $nonce_key = $meta_key . '_nonce';
+
+            // get and sanitize the nonce, if we have one
+            if ( isset( $_POST[$nonce_key] ) ) {
+                $nonce = sanitize_key( $_POST[$nonce_key] );
+            } else {
+                continue;
+            }
+
+            // check our nonce to make sure this came from Edit screen 
+            if ( !wp_verify_nonce( $nonce, basename( __FILE__  ) ) ) {
                 continue;
             }
 
             // get posted data
-            $new_meta_value = ( isset( $_POST[$meta_key] )  ? $_POST[$meta_key] : '' );
+            $new_meta_value = ( isset( $_POST[$meta_key] )  ? sanitize_text_field( $_POST[$meta_key] ) : '' );
 
             // get meta value of the user
             $meta_value = get_user_meta( $user_id, $meta_key, true);
@@ -288,8 +303,6 @@ class Member_metaboxes {
             elseif ( '' == $new_meta_value && $meta_value ) {
                 delete_user_meta( $user_id, $meta_key, $meta_value );
             }
-
-
         }
     }
 }
