@@ -8,6 +8,8 @@
  * 
  * TODO: create custom user meta for our user role
  */
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
 
 namespace DC_Membership_Users;
 

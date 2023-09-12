@@ -8,6 +8,8 @@
  * @todo: create way to check if user is member
  * 
  */
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
 
 namespace DC_Member_Post_Type;
 
