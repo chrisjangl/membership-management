@@ -19,8 +19,9 @@ function dcms_my_account_shortcode() {
     if ( ! is_user_logged_in() ) {
 
         ob_start();
+
         // if not, display login form
-        echo wp_login_form();
+        echo wp_kses( wp_login_form(), 'post' );
 
         return ob_get_clean();
     } else {
@@ -46,7 +47,7 @@ function dcms_my_account_shortcode() {
             // if so, display My Account page
             ?>
             <h3>Membership Status</h3>
-            <p>Your membership is: <b><?php echo $membership_status; ?></b>.</p>
+            <p>Your membership is: <b><?php echo esc_html( $membership_status ); ?></b>.</p>
             <?php
 
             // nonces for the fields
@@ -61,13 +62,13 @@ function dcms_my_account_shortcode() {
                             <!-- first name -->
                             <div class="form-group half">
                                 <label for="dc_member_first_name">First Name:</label>
-                                <input type="text" name="dc_member_first_name" id="dc_member_first_name" <?php echo !empty( $first_name ) ? ' value="' . $first_name . '"' : 'placeholder=""'; ?> />
+                                <input type="text" name="dc_member_first_name" id="dc_member_first_name" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
                             </div>
                                 
                             <!-- last name -->
                             <div class="form-group half">
                                 <label for="dc_member_last_name">Last Name:</label>
-                                <input type="text" name="dc_member_last_name" id="dc_member_last_name" <?php echo !empty( $last_name ) ? ' value="' . $last_name . '"' : 'placeholder=""'; ?> />
+                                <input type="text" name="dc_member_last_name" id="dc_member_last_name" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
                             </div>
                         </div>
                     </div>
@@ -78,13 +79,13 @@ function dcms_my_account_shortcode() {
                         <!-- Email -->
                         <div class="form-row">
                             <label for="dc_member_email">Email:</label>
-                            <input type="email" name="dc_member_email" id="dc_member_email" <?php echo !empty( $email ) ? ' value="' . $email . '"' : 'placeholder="member@example.com"'; ?> required />
+                            <input type="email" name="dc_member_email" id="dc_member_email" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
                         </div>
 
                         <!-- Phone -->
                         <div class="form-row">
                             <label for="dc_member_phone">Phone Number:</label>
-                            <input type="tel" name="dc_member_phone" id="dc_member_phone" <?php echo !empty( $phone ) ? ' value="' . $phone . '"' : 'placeholder="Phone"'; ?> />
+                            <input type="tel" name="dc_member_phone" id="dc_member_phone" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
                         </div>
                     </div>
 
@@ -94,32 +95,32 @@ function dcms_my_account_shortcode() {
                         <h4>Mailing Address</h4>
                         <div class="form-row">
                             <label for="dc_member_mailing_address[street1]" >Street:</label>
-                            <input type="text" name="dc_member_mailing_address[street1]" id="dc_member_mailing_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . $mailing_address["street1"] . '"' : 'placeholder="Street"'; ?> />
+                            <input type="text" name="dc_member_mailing_address[street1]" id="dc_member_mailing_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ) . '"' : 'placeholder="Street"'; ?> />
                             <br />
-                            <input type="text" name="dc_member_mailing_address[street2]" id="dc_member_mailing_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . $mailing_address["street2"] . '"' : 'placeholder=""'; ?> />
+                            <input type="text" name="dc_member_mailing_address[street2]" id="dc_member_mailing_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
                         </div>
 
                         <div class="form-row">
                             <label for="dc_member_mailing_address[city]" >City:</label>
-                            <input type="text" name="dc_member_mailing_address[city]" id="dc_member_mailing_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . $mailing_address["city"] . '"' : 'placeholder="City"'; ?> />
+                            <input type="text" name="dc_member_mailing_address[city]" id="dc_member_mailing_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
                         </div>
 
                         <div class="form-row">
                             <div class="form-group half">
                                 <label for="dc_member_mailing_address[state]" >State:</label>
-                                <input type="text" name="dc_member_mailing_address[state]" id="dc_member_mailing_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . $mailing_address["state"] . '"' : 'placeholder="State"'; ?> />
+                                <input type="text" name="dc_member_mailing_address[state]" id="dc_member_mailing_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
                             </div>
 
                             <div class="form-group half">
                                 <label for="dc_member_mailing_address[zip]" >Zip:</label>
-                                <input type="text" name="dc_member_mailing_address[zip]" id="dc_member_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . $mailing_address["zip"] . '"' : 'placeholder="Zip"'; ?> />
+                                <input type="text" name="dc_member_mailing_address[zip]" id="dc_member_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
                             </div>
                         </div>
                     </div>
 
                 </div>
 
-                <input type="hidden" name="user_id" value="<?php echo $user_id; ?>" />
+                <input type="hidden" name="user_id" value="<?php echo esc_attr( $user_id ); ?>" />
                 <input type="submit" name="update_own_info" value="Update Info" />
             </form>
 
