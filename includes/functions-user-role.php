@@ -8,10 +8,10 @@
  * 
  * TODO: create custom user meta for our user role
  */
+namespace DC_Membership_Users;
+
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-
-namespace DC_Membership_Users;
 
 \DC_Membership_Users\create_member_role();
 

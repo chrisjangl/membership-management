@@ -8,10 +8,10 @@
  * @todo: create way to check if user is member
  * 
  */
+namespace DC_Member_Post_Type;
+
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-
-namespace DC_Member_Post_Type;
 
 function get_post_type() {
 	return 'dc-member';
