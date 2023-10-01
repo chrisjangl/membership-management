@@ -2,7 +2,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
-use \DC_Membership_Users\create_member_as_user;
+use \DCMM_Users\create_member_as_user;
 
 /**
  * Set up the Member post type
@@ -14,7 +14,7 @@ use \DC_Membership_Users\create_member_as_user;
  * 
  */
 
-class DC_Member extends WP_User {
+class DCMM_Member extends WP_User {
 
 	protected $member_id = null;
 	protected $membership_status = null;
@@ -42,7 +42,7 @@ class DC_Member extends WP_User {
 				
 				// if not, create a WP user, giving it a role of "Organizational Member"
 				include_once( 'functions-user-role.php' );
-				$member_ID = \DC_Membership_Users\create_member_as_user( $email );
+				$member_ID = \DCMM_Users\create_member_as_user( $email );
 
 				if ( ! \is_wp_error( $member_ID ) ) {
 					$this->member_id = $member_ID;
@@ -66,4 +66,4 @@ class DC_Member extends WP_User {
 
 }
 
-new DC_Member();
+new DCMM_Member();

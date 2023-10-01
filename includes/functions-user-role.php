@@ -8,12 +8,12 @@
  * 
  * TODO: create custom user meta for our user role
  */
-namespace DC_Membership_Users;
+namespace DCMM_Users;
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
-\DC_Membership_Users\create_member_role();
+\DCMM_Users\create_member_role();
 
 function create_member_role() {
     add_role( 'member', 'Organization Member', get_role( 'subscriber' )->capabilities );

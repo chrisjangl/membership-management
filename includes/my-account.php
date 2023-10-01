@@ -4,16 +4,16 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 /**
  * Functionality relating to the user's My Account page
  */
-use \DC_Membership_Users\is_organizational_member;  
+use \DCMM_Users\is_organizational_member;  
 
 // create shortcode to display the user's My Account page
 function dcms_my_account_shortcode() {
 
-    wp_enqueue_style( 'dc_member_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
+    wp_enqueue_style( 'dcmm_member_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
     // enqueue the JS, requiring jQuery as a dependency & passding the AJAX URL
-    wp_enqueue_script( 'dc_member_info', plugin_dir_url( dirname(__FILE__)  ) . 'assets/js/member-my-account.js', array('jquery'), '1.0' );
-    wp_localize_script( 'dc_member_info', 'dc_membership', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
-    wp_enqueue_script( 'dc_member_info', plugin_dir_url( dirname(__FILE__)  ) . 'assets/js/member-my-account.js', array('jquery'), '1.0' );
+    wp_enqueue_script( 'dcmm_member_info', plugin_dir_url( dirname(__FILE__)  ) . 'assets/js/member-my-account.js', array('jquery'), '1.0' );
+    wp_localize_script( 'dcmm_member_info', 'dcmm', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
+    wp_enqueue_script( 'dcmm_member_info', plugin_dir_url( dirname(__FILE__)  ) . 'assets/js/member-my-account.js', array('jquery'), '1.0' );
 
     // check if user is logged in
     if ( ! is_user_logged_in() ) {
@@ -28,14 +28,14 @@ function dcms_my_account_shortcode() {
 
         // get current user's ID
         $user_id = get_current_user_id();
-        $CPT_post_id = get_user_meta( $user_id, 'dc_member_post_id', true );
+        $CPT_post_id = get_user_meta( $user_id, 'dcmm_post_id', true );
         
         // TODO: user DC_Member class to get this ino
-        $first_name = get_user_meta( $user_id, 'dc_member_first_name', true );
-        $last_name = get_user_meta( $user_id, 'dc_member_last_name', true );
-        $email = get_post_meta( $CPT_post_id, 'dc_member_email', true );
-        $phone = get_user_meta( $user_id, 'dc_member_phone', true );
-        $mailing_address = get_user_meta( $user_id, 'dc_member_mailing_address', true );
+        $first_name = get_user_meta( $user_id, 'dcmm_first_name', true );
+        $last_name = get_user_meta( $user_id, 'dcmm_last_name', true );
+        $email = get_post_meta( $CPT_post_id, 'dcmm_email', true );
+        $phone = get_user_meta( $user_id, 'dcmm_phone', true );
+        $mailing_address = get_user_meta( $user_id, 'dcmm_mailing_address', true );
         $membership_status = get_user_meta( $user_id, "dc_membership_status", true );
 
         require_once( 'functions-user-role.php' );
@@ -43,7 +43,7 @@ function dcms_my_account_shortcode() {
         ob_start();
 
         // check if user is a member
-        if ( \DC_Membership_Users\is_organizational_member( $user_id ) ) {
+        if ( \DCMM_Users\is_organizational_member( $user_id ) ) {
             // if so, display My Account page
             ?>
             <h3>Membership Status</h3>
@@ -61,14 +61,14 @@ function dcms_my_account_shortcode() {
                         <div class="form-row">
                             <!-- first name -->
                             <div class="form-group half">
-                                <label for="dc_member_first_name">First Name:</label>
-                                <input type="text" name="dc_member_first_name" id="dc_member_first_name" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
+                                <label for="dcmm_first_name">First Name:</label>
+                                <input type="text" name="dcmm_first_name" id="dc_medcmm__name" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
                             </div>
                                 
                             <!-- last name -->
                             <div class="form-group half">
-                                <label for="dc_member_last_name">Last Name:</label>
-                                <input type="text" name="dc_member_last_name" id="dc_member_last_name" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
+                                <label for="dcmm_last_name">Last Name:</label>
+                                <input type="text" name="dcmm_last_name" id="dc_medcmm_name" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
                             </div>
                         </div>
                     </div>
@@ -78,14 +78,14 @@ function dcms_my_account_shortcode() {
                         
                         <!-- Email -->
                         <div class="form-row">
-                            <label for="dc_member_email">Email:</label>
-                            <input type="email" name="dc_member_email" id="dc_member_email" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
+                            <label for="dcmm_email">Email:</label>
+                            <input type="email" name="dcmm_email" id="dc_medcmm_" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
                         </div>
 
                         <!-- Phone -->
                         <div class="form-row">
-                            <label for="dc_member_phone">Phone Number:</label>
-                            <input type="tel" name="dc_member_phone" id="dc_member_phone" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
+                            <label for="dcmm_phone">Phone Number:</label>
+                            <input type="tel" name="dcmm_phone" id="dc_medcmm_" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
                         </div>
                     </div>
 
@@ -94,26 +94,26 @@ function dcms_my_account_shortcode() {
                     <div class="form-section">
                         <h4>Mailing Address</h4>
                         <div class="form-row">
-                            <label for="dc_member_mailing_address[street1]" >Street:</label>
-                            <input type="text" name="dc_member_mailing_address[street1]" id="dc_member_mailing_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ) . '"' : 'placeholder="Street"'; ?> />
+                            <label for="dcmm_mailing_address[street1]" >Street:</label>
+                            <input type="text" name="dcmm_mailing_address[street1]" id="dc_medcmm_ng_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ) . '"' : 'placeholder="Street"'; ?> />
                             <br />
-                            <input type="text" name="dc_member_mailing_address[street2]" id="dc_member_mailing_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
+                            <input type="text" name="dcmm_mailing_address[street2]" id="dc_medcmm_ng_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
                         </div>
 
                         <div class="form-row">
-                            <label for="dc_member_mailing_address[city]" >City:</label>
-                            <input type="text" name="dc_member_mailing_address[city]" id="dc_member_mailing_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
+                            <label for="dcmm_mailing_address[city]" >City:</label>
+                            <input type="text" name="dcmm_mailing_address[city]" id="dc_medcmm_ng_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
                         </div>
 
                         <div class="form-row">
                             <div class="form-group half">
-                                <label for="dc_member_mailing_address[state]" >State:</label>
-                                <input type="text" name="dc_member_mailing_address[state]" id="dc_member_mailing_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
+                                <label for="dcmm_mailing_address[state]" >State:</label>
+                                <input type="text" name="dcmm_mailing_address[state]" id="dc_medcmm_ng_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
                             </div>
 
                             <div class="form-group half">
-                                <label for="dc_member_mailing_address[zip]" >Zip:</label>
-                                <input type="text" name="dc_member_mailing_address[zip]" id="dc_member_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
+                                <label for="dcmm_mailing_address[zip]" >Zip:</label>
+                                <input type="text" name="dcmm_mailing_address[zip]" id="dcmm_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
                             </div>
                         </div>
                     </div>
@@ -162,7 +162,7 @@ function update_user_data() {
         $user_info = get_userdata( $user_id );
         
         // get the user's CPT post ID
-        $CPT_post_id = get_user_meta( $user_id, 'dc_member_post_id', true );
+        $CPT_post_id = get_user_meta( $user_id, 'dcmm_post_id', true );
 
         // get the nonces
         $dcmm_member_update_nonce = isset( $_POST['dcmm_member_update_nonce'] ) 
@@ -178,13 +178,13 @@ function update_user_data() {
             $first_name = isset( $_POST['first_name'] ) ? sanitize_text_field( $_POST['first_name'] ) : false;
 
             // update the user's first name
-            update_user_meta( $user_id, 'dc_member_first_name', $first_name );
+            update_user_meta( $user_id, 'dcmm_first_name', $first_name );
 
             // user's last name 
             $last_name = isset( $_POST['last_name'] ) ? sanitize_text_field( $_POST['last_name'] ) : false;
 
             // update the user's last name
-            update_user_meta( $user_id, 'dc_member_last_name', $last_name );
+            update_user_meta( $user_id, 'dcmm_last_name', $last_name );
 
             // (maybe) get the user's mailing address and sanitize it
             $mailing_address = [];
@@ -195,19 +195,19 @@ function update_user_data() {
             $mailing_address['zip'] = isset( $_POST['zip'] ) ? sanitize_text_field( $_POST['zip'] ) : null;
 
             // update the user's mailing address
-            update_user_meta( $user_id, 'dc_member_mailing_address', $mailing_address );
+            update_user_meta( $user_id, 'dcmm_mailing_address', $mailing_address );
 
             // email
             $email = isset( $_POST['email'] ) ? sanitize_email( $_POST['email'] ) : false;
 
             // update the user's email address
-            update_post_meta( $CPT_post_id, 'dc_member_email', $email );
+            update_post_meta( $CPT_post_id, 'dcmm_email', $email );
 
             // phone
             $phone = isset( $_POST['phone'] ) ? sanitize_text_field( $_POST['phone'] ) : false;
 
             // update the user's phone number
-            update_user_meta( $user_id, 'dc_member_phone', $phone );
+            update_user_meta( $user_id, 'dcmm_phone', $phone );
 
             wp_send_json_success( 'Your info has been updated.' );
 

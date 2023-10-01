@@ -8,7 +8,7 @@
  * @todo: create way to check if user is member
  * 
  */
-namespace DC_Member_Post_Type;
+namespace DCMM_Post_Type;
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
@@ -32,7 +32,7 @@ function construct_member_post_type( ) {
 function register_action_hooks() {
 	
 	// register our post type
-	\add_action( 'init', '\DC_Member_Post_Type\dcm_register_post_type' );
+	\add_action( 'init', '\DCMM_Post_Type\dcm_register_post_type' );
 
 }
 

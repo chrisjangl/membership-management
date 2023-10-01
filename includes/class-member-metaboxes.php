@@ -1,6 +1,6 @@
 <?php
 /**
- * Metaboxes class - extends DC_Member
+ * Metaboxes class - extends DCMM_Member
  *
  * @class 		Member_metaboxes
  * @version		1.0.0
@@ -53,7 +53,7 @@ class Member_metaboxes {
         && 'post-new.php' != $hook ) {
             return;
         }
-        wp_enqueue_style( 'dc_member_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
+        wp_enqueue_style( 'dcmm_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
     }
 
     
@@ -63,25 +63,25 @@ class Member_metaboxes {
      * 
      * TODO: make email required
      * 
-     * @uses DC_Member
+     * @uses DCMM_Member
     */
     function create_metabox_contact_info() {
 
         require_once('class-member.php');
 
-        $user_id = get_post_meta( get_the_id(), 'dc_member_wp_user_id', true );
-        $first_name = get_user_meta( $user_id, 'dc_member_first_name', true );
-        $last_name = get_user_meta( $user_id, 'dc_member_last_name', true );
-        $mailing_address = get_user_meta( $user_id, 'dc_member_mailing_address', true );
-        $email = get_post_meta( get_the_id(), 'dc_member_email', true );
-        $phone = get_user_meta( $user_id, 'dc_member_phone', true );
+        $user_id = get_post_meta( get_the_id(), 'dcmm_wp_user_id', true );
+        $first_name = get_user_meta( $user_id, 'dcmm_first_name', true );
+        $last_name = get_user_meta( $user_id, 'dcmm_last_name', true );
+        $mailing_address = get_user_meta( $user_id, 'dcmm_mailing_address', true );
+        $email = get_post_meta( get_the_id(), 'dcmm_email', true );
+        $phone = get_user_meta( $user_id, 'dcmm_phone', true );
 
         // nonces for the fields
-        wp_nonce_field( basename( __FILE__ ), 'dc_member_first_name_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dc_member_last_name_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dc_member_mailing_address_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dc_member_email_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dc_member_phone_nonce' );
+        wp_nonce_field( basename( __FILE__ ), 'dcmm_first_name_nonce' );
+        wp_nonce_field( basename( __FILE__ ), 'dcmm_last_name_nonce' );
+        wp_nonce_field( basename( __FILE__ ), 'dcmm_mailing_address_nonce' );
+        wp_nonce_field( basename( __FILE__ ), 'dcmm_email_nonce' );
+        wp_nonce_field( basename( __FILE__ ), 'dcmm_phone_nonce' );
         ?>
 
         <div class="dcm-metabox">
@@ -90,14 +90,14 @@ class Member_metaboxes {
                 <div class="form-row">
                     <!-- first name -->
                     <div class="form-group half">
-                        <label for="dc_member_first_name">First Name:</label>
-                        <input type="text" name="dc_member_first_name" id="dc_member_first_name" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
+                        <label for="dcmm_first_name">First Name:</label>
+                        <input type="text" name="dcmm_first_name" id="dcmm_first_name" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
                     </div>
                         
                     <!-- last name -->
                     <div class="form-group half">
-                        <label for="dc_member_last_name">Last Name:</label>
-                        <input type="text" name="dc_member_last_name" id="dc_member_last_name" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
+                        <label for="dcmm_last_name">Last Name:</label>
+                        <input type="text" name="dcmm_last_name" id="dcmm_last_name" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
                     </div>
                 </div>
             </div>
@@ -107,14 +107,14 @@ class Member_metaboxes {
                 
                 <!-- Email -->
                 <div class="form-row">
-                    <label for="dc_member_email">Email:</label>
-                    <input type="email" name="dc_member_email" id="dc_member_email" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
+                    <label for="dcmm_email">Email:</label>
+                    <input type="email" name="dcmm_email" id="dcmm_email" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
                 </div>
 
                 <!-- Phone -->
                 <div class="form-row">
-                    <label for="dc_member_phone">Phone Number:</label>
-                    <input type="tel" name="dc_member_phone" id="dc_member_phone" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
+                    <label for="dcmm_phone">Phone Number:</label>
+                    <input type="tel" name="dcmm_phone" id="dcmm_phone" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
                 </div>
             </div>
 
@@ -123,26 +123,26 @@ class Member_metaboxes {
             <div class="form-section">
                 <h4>Mailing Address</h4>
                 <div class="form-row">
-                    <label for="dc_member_mailing_address[street1]" >Street:</label>
-                    <input type="text" name="dc_member_mailing_address[street1]" id="dc_member_mailing_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ). '"' : 'placeholder="Street"'; ?> />
+                    <label for="dcmm_mailing_address[street1]" >Street:</label>
+                    <input type="text" name="dcmm_mailing_address[street1]" id="dcmm_mailing_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ). '"' : 'placeholder="Street"'; ?> />
                     <br />
-                    <input type="text" name="dc_member_mailing_address[street2]" id="dc_member_mailing_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
+                    <input type="text" name="dcmm_mailing_address[street2]" id="dcmm_mailing_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
                 </div>
 
                 <div class="form-row">
-                    <label for="dc_member_mailing_address[city]" >City:</label>
-                    <input type="text" name="dc_member_mailing_address[city]" id="dc_member_mailing_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
+                    <label for="dcmm_mailing_address[city]" >City:</label>
+                    <input type="text" name="dcmm_mailing_address[city]" id="dcmm_mailing_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
                 </div>
 
                 <div class="form-row">
                     <div class="form-group half">
-                        <label for="dc_member_mailing_address[state]" >State:</label>
-                        <input type="text" name="dc_member_mailing_address[state]" id="dc_member_mailing_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
+                        <label for="dcmm_mailing_address[state]" >State:</label>
+                        <input type="text" name="dcmm_mailing_address[state]" id="dcmm_mailing_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
                     </div>
 
                     <div class="form-group half">
-                        <label for="dc_member_mailing_address[zip]" >Zip:</label>
-                        <input type="text" name="dc_member_mailing_address[zip]" id="dc_member_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
+                        <label for="dcmm_mailing_address[zip]" >Zip:</label>
+                        <input type="text" name="dcmm_mailing_address[zip]" id="dcmm_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
                     </div>
                 </div>
             </div>
@@ -159,7 +159,7 @@ class Member_metaboxes {
     function create_metabox_wp_user() {
 
         // Toggle for creating a WP User for this member.
-        $wp_user_id = get_post_meta( get_the_id(), "dc_member_wp_user_id", true );
+        $wp_user_id = get_post_meta( get_the_id(), "dcmm_wp_user_id", true );
 
         ?>
 
@@ -171,15 +171,15 @@ class Member_metaboxes {
      * Create the metabox for the membership status
      */
     function create_metabox_membership_status() {
-        $user_id = get_post_meta( get_the_id(), 'dc_member_wp_user_id', true );
-        $membership_status = get_user_meta( $user_id, "dc_membership_status", true );
+        $user_id = get_post_meta( get_the_id(), 'dcmm_wp_user_id', true );
+        $membership_status = get_user_meta( $user_id, "dcmm_status", true );
         ?>
         <h3>Membership Status</h3>
-        <?php wp_nonce_field( basename( __FILE__ ), 'dc_membership_status_nonce' ); ?>
+        <?php wp_nonce_field( basename( __FILE__ ), 'dcmm_status_nonce' ); ?>
         
         <p>
-            <label for="dc_membership_status">Membership status:</label>
-            <select name="dc_membership_status" id="dc_membership_status">
+            <label for="dcmm_status">Membership status:</label>
+            <select name="dcmm_status" id="dcmm_status">
                 <option value="--" <?php selected( $membership_status, '' ); ?>>--</option>
                 <option value="active" <?php selected( $membership_status, 'active' ); ?>>Active</option>
                 <option value="inactive" <?php selected( $membership_status, 'inactive' ); ?>>Inactive</option>
@@ -200,15 +200,15 @@ class Member_metaboxes {
         }
 
         $post_metakeys = array(
-            'dc_member_email',
+            'dcmm_email',
         );
         
         $user_metakeys = array(
-            'dc_member_first_name',
-            'dc_member_last_name',
-            'dc_member_phone',
-            'dc_member_mailing_address',
-            'dc_membership_status'
+            'dcmm_first_name',
+            'dcmm_last_name',
+            'dcmm_phone',
+            'dcmm_mailing_address',
+            'dcmm_status'
         );
 
         
@@ -252,19 +252,19 @@ class Member_metaboxes {
         }
 
         // check if we have a user for this member, and create one if not
-        if ( ! $user_id = get_post_meta( $post_id, 'dc_member_wp_user_id', true ) ) {
+        if ( ! $user_id = get_post_meta( $post_id, 'dcmm_wp_user_id', true ) ) {
 
-            $email = get_post_meta( $post_id, 'dc_member_email', true );
+            $email = get_post_meta( $post_id, 'dcmm_email', true );
             
             include_once( 'class-member.php');
-            $member = new \DC_Member( $email );
+            $member = new \DCMM_Member( $email );
 
             $user_id = $member->get_wp_user_id();
-            update_post_meta( $post_id, 'dc_member_wp_user_id', $user_id );
+            update_post_meta( $post_id, 'dcmm_wp_user_id', $user_id );
         }
 
         // store the post ID in the user's meta
-        update_user_meta( $user_id, 'dc_member_post_id', $post_id );
+        update_user_meta( $user_id, 'dcmm_post_id', $post_id );
 
         // loop through the user fields and save the data to the corresponding user
         foreach ( $user_metakeys as $meta_key ) {
