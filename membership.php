@@ -4,7 +4,7 @@
  * Description: Manage your organization's membership.
  * Author: Digitally Cultured
  * Author URI: https://digitallycultured.com/
- * Version: 0.0.1
+ * Version: 0.1.0
  * License: GPLv3
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  */
@@ -21,4 +21,8 @@ include( 'includes/register-post-type.php' );
  */
 include( 'includes/my-account.php' );
 
+/**
+ * Importer
+ */
+include( 'includes/importer.php' );
   

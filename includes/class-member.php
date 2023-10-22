@@ -10,8 +10,8 @@ use \DCMM_Users\create_member_as_user;
  * TODO: Need to convert this from a singleton-eque class to a regular class
  * TODO: Need to handle the case where the email address is changed in the CPT
  * 
- * @todo: create user role (here? or in contact? or both?)
- * @todo: create way to check if user is member
+ * TODO: create method to check if user is member
+ * TODO: this class should only be a Member object; get rid of developer helpers (post type, etc.)
  * 
  */
 
@@ -101,9 +101,8 @@ class DCMM_Member extends WP_User {
 			}
 		}
 		
-		// if not, create a WP user, giving it a role of "Organizational Member"
-
 		// register meta boxes
+		// TODO: move this elsewhere
 		require_once( 'class-member-metaboxes.php' );
 		new DCMM_metaboxes();
 
