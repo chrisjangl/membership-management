@@ -7,18 +7,18 @@ jQuery( document ).ready( function() {
 
         // get the form data
         var userId = jQuery( 'input[name="user_id"]' ).val(),
-            firstName = jQuery( '#dcmm_member_first_name' ).val(),
-            lastName = jQuery( '#dcmm_member_last_name' ).val(),
-            email = jQuery( '#dcmm_member_email' ).val(),
-            phone = jQuery( '#dcmm_member_phone' ).val(),
-            street1 = jQuery( '#dcmm_member_mailing_address_street1' ).val(),
-            street2 = jQuery( '#dcmm_member_mailing_address_street2' ).val(),
-            city = jQuery( '#dcmm_member_mailing_address_city' ).val(),
-            state = jQuery( '#dcmm_member_mailing_address_state' ).val(),
-            zip = jQuery( '#dcmm_member_mailing_address_zip' ).val();
+            firstName = jQuery( '#dcmm_first_name' ).val(),
+            lastName = jQuery( '#dcmm_last_name' ).val(),
+            email = jQuery( '#dcmm_email' ).val(),
+            phone = jQuery( '#dcmm_phone' ).val(),
+            street1 = jQuery( '#dcmm_mailing_address_street1' ).val(),
+            street2 = jQuery( '#dcmm_mailing_address_street2' ).val(),
+            city = jQuery( '#dcmm_mailing_address_city' ).val(),
+            state = jQuery( '#dcmm_mailing_address_state' ).val(),
+            zip = jQuery( '#dcmm_mailing_address_zip' ).val();
 
         // get the nonce
-        var dcmm_member_update_nonce = jQuery( '#dcmm_member_update_nonce' ).val();
+        var dcmm_update_nonce = jQuery( '#dcmm_update_nonce' ).val();
 
         // send the data via ajax
         jQuery.ajax({
@@ -36,7 +36,7 @@ jQuery( document ).ready( function() {
                 city: city,
                 state: state,
                 zip: zip,
-                dcmm_member_update_nonce: dcmm_member_update_nonce,
+                dcmm_update_nonce: dcmm_update_nonce,
             },
             // while the ajax is running, display a loading message & disable the submit button
             beforeSend: function() {

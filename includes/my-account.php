@@ -29,96 +29,39 @@ function dcms_my_account_shortcode() {
         // get current user's ID
         $user_id = get_current_user_id();
         $CPT_post_id = get_user_meta( $user_id, 'dcmm_post_id', true );
-        
-        // TODO: user DC_Member class to get this ino
-        $first_name = get_user_meta( $user_id, 'dcmm_first_name', true );
-        $last_name = get_user_meta( $user_id, 'dcmm_last_name', true );
-        $email = get_post_meta( $CPT_post_id, 'dcmm_email', true );
-        $phone = get_user_meta( $user_id, 'dcmm_phone', true );
-        $mailing_address = get_user_meta( $user_id, 'dcmm_mailing_address', true );
-        $membership_status = get_user_meta( $user_id, "dc_membership_status", true );
 
+        // and then get the Member object
+        require_once('class-member.php');
+        $member = new DCMM_Member( $CPT_post_id );
+
+        // TODO: user DC_Member class to get this info
+        // $first_name = get_user_meta( $user_id, 'dcmm_first_name', true );
+        // $last_name = get_user_meta( $user_id, 'dcmm_last_name', true );
+        // $email = get_post_meta( $CPT_post_id, 'dcmm_email', true );
+        // $phone = get_user_meta( $user_id, 'dcmm_phone', true );
+        // $mailing_address = get_user_meta( $user_id, 'dcmm_mailing_address', true );
+        $membership_status = $member->get( 'status' );
+
+        // TODO: do we still need this?
         require_once( 'functions-user-role.php' );
 
         ob_start();
 
-        // check if user is a member
+        // check if user is a member...
         if ( \DCMM_Users\is_organizational_member( $user_id ) ) {
-            // if so, display My Account page
+
+            // ...if so, display My Account page
             ?>
             <h3>Membership Status</h3>
             <p>Your membership is: <b><?php echo esc_html( $membership_status ); ?></b>.</p>
-            <?php
-
-            // nonces for the fields
-            wp_nonce_field( basename( __FILE__ ), 'dcmm_member_update_nonce' );
-            ?>
 
             <form action="" method="post" id="update-own-info">
-                <div class="dcm-metabox">
-                    <h3>Name</h3>
-                    <div class="form-section">
-                        <div class="form-row">
-                            <!-- first name -->
-                            <div class="form-group half">
-                                <label for="dcmm_first_name">First Name:</label>
-                                <input type="text" name="dcmm_first_name" id="dc_medcmm__name" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
-                            </div>
-                                
-                            <!-- last name -->
-                            <div class="form-group half">
-                                <label for="dcmm_last_name">Last Name:</label>
-                                <input type="text" name="dcmm_last_name" id="dc_medcmm_name" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
-                            </div>
-                        </div>
-                    </div>
 
-                    <h3>Contact Info</h3>
-                    <div class="form-section">
-                        
-                        <!-- Email -->
-                        <div class="form-row">
-                            <label for="dcmm_email">Email:</label>
-                            <input type="email" name="dcmm_email" id="dc_medcmm_" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
-                        </div>
+                <?php
+                wp_nonce_field( basename( __FILE__ ), 'dcmm_update_nonce' );
 
-                        <!-- Phone -->
-                        <div class="form-row">
-                            <label for="dcmm_phone">Phone Number:</label>
-                            <input type="tel" name="dcmm_phone" id="dc_medcmm_" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
-                        </div>
-                    </div>
-
-
-                    <!-- Mailing Address -->
-                    <div class="form-section">
-                        <h4>Mailing Address</h4>
-                        <div class="form-row">
-                            <label for="dcmm_mailing_address[street1]" >Street:</label>
-                            <input type="text" name="dcmm_mailing_address[street1]" id="dc_medcmm_ng_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ) . '"' : 'placeholder="Street"'; ?> />
-                            <br />
-                            <input type="text" name="dcmm_mailing_address[street2]" id="dc_medcmm_ng_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
-                        </div>
-
-                        <div class="form-row">
-                            <label for="dcmm_mailing_address[city]" >City:</label>
-                            <input type="text" name="dcmm_mailing_address[city]" id="dc_medcmm_ng_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label for="dcmm_mailing_address[state]" >State:</label>
-                                <input type="text" name="dcmm_mailing_address[state]" id="dc_medcmm_ng_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
-                            </div>
-
-                            <div class="form-group half">
-                                <label for="dcmm_mailing_address[zip]" >Zip:</label>
-                                <input type="text" name="dcmm_mailing_address[zip]" id="dcmm_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
+                $member->get_member_info_form();
+                ?>
 
                 <input type="hidden" name="user_id" value="<?php echo esc_attr( $user_id ); ?>" />
                 <input type="submit" name="update_own_info" value="Update Info" />
@@ -165,8 +108,8 @@ function update_user_data() {
         $CPT_post_id = get_user_meta( $user_id, 'dcmm_post_id', true );
 
         // get the nonces
-        $dcmm_member_update_nonce = isset( $_POST['dcmm_member_update_nonce'] ) 
-            ? sanitize_key( $_POST['dcmm_member_update_nonce'] )
+        $dcmm_member_update_nonce = isset( $_POST['dcmm_update_nonce'] ) 
+            ? sanitize_key( $_POST['dcmm_update_nonce'] )
             : false;
         
         // verify the nonce
@@ -174,6 +117,7 @@ function update_user_data() {
 
             // get the user's info; check if it's set, then sanitize it if so:
 
+            // TODO: handle the situation where the value isn't passed in as a POST variable
             // user's first name
             $first_name = isset( $_POST['first_name'] ) ? sanitize_text_field( $_POST['first_name'] ) : false;
 

@@ -2,9 +2,9 @@
 /**
  * Metaboxes class - extends DCMM_Member
  *
- * @class 		Member_metaboxes
+ * @class 		DCMM_metaboxes
  * @version		1.0.0
- * @package		Yonkers TLC Events / Includes
+ * @package		Membership Management / Includes
  * @category	Class
  * @author 		Digitally Cultured
  */
@@ -13,12 +13,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Member_metaboxes {
+class DCMM_metaboxes {
 
     function __construct() {
         add_action( 'load-post.php', array ( $this, 'post_meta_box_setup' ) );
         add_action( 'load-post-new.php', array ( $this, 'post_meta_box_setup' ) );
-        add_action( 'admin_enqueue_scripts', array( $this, 'dcm_enqueue_admin_scripts' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'dcmm_enqueue_admin_scripts' ) );
 
     }
 
@@ -34,20 +34,18 @@ class Member_metaboxes {
      function add_metaboxes() {
         add_meta_box( 'contact_info', 'Contact Info', array( $this, 'create_metabox_contact_info' ), 'dc-member', 'normal', 'high' );
         add_meta_box( 'membership_status', "Membership Status", array( $this, 'create_metabox_membership_status' ), 'dc-member', 'side' );
-        // add_meta_box( 'event_guest', "Guest Speaker", array( $this, 'create_metabox_guest' ), 'dc-member', 'side' );
-        // add_meta_box( 'event_location', 'Location', array( $this, 'create_metabox_location' ), 'normal', 'default'  );
-        // add_meta_box( 'event_appointment', 'Add to Calendar', array( $this, 'create_metabox_ics' ), 'side', 'normal' );
-        // add_meta_box( 'event_cost', 'Cost of Admission', array( $this, 'create_metabox_ics' ), 'side', 'normal' );
     }
 
     /**
      * Enqueue admin styles
+     * 
+     * @TODO: consider removing dcmm prefix from function name
      *
      * @param [type] $hook
      *
      * @return void
      */
-    function dcm_enqueue_admin_scripts( $hook ) {
+    function dcmm_enqueue_admin_scripts( $hook ) {
         if ( 'edit.php' != $hook
         && 'post.php' != $hook
         && 'post-new.php' != $hook ) {
@@ -55,8 +53,6 @@ class Member_metaboxes {
         }
         wp_enqueue_style( 'dcmm_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
     }
-
-    
 
     /** 
      * callback to create Contact Info metabox
@@ -68,87 +64,11 @@ class Member_metaboxes {
     function create_metabox_contact_info() {
 
         require_once('class-member.php');
+        $CPT_post_id = get_the_id();
 
-        $user_id = get_post_meta( get_the_id(), 'dcmm_wp_user_id', true );
-        $first_name = get_user_meta( $user_id, 'dcmm_first_name', true );
-        $last_name = get_user_meta( $user_id, 'dcmm_last_name', true );
-        $mailing_address = get_user_meta( $user_id, 'dcmm_mailing_address', true );
-        $email = get_post_meta( get_the_id(), 'dcmm_email', true );
-        $phone = get_user_meta( $user_id, 'dcmm_phone', true );
-
-        // nonces for the fields
-        wp_nonce_field( basename( __FILE__ ), 'dcmm_first_name_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dcmm_last_name_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dcmm_mailing_address_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dcmm_email_nonce' );
-        wp_nonce_field( basename( __FILE__ ), 'dcmm_phone_nonce' );
-        ?>
-
-        <div class="dcm-metabox">
-            <h3>Name</h3>
-            <div class="form-section">
-                <div class="form-row">
-                    <!-- first name -->
-                    <div class="form-group half">
-                        <label for="dcmm_first_name">First Name:</label>
-                        <input type="text" name="dcmm_first_name" id="dcmm_first_name" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
-                    </div>
-                        
-                    <!-- last name -->
-                    <div class="form-group half">
-                        <label for="dcmm_last_name">Last Name:</label>
-                        <input type="text" name="dcmm_last_name" id="dcmm_last_name" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
-                    </div>
-                </div>
-            </div>
-
-            <h3>Contact Info</h3>
-            <div class="form-section">
-                
-                <!-- Email -->
-                <div class="form-row">
-                    <label for="dcmm_email">Email:</label>
-                    <input type="email" name="dcmm_email" id="dcmm_email" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
-                </div>
-
-                <!-- Phone -->
-                <div class="form-row">
-                    <label for="dcmm_phone">Phone Number:</label>
-                    <input type="tel" name="dcmm_phone" id="dcmm_phone" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
-                </div>
-            </div>
-
-
-            <!-- Mailing Address -->
-            <div class="form-section">
-                <h4>Mailing Address</h4>
-                <div class="form-row">
-                    <label for="dcmm_mailing_address[street1]" >Street:</label>
-                    <input type="text" name="dcmm_mailing_address[street1]" id="dcmm_mailing_address_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ). '"' : 'placeholder="Street"'; ?> />
-                    <br />
-                    <input type="text" name="dcmm_mailing_address[street2]" id="dcmm_mailing_address_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
-                </div>
-
-                <div class="form-row">
-                    <label for="dcmm_mailing_address[city]" >City:</label>
-                    <input type="text" name="dcmm_mailing_address[city]" id="dcmm_mailing_address_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group half">
-                        <label for="dcmm_mailing_address[state]" >State:</label>
-                        <input type="text" name="dcmm_mailing_address[state]" id="dcmm_mailing_address_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
-                    </div>
-
-                    <div class="form-group half">
-                        <label for="dcmm_mailing_address[zip]" >Zip:</label>
-                        <input type="text" name="dcmm_mailing_address[zip]" id="dcmm_mailing_address_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        <?
+        // TODO: pass in the email or post ID
+        $member = new DCMM_Member( $CPT_post_id );
+        $member->get_member_info_form( );
     }
 
     /**
@@ -160,7 +80,6 @@ class Member_metaboxes {
 
         // Toggle for creating a WP User for this member.
         $wp_user_id = get_post_meta( get_the_id(), "dcmm_wp_user_id", true );
-
         ?>
 
         <?php
@@ -171,11 +90,19 @@ class Member_metaboxes {
      * Create the metabox for the membership status
      */
     function create_metabox_membership_status() {
-        $user_id = get_post_meta( get_the_id(), 'dcmm_wp_user_id', true );
-        $membership_status = get_user_meta( $user_id, "dcmm_status", true );
+
+        require_once('class-member.php');
+        $CPT_post_id = get_the_id();
+
+        // Get the membership status
+        $member = new DCMM_Member( $CPT_post_id );
+        $meta_keys = $member->get_meta_keys();
+        $nonce_prefix = $meta_keys['nonce_prefix'];
+        $membership_status = $member->get( 'status' );
         ?>
+
         <h3>Membership Status</h3>
-        <?php wp_nonce_field( basename( __FILE__ ), 'dcmm_status_nonce' ); ?>
+        <?php wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' ); ?>
         
         <p>
             <label for="dcmm_status">Membership status:</label>
@@ -186,7 +113,6 @@ class Member_metaboxes {
             </select>
         </p>
         <?php
-
     }
 
     // @TODO: reuse this between here & the AJAX save user info in my-account.php
@@ -202,7 +128,13 @@ class Member_metaboxes {
         $post_metakeys = array(
             'dcmm_email',
         );
-        
+
+        require_once('class-member.php');
+
+        // get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+        $nonce_prefix = $meta_keys['nonce_prefix'];
+
         $user_metakeys = array(
             'dcmm_first_name',
             'dcmm_last_name',
@@ -225,7 +157,7 @@ class Member_metaboxes {
             }
 
             // check our nonce to make sure this came from Edit screen 
-            if ( !wp_verify_nonce( $nonce, basename( __FILE__  ) ) ) {
+            if ( !wp_verify_nonce( $nonce, $nonce_prefix ) ) {
                 continue;
             }
 
@@ -279,12 +211,19 @@ class Member_metaboxes {
             }
 
             // check our nonce to make sure this came from Edit screen 
-            if ( !wp_verify_nonce( $nonce, basename( __FILE__  ) ) ) {
+            if ( !wp_verify_nonce( $nonce, $nonce_prefix ) ) {
                 continue;
             }
 
             // get posted data
-            $new_meta_value = ( isset( $_POST[$meta_key] )  ? sanitize_text_field( $_POST[$meta_key] ) : '' );
+            // check if the field is an array...
+            if ( is_array( $_POST[$meta_key] ) ) {
+                // ...if so, sanitize each value in the array...
+                $new_meta_value = array_map( 'sanitize_text_field', $_POST[$meta_key] );
+            } else {
+                // ...if not, sanitize the value
+                $new_meta_value = sanitize_text_field( $_POST[$meta_key] );
+            }
 
             // get meta value of the user
             $meta_value = get_user_meta( $user_id, $meta_key, true);

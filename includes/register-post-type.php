@@ -87,7 +87,7 @@ function dcm_register_post_type() {
 function add_member_meta_boxes() {
 
 	require_once( 'class-member-metaboxes.php' );
-	new \Member_metaboxes();
+	new \DCMM_metaboxes();
 
 }
 
