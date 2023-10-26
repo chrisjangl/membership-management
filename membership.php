@@ -4,7 +4,7 @@
  * Description: Manage your organization's membership.
  * Author: Digitally Cultured
  * Author URI: https://digitallycultured.com/
- * Version: 0.1.0
+ * Version: 0.1.1
  * License: GPLv3
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  */
