@@ -25,15 +25,15 @@ class DCMM_metaboxes {
     /** register our functions that relate to the metaboxes
     */
      function post_meta_box_setup() {
-        add_action( 'add_meta_boxes_dc-member', array( $this, 'add_metaboxes' ) );
+        add_action( 'add_meta_boxes_dcmm-member', array( $this, 'add_metaboxes' ) );
         add_action( 'save_post', array( $this, 'save_meta' ), 10, 2 );
     }
 
     /** register the metaboxes and their callbacks
     **/
      function add_metaboxes() {
-        add_meta_box( 'contact_info', 'Contact Info', array( $this, 'create_metabox_contact_info' ), 'dc-member', 'normal', 'high' );
-        add_meta_box( 'membership_status', "Membership Status", array( $this, 'create_metabox_membership_status' ), 'dc-member', 'side' );
+        add_meta_box( 'contact_info', 'Contact Info', array( $this, 'create_metabox_contact_info' ), 'dcmm-member', 'normal', 'high' );
+        add_meta_box( 'membership_status', "Membership Status", array( $this, 'create_metabox_membership_status' ), 'dcmm-member', 'side' );
     }
 
     /**

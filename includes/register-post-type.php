@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
 function get_post_type() {
-	return 'dc-member';
+	return 'dcmm-member';
 }
 
 function construct_member_post_type( ) {
