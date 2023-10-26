@@ -4,7 +4,7 @@
   "scripts": {
     "css": "node-sass src/scss/main.scss css/member-admin.css --output-style compressed",
     "watch": "npm run css -- --watch",
-    "dist": "npm pack && tar -xzf .tgz --strip-components=1 --inlude='./css/*' --include='./js/*'"
+    "dist": "tar -czf ../plugin.tar.gz --exclude='./assets/src/' --exclude='./node_modules' --exclude='.gitignore' --exclude='package.json' --exclude='package-lock.json' ./"
   },
   "dependencies": {
     "node-sass": "^8.0.0"
