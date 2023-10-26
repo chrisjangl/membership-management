@@ -173,14 +173,14 @@ class DCMM_Member extends WP_User {
 				<div class="form-row">
 					<!-- first name -->
 					<div class="form-group half">
-						<label for="<?php echo $meta_keys['first_name']; ?>">First Name:</label>
-						<input type="text" name="<?php echo $meta_keys['first_name']; ?>" id="<?php echo $meta_keys['first_name']; ?>" <?php echo !empty( $first_name ) ? ' value="' . esc_attr( $first_name ) . '"' : ''; ?> />
+						<label for="<?php echo esc_attr( $meta_keys['first_name'] ); ?>">First Name:</label>
+						<input type="text" name="<?php echo esc_attr( $meta_keys['first_name'] ); ?>" id="<?php echo esc_attr($meta_keys['first_name']); ?>" <?php echo !empty( $first_name ) ? ' value="' . esc_html( $first_name ) . '"' : ''; ?> />
 					</div>
 						
 					<!-- last name -->
 					<div class="form-group half">
-						<label for="<?php echo $meta_keys['last_name']; ?>">Last Name:</label>
-						<input type="text" name="<?php echo $meta_keys['last_name']; ?>" id="<?php echo $meta_keys['last_name']; ?>" <?php echo !empty( $last_name ) ? ' value="' . esc_attr( $last_name ) . '"' : ''; ?> />
+						<label for="<?php echo esc_attr( $meta_keys['last_name'] ); ?>">Last Name:</label>
+						<input type="text" name="<?php echo esc_attr( $meta_keys['last_name'] ); ?>" id="<?php echo esc_attr( $meta_keys['last_name'] ); ?>" <?php echo !empty( $last_name ) ? ' value="' . esc_html( $last_name ) . '"' : ''; ?> />
 					</div>
 				</div>
 			</div>
@@ -190,14 +190,14 @@ class DCMM_Member extends WP_User {
 				
 				<!-- Email -->
 				<div class="form-row">
-					<label for="<?php echo $meta_keys['email']; ?>">Email:</label>
-					<input type="email" name="<?php echo $meta_keys['email']; ?>" id="<?php echo $meta_keys['email']; ?>" <?php echo !empty( $email ) ? ' value="' . esc_attr( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
+					<label for="<?php echo esc_attr( $meta_keys['email'] ); ?>">Email:</label>
+					<input type="email" name="<?php echo esc_attr( $meta_keys['email'] ); ?>" id="<?php echo esc_attr( $meta_keys['email'] ); ?>" <?php echo !empty( $email ) ? ' value="' . esc_html( $email ) . '"' : 'placeholder="member@example.com"'; ?> required />
 				</div>
 
 				<!-- Phone -->
 				<div class="form-row">
-					<label for="<?php echo $meta_keys['phone']; ?>">Phone Number:</label>
-					<input type="tel" name="<?php echo $meta_keys['phone']; ?>" id="<?php echo $meta_keys['phone']; ?>" <?php echo !empty( $phone ) ? ' value="' . esc_attr( $phone ) . '"' : 'placeholder="Phone"'; ?> />
+					<label for="<?php echo esc_attr( $meta_keys['phone'] ); ?>">Phone Number:</label>
+					<input type="tel" name="<?php echo esc_attr( $meta_keys['phone'] ); ?>" id="<?php echo esc_attr( $meta_keys['phone'] ); ?>" <?php echo !empty( $phone ) ? ' value="' . esc_html( $phone ) . '"' : 'placeholder="Phone"'; ?> />
 				</div>
 			</div>
 
@@ -206,26 +206,26 @@ class DCMM_Member extends WP_User {
 			<div class="form-section">
 				<h4>Mailing Address</h4>
 				<div class="form-row">
-					<label for="<?php echo $meta_keys['address']; ?>[street1]" >Street:</label>
-					<input type="text" name="<?php echo $meta_keys['address']; ?>[street1]" id="<?php echo $meta_keys['address']; ?>_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_attr( $mailing_address["street1"] ). '"' : 'placeholder="Street"'; ?> />
+					<label for="<?php echo esc_attr( $meta_keys['address'] ); ?>[street1]" >Street:</label>
+					<input type="text" name="<?php echo esc_attr( $meta_keys['address'] ); ?>[street1]" id="<?php echo esc_attr( $meta_keys['address'] ); ?>_street1" <?php echo !empty( $mailing_address['street1'] ) ? ' value="' . esc_html( $mailing_address["street1"] ). '"' : 'placeholder="Street"'; ?> />
 					<br />
-					<input type="text" name="<?php echo $meta_keys['address']; ?>[street2]" id="<?php echo $meta_keys['address']; ?>_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_attr( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
+					<input type="text" name="<?php echo esc_attr( $meta_keys['address'] ); ?>[street2]" id="<?php echo esc_attr( $meta_keys['address'] ); ?>_street2" <?php echo !empty( $mailing_address['street2'] ) ? ' value="' . esc_html( $mailing_address["street2"] ) . '"' : 'placeholder=""'; ?> />
 				</div>
 
 				<div class="form-row">
-					<label for="<?php echo $meta_keys['address']; ?>[city]" >City:</label>
-					<input type="text" name="<?php echo $meta_keys['address']; ?>[city]" id="<?php echo $meta_keys['address']; ?>_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_attr( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
+					<label for="<?php echo esc_attr( $meta_keys['address'] ); ?>[city]" >City:</label>
+					<input type="text" name="<?php echo esc_attr( $meta_keys['address'] ); ?>[city]" id="<?php echo esc_attr( $meta_keys['address'] ); ?>_city" <?php echo !empty( $mailing_address['city'] ) ? ' value="' . esc_html( $mailing_address["city"] ) . '"' : 'placeholder="City"'; ?> />
 				</div>
 
 				<div class="form-row">
 					<div class="form-group half">
-						<label for="<?php echo $meta_keys['address']; ?>[state]" >State:</label>
-						<input type="text" name="<?php echo $meta_keys['address']; ?>[state]" id="<?php echo $meta_keys['address']; ?>_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_attr( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
+						<label for="<?php echo esc_attr( $meta_keys['address'] ); ?>[state]" >State:</label>
+						<input type="text" name="<?php echo esc_attr( $meta_keys['address'] ); ?>[state]" id="<?php echo esc_attr( $meta_keys['address'] ); ?>_state" <?php echo !empty( $mailing_address['state'] ) ? ' value="' . esc_html( $mailing_address["state"] ) . '"' : 'placeholder="State"'; ?> />
 					</div>
 
 					<div class="form-group half">
-						<label for="<?php echo $meta_keys['address']; ?>[zip]" >Zip:</label>
-						<input type="text" name="<?php echo $meta_keys['address']; ?>[zip]" id="<?php echo $meta_keys['address']; ?>_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_attr( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
+						<label for="<?php echo esc_attr( $meta_keys['address'] ); ?>[zip]" >Zip:</label>
+						<input type="text" name="<?php echo esc_attr( $meta_keys['address'] ); ?>[zip]" id="<?php echo esc_attr( $meta_keys['address'] ); ?>_zip" <?php echo !empty( $mailing_address['zip'] ) ? ' value="' . esc_html( $mailing_address["zip"] ) . '"' : 'placeholder="Zip"'; ?> />
 					</div>
 				</div>
 			</div>

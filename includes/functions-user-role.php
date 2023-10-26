@@ -37,7 +37,7 @@ function add_user_fields($user) {
 
     <?php
     // TODO: list the exams they are / have been registered
-    echo ob_get_clean();
+    echo esc_html( ob_get_clean() );
 }
 add_action( 'show_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
 add_action( 'edit_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
