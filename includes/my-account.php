@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 use \DCMM_Users\is_organizational_member;  
 
 // create shortcode to display the user's My Account page
-function dcms_my_account_shortcode() {
+function dcmm_my_account_shortcode() {
 
     wp_enqueue_style( 'dcmm_member_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
     // enqueue the JS, requiring jQuery as a dependency & passding the AJAX URL
@@ -82,13 +82,13 @@ function dcms_my_account_shortcode() {
         return ob_get_clean();
     }
 }
-add_shortcode( 'dcms_my_account', 'dcms_my_account_shortcode' );
+add_shortcode( 'dcms_my_account', 'dcmm_my_account_shortcode' );
 
 /**
  * Allow users to update their own info, submitted by AJAX
  * 
  */
-function update_user_data() {
+function dcmm_update_user_data() {
 
     // get the logged-in user's ID
     $user_id = get_current_user_id();
@@ -161,5 +161,6 @@ function update_user_data() {
         }
     }
 }
+
 // register the ajax action
-add_action( 'wp_ajax_dcms_update_own_info', 'update_user_data' );
+add_action( 'wp_ajax_dcms_update_own_info', 'dcmm_update_user_data' );

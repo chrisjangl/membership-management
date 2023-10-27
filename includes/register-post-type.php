@@ -32,7 +32,7 @@ function construct_member_post_type( ) {
 function register_action_hooks() {
 	
 	// register our post type
-	\add_action( 'init', '\DCMM_Post_Type\dcm_register_post_type' );
+	\add_action( 'init', '\DCMM_Post_Type\dcmm_register_post_type' );
 
 }
 
@@ -41,7 +41,7 @@ function register_action_hooks() {
  *
  * @return void
  */
-function dcm_register_post_type() {
+function dcmm_register_post_type() {
 
 	$labels = array(
 		'name'               => __( 'Members', 'post type general name' ),
