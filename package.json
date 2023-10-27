@@ -5,7 +5,7 @@
     "css": "node-sass src/scss/main.scss css/member-admin.css --output-style compressed",
     "watch": "npm run css -- --watch",
     "dist": "tar -czf ../dc-membership.tar.gz --exclude='./assets/src/' --exclude='./.git/' --exclude='./node_modules' --exclude='.gitignore' --exclude='package.json' --exclude='package-lock.json' ./",
-    "zip": "zip -r ../dc-membership.zip ./ -x './assets/src/*' './.git/' './node_modules/*' '.gitignore' 'package.json' 'package-lock.json'"
+    "zip": "zip -r ../dc-membership.zip ./ -x './assets/src/*' './.git/*' './node_modules/*' '.gitignore' 'package.json' 'package-lock.json'"
   },
   "dependencies": {
     "node-sass": "^8.0.0"
