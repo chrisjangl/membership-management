@@ -3,13 +3,39 @@
  * Functionality for importing members from a CSV file.
  */
 
-add_action( 'init', 'stop_heartbeat', 1 );
+namespace DCMM_Importer;
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+\add_action( 'init', __NAMESPACE__ . '\stop_heartbeat', 1 );
 function stop_heartbeat() {
     wp_deregister_script('heartbeat');
 }
 
 // add a submenu page to the Members CPT menu
-add_action( 'admin_menu', 'dc_membership_importer_menu' );
+\add_action( 'admin_menu', __NAMESPACE__ . '\membership_importer_menu' );
+
+/**
+ * Gets the slug for the member importer submenu page
+ * 
+ * @return string
+ */
+function get_importer_page_slug() {
+    return 'dcmm-importer';
+}
+
+/**
+ * Gets the slug for the Members CPT menu page
+ * 
+ * @return string
+ */
+function get_membership_menu_page_slug() {
+    include_once( 'class-member.php' );
+    $DCMM_info = new \DCMM_Member();
+    $our_post_type = $DCMM_info->get_post_type();
+
+    return 'edit.php?post_type=' . $our_post_type;
+}
 
 /**
  * Add a submenu page to Import Members via CSV.
@@ -18,14 +44,18 @@ add_action( 'admin_menu', 'dc_membership_importer_menu' );
  *
  * @return void
  */
-function dc_membership_importer_menu() {
+function membership_importer_menu() {
+
+    $membership_menu_page_slug = get_membership_menu_page_slug();
+    $importer_page_slug = get_importer_page_slug();
+
     add_submenu_page(
-        'edit.php?post_type=dc-member',
-        __( 'Import Members', 'dc-membership' ),
-        __( 'Import Members', 'dc-membership' ),
+        $membership_menu_page_slug,
+        __( 'Import Members', 'dcmm-membership' ),
+        __( 'Import Members', 'dcmm-membership' ),
         'manage_options',
-        'dc-membership-importer',
-        'dc_membership_importer_page'
+        $importer_page_slug,
+        __NAMESPACE__ . '\membership_importer_page'
     );
 }
 
@@ -43,12 +73,12 @@ function dc_membership_importer_menu() {
  *
  * @return void
  */
-function dc_membership_importer_page() {
+function membership_importer_page() {
 
     // give report if we've already imported
     // TODO: need to report if there's been errors
     if ( isset( $_GET['imported'] ) ) {
-        echo '<div class="notice notice-success is-dismissible"><p>' . sprintf( _n( '%d member imported.', '%d members imported.', $_GET['imported'], 'dc-membership' ), $_GET['imported'] ) . '</p></div>';
+        echo '<div class="notice notice-success is-dismissible"><p>' . sprintf( _n( '%d member imported.', '%d members imported.', $_GET['imported'], 'default' ), $_GET['imported'] ) . '</p></div>';
     }
     ?>
     <style>
@@ -97,28 +127,28 @@ function dc_membership_importer_page() {
             <p>Some programs will encode your .csv file in a way that might cause the first column to not get imported. If you're running into this issue, try adding a blank column to the left of your data.</p>
         </div>
         <form method="post" enctype="multipart/form-data">
-            <?php wp_nonce_field( 'dc-membership-importer', 'dc-membership-importer-nonce' ); ?>
+            <?php wp_nonce_field( 'dcmm-membership-importer', 'dcmm-membership-importer-nonce' ); ?>
 
             <table class="form-table">
                 <tbody>
                     <tr>
                         <th scope="row">
-                            <label for="dc-membership-importer-file"><?php _e( 'CSV File', 'dc-membership' ); ?></label>
+                            <label for="dcmm-membership-importer-file"><?php _e( 'CSV File', 'default' ); ?></label>
                         </th>
                         <td>
-                            <input type="file" name="dc-membership-importer-file" id="dc-membership-importer-file" />
+                            <input type="file" name="dcmm-membership-importer-file" id="dcmm-membership-importer-file" />
                         </td>
                     </tr>
                 </tbody>
             </table>
-            <?php submit_button( __( 'Import', 'dc-membership' ) ); ?>
+            <?php submit_button( __( 'Import', 'default' ) ); ?>
         </form>
     </div>
     <?php
 }
 
 // handle the import
-add_action( 'admin_init', 'dc_membership_importer_handle_import' );
+\add_action( 'admin_init', __NAMESPACE__ . '\handle_import' );
 
 /**
  * Handle the import.
@@ -155,7 +185,7 @@ add_action( 'admin_init', 'dc_membership_importer_handle_import' );
  *
  * @return void
  */
-function dc_membership_importer_handle_import() {
+function handle_import() {
 
     // skip if we already imported
     if ( isset( $_GET['imported'] ) ) {
@@ -163,22 +193,22 @@ function dc_membership_importer_handle_import() {
     }
 
     // only run if the nonce is set
-    if ( ! isset( $_POST['dc-membership-importer-nonce'] ) ) {
+    if ( ! isset( $_POST['dcmm-membership-importer-nonce'] ) ) {
         return;
     }
 
     // verify the nonce
-    if ( ! wp_verify_nonce( $_POST['dc-membership-importer-nonce'], 'dc-membership-importer' ) ) {
+    if ( ! wp_verify_nonce( $_POST['dcmm-membership-importer-nonce'], 'dcmm-membership-importer' ) ) {
         return;
     }
 
     // only run if a file was uploaded
-    if ( empty( $_FILES['dc-membership-importer-file'] ) ) {
+    if ( empty( $_FILES['dcmm-membership-importer-file'] ) ) {
         return;
     }
 
     // retrieve the uploaded file
-    $file = $_FILES['dc-membership-importer-file'];
+    $file = $_FILES['dcmm-membership-importer-file'];
 
     // only run if a file was actually uploaded
     if ( UPLOAD_ERR_OK !== $file['error'] ) {
@@ -192,6 +222,11 @@ function dc_membership_importer_handle_import() {
     if ( 'csv' !== $extension ) {
         return;
     }
+
+    // get the post type for Members
+    include_once( 'class-member.php' );
+    $DCMM_info = new \DCMM_Member();
+    $our_post_type = $DCMM_info->get_post_type();
 
     // retrieve the file contents
     $csv = file_get_contents( $file['tmp_name'] );
@@ -219,6 +254,7 @@ function dc_membership_importer_handle_import() {
             continue;
         }
 
+        // TODO: These need to be sanitized
         // (maybe) initiliaze info from $data
         $first_name = isset( $data['first name'] ) ? $data['first name'] : null;
         $last_name = isset( $data['last name'] ) ? $data['last name'] : null;
@@ -250,7 +286,7 @@ function dc_membership_importer_handle_import() {
 
         // create the CPT
         $post_id = wp_insert_post( array(
-            'post_type' => 'dc-member',
+            'post_type' => $our_post_type,
             'post_title' => $post_title,
             'post_status' => 'publish',
         ) );
@@ -267,39 +303,39 @@ function dc_membership_importer_handle_import() {
         }
 
         // save the member's email to the post
-        update_post_meta( $post_id, 'dc_member_email', $email );
+        update_post_meta( $post_id, 'dcmm_email', $email );
 
 
         // TODO: I'm repeating this exact code in wp-content/plugins/dc-membership/includes/class-member-metaboxes.php, save_meta(). How can I make it DRY?
         // check if we have a user for this member, and create one if not
-        if ( ! $user_id = get_post_meta( $post_id, 'dc_member_wp_user_id', true ) ) {
+        if ( ! $user_id = get_post_meta( $post_id, 'dcmm_wp_user_id', true ) ) {
             
             include_once( 'class-member.php');
-            $member = new \DC_Member( $email );
+            $member = new \DCMM_Member( $email );
 
             // TODO: need to check if $member is successful
 
             $user_id = $member->get_wp_user_id();
-            update_post_meta( $post_id, 'dc_member_wp_user_id', $user_id );
+            update_post_meta( $post_id, 'dcmm_wp_user_id', $user_id );
         }
 
         // store the post ID in the user's meta
-        update_user_meta( $user_id, 'dc_member_post_id', $post_id );
+        update_user_meta( $user_id, 'dcmm_post_id', $post_id );
 
         // update the WP_User's meta:
         // First name
         if ( isset( $first_name ) ) {
-            update_user_meta( $user_id, 'dc_member_first_name', $first_name );
+            update_user_meta( $user_id, 'dcmm_first_name', $first_name );
         }
 
         // Last name
         if ( isset( $last_name ) ) {
-            update_user_meta( $user_id, 'dc_member_last_name', $last_name );
+            update_user_meta( $user_id, 'dcmm_last_name', $last_name );
         }
 
         // Phone
         if ( isset( $phone ) ) {
-            update_user_meta( $user_id, 'dc_member_phone', $phone );
+            update_user_meta( $user_id, 'dcmm_phone', $phone );
         }
 
         // Address:
@@ -330,17 +366,19 @@ function dc_membership_importer_handle_import() {
 
         // If we had any of them, set the address
         if ( is_array( $address ) ) {
-            update_user_meta( $user_id, 'dc_member_mailing_address', $address );
+            update_user_meta( $user_id, 'dcmm_mailing_address', $address );
         }
 
         // Set the membership status
         if ( isset( $membership_status ) ) {
-            update_user_meta( $user_id, 'dc_membership_status', strtolower($membership_status) );
+            update_user_meta( $user_id, 'dcmm_status', strtolower($membership_status) );
         }
     }
 
     // redirect back to the importer page
-    wp_safe_redirect( admin_url( 'edit.php?post_type=dc-member&page=dc-membership-importer&imported=' . $successful_imports ) );
+    // URL gets built based on the original URL, and pass in the # of successful imports as a URL parameter
+    $redirect_url = get_membership_menu_page_slug() . '&page=' . get_importer_page_slug() . '&imported=' . $successful_imports;
+    wp_safe_redirect( admin_url( $redirect_url ) );
 
     exit;
 }

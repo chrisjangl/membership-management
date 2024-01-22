@@ -132,6 +132,14 @@ class DCMM_Member extends WP_User {
 		}
 	}
 
+	/**
+	 * Gets the post type
+	 * 
+	 */
+	public static function get_post_type() {
+		return self::$our_post_type;
+	}
+
 	public function get_member_info_form() {
 
 		// get the WP User ID
