@@ -28,6 +28,7 @@ class DCMM_Member extends WP_User {
 	protected $cpt_id = null;
 	protected static $our_post_type = 'dcmm-member';
 	protected static $meta_prefix = 'dcmm_';
+	
 	// TODO: use the $meta_prefix property instead; 
 	protected static $meta_keys = array(
 		'nonce_prefix' => 'dcmm_member_info_',
@@ -46,6 +47,12 @@ class DCMM_Member extends WP_User {
 	);
 	// protected static $db_table_name = 'custom_lms_exam_strations';
 	static $instance;
+
+	// Member info
+	protected $first_name = null;
+	protected $last_name = null;
+	protected $email = null;
+	protected $phone = null;
 	protected $membership_status = null;
 
 	/**
@@ -55,7 +62,53 @@ class DCMM_Member extends WP_User {
 	 * 
 	 * TODO: change this to construct using post ID OR email
 	 */
-	function __construct( $key = null ) {
+	public function __construct( $key = null ) {
+
+		// if the version of the plugin is less than 1.0, use the old constructor
+		if ( version_compare( DCMM_VERSION, '1.0.0', '>=' ) ) {
+			$this->construct_v_1_0_0( $key );
+		} else {
+			$this->construct_v_0_1( $key );
+		}
+	}
+
+	/**
+	 * New constructor stores most meta in the CPT instead of the user
+	 */
+	function construct_v_1_0_0( $key = null ) {
+		
+		// let's see if there's a WordPress user associated
+		if ( !is_null ( $key ) ) {
+
+			// were we passed an email address or a post ID?
+			if ( is_numeric( $key ) ) {
+
+				// it's a CPT post ID, add it to the object...
+				$this->cpt_id = $key;
+
+				// ...and get the email address
+				$email = get_post_meta( $key, self::$meta_keys['email'], true );
+			} else {
+
+				// if it's an email address, use that
+				$email = $key;
+			}
+		}
+
+		// load the member's meta (from the CPT) onto the Member object
+		$this->load_member_meta( $this->cpt_id );
+	
+		// register meta boxes
+		// TODO: move this elsewhere
+		require_once( 'class-member-metaboxes.php' );
+		new DCMM_metaboxes();
+
+	}
+
+	/**
+	 * Old constructor used WP User for a lot of meta
+	 */
+	function construct_v_0_1( $key = null ) {
 		
 		// let's see if there's a WordPress user associated
 		if ( !is_null ( $key ) ) {
@@ -140,34 +193,33 @@ class DCMM_Member extends WP_User {
 		return self::$our_post_type;
 	}
 
+	/**
+	 * Output the HTML for the Member Info inputs for the Member post type
+	 * 
+	 * Usually used on the Edit screen for the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * @uses \DCMM_Member::get()
+	 * 
+	 * @return void
+	 */
 	public function get_member_info_form() {
-
-		// get the WP User ID
-		if ( $this->member_id ) {
-			$user_id = $this->member_id;
-		} else {
-			$user_id = get_current_user_id();
-		}
 		 
 		// get the CPT post ID
 		if ( $this->cpt_id ) {
 			$cpt_id = $this->cpt_id;
 		} 
 
-		
-
 		// get the meta keys for the CPT
 		$meta_keys = \DCMM_Member::get_meta_keys();
 
 		$nonce_prefix = $meta_keys['nonce_prefix'];
 
-		$user_id = get_post_meta( $cpt_id, 'dcmm_wp_user_id', true );
-		// get the user meta, using the meta keys from above
-		$first_name = isset( $this->first_name ) ? $this->first_name : get_user_meta( $user_id, $meta_keys['first_name'], true );
-		$last_name = isset( $this->last_name ) ? $this->last_name : get_user_meta( $user_id, $meta_keys['last_name'], true );
-		$mailing_address = get_user_meta( $user_id, $meta_keys['address'], true );
-		$email = get_post_meta( $cpt_id, $meta_keys['email'], true );
-		$phone = isset( $this->phone ) ? $this->phone : get_user_meta( $user_id, $meta_keys['phone'], true );
+		$first_name = $this->get( 'first_name' );
+		$last_name = $this->get( 'last_name' );
+		$email = $this->get( 'email' );
+		$mailing_address = $this->get( 'address' );
+		$phone = $this->get( 'phone' );
 
 		// nonces for each meta field
 		foreach ( $meta_keys as $meta_key ) {
@@ -246,6 +298,8 @@ class DCMM_Member extends WP_User {
 	/**
 	 * Gets the ID of the associated WP User, as stored in our DCMM_Member object
 	 * 
+	 * @return int The ID of the WP User
+	 * 
 	 */
 	function get_wp_user_id() {
 		return $this->member_id;
@@ -254,24 +308,200 @@ class DCMM_Member extends WP_User {
 	/**
 	 * Loads the user's meta into the object
 	 * 
-	 * @TODO: create function to load the user's meta into the object
+	 * @param int $cpt_id The CPT post ID of the Member
 	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * @uses \DCMM_Member::load_first_name_onto_member_object()
+	 * @uses \DCMM_Member::load_last_name_onto_member_object()
+	 * @uses \DCMM_Member::load_email_onto_member_object()
+	 * @uses \DCMM_Member::load_phone_onto_member_object()
+	 * @uses \DCMM_Member::load_mailing_address_onto_member_object()
 	 */
-	protected function load_user_meta( $member_ID = null ) {
+	protected function load_member_meta( $cpt_id = null ) {
 
-		if ( is_null( $member_ID ) ) {
-			$member_ID = $this->member_id;
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
 		}
 
 		// get the meta keys for the CPT
 		$meta_keys = \DCMM_Member::get_meta_keys();
 
+		// load member's first name
+		$this->load_first_name_onto_member_object( $cpt_id );
+
+		// load member's last name
+		$this->load_last_name_onto_member_object( $cpt_id );
+
+		// load member's email
+		$this->load_email_onto_member_object( $cpt_id );
+
+		// load member's phone
+		$this->load_phone_onto_member_object( $cpt_id );
+
+		// load member's mailing address
+		$this->load_mailing_address_onto_member_object( $cpt_id );
+
+	}
+
+	/**
+	 * Loads the user's first name into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_first_name_onto_member_object( $cpt_id = null ) {
+
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the user's first name
+		$this->first_name = get_post_meta( $cpt_id, $meta_keys['first_name'], true );
+	}
+
+	/**
+	 * Loads the user's last name into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_last_name_onto_member_object( $cpt_id = null ) {
+
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the user's last name
+		$this->last_name = get_post_meta( $cpt_id, $meta_keys['last_name'], true );
+	}
+
+	/**
+	 * Loads the user's membership status into the Member object
+	 * 
+	 * @param int $member_ID The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_membership_status_onto_member_object( $cpt_id = null ) {
+
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the user's last name
+		$this->membership_status = get_post_meta( $cpt_id, $meta_keys['status'], true );
+	}
+
+	/**
+	 * Loads the user's email into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_email_onto_member_object( $cpt_id = null ) {
+
+		// if we weren't passed a CPT ID, use the object's CPT ID
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the member's email
+		$email = get_post_meta( $cpt_id, $meta_keys['email'], true );
+
+		// if $email isn't a WP, set it to the object
+		if ( ! is_wp_error( $email ) ) {
+			$this->email = $email;
+		}	
+	}
+
+	/**
+	 * Loads the user's phone into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_phone_onto_member_object( $cpt_id = null ) {
+
+		if ( is_null( $cpt_id ) ) {
+
+			// TODO: decide do i want to use cpt_id or cpt_id?
+			$cpt_id = $this->cpt_id;
+
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the member's phone
+		$phone = get_post_meta( $cpt_id, $meta_keys['phone'], true );
+
+		// if $phone isn't a WP, set it to the object
+		if ( ! is_wp_error( $phone ) ) {
+			$this->phone = $phone;
+		}
+	}
+
+	/**
+	 * Loads the user's mailing address into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_mailing_address_onto_member_object( $cpt_id = null ) {
+
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the member's mailing address
+		$mailing_address = get_post_meta( $cpt_id, $meta_keys['mailing_address'], true );
+
+		// if $mailing_address isn't a WP, set it to the object
+		if ( ! is_wp_error( $mailing_address ) ) {
+			$this->mailing_address = $mailing_address;
+		}
 	}
 
 	/**
 	 * Get member info from the Member post type
 	 * 
-	 * TODO: figure out how to differentiate between post meta & user meta
+	 * @param string $key The meta key to get
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return mixed The value of the meta key
 	 */
 	public function get( $key ) {
 
@@ -289,7 +519,7 @@ class DCMM_Member extends WP_User {
 		}
 
 		// get the meta value
-		$meta_value = get_user_meta( $this->member_id, $meta_keys[$key], true );
+		$meta_value = get_post_meta( $this->cpt_id, $meta_keys[$key], true );
 
 		// if $meta_value isn't a WP error, return it
 		if ( !is_wp_error( $meta_value ) ) {

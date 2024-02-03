@@ -9,7 +9,9 @@
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly      
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly    
+
+define( 'DCMM_VERSION', '1.0.0' );
 
 /**
  * Member
