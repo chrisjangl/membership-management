@@ -53,6 +53,7 @@ class DCMM_Member extends WP_User {
 	protected $last_name = null;
 	protected $email = null;
 	protected $phone = null;
+	protected $mailing_address = null;
 	protected $membership_status = null;
 
 	/**
@@ -486,12 +487,55 @@ class DCMM_Member extends WP_User {
 		$meta_keys = \DCMM_Member::get_meta_keys();
 
 		// get the member's mailing address
-		$mailing_address = get_post_meta( $cpt_id, $meta_keys['mailing_address'], true );
+		$mailing_address = get_post_meta( $cpt_id, $meta_keys['address'], true );
 
 		// if $mailing_address isn't a WP, set it to the object
 		if ( ! is_wp_error( $mailing_address ) ) {
 			$this->mailing_address = $mailing_address;
 		}
+	}
+
+	/**
+	 * Save the Member's info to CPT post meta
+	 * 
+	 * @param string $key The meta key to save. Use the key from \DCMM_Member::get_meta_keys()
+	 * @param mixed $value The value to save
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return bool True if the meta was saved, false if not
+	 */
+	public function save( $key, $value ) {
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// check if the $key passed in is a valid meta key
+		if ( !isset( $meta_keys[$key] ) ) {
+			return false;
+		}
+
+		// get current value of the meta key
+		$current_value = get_post_meta( $this->cpt_id, $meta_keys[$key], true );
+
+		// if new meta was added, and there was no previous value, add it
+		if ( $value && '' == $current_value ) {
+			add_post_meta( $this->cpt_id, $meta_keys[$key], $value, true );
+		}
+
+		// if there was a previous value, but it doesn't match new value, update it
+		elseif ( $value && $value != $current_value ) {
+			update_post_meta( $this->cpt_id, $meta_keys[$key], $value );
+		}
+
+		// if there is no new value, but there was a previous value, delete it
+		elseif ( '' == $value && $current_value ) {
+			delete_post_meta( $this->cpt_id, $meta_keys[$key], $current_value );
+		}
+
+		// and then make sure to update the Member object
+		$this->load_member_meta( $this->cpt_id );
+
+		return true;
 	}
 
 	/**
@@ -504,11 +548,6 @@ class DCMM_Member extends WP_User {
 	 * @return mixed The value of the meta key
 	 */
 	public function get( $key ) {
-
-		// make sure we have a WP User ID
-		if ( is_null( $this->wp_user_id ) ) {
-			return false;
-		}
 
 		// get the meta keys for the CPT
 		$meta_keys = $this::get_meta_keys();

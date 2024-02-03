@@ -128,28 +128,34 @@ class DCMM_metaboxes {
             return $post_id;
         }
 
+        // list of keys to 
         $post_metakeys = array(
-            'dcmm_email',
-            'dcmm_first_name',
-            'dcmm_last_name',
-            'dcmm_phone',
-            'dcmm_mailing_address',
-            'dcmm_status'
+            'email',
+            'first_name',
+            'last_name',
+            'phone',
+            'address',
+            'status'
         );
 
         require_once('class-member.php');
+        $member = new \DCMM_Member( $post_id );
 
         // get the meta keys for the CPT
-		$meta_keys = \DCMM_Member::get_meta_keys();
+		$meta_keys = $member::get_meta_keys();
         $nonce_prefix = $meta_keys['nonce_prefix'];
 
         $user_metakeys = array(
         );
 
         
-        // loop through post fields and save the data
-        foreach ( $post_metakeys as $meta_key ) {
+        // loop through each field we want to save ...
+        foreach ( $post_metakeys as $post_keys_index ) {
 
+            // get the meta key for the field
+            $meta_key = $meta_keys[$post_keys_index];
+
+            // build the nonce key based on the meta key
             $nonce_key = $meta_key . '_nonce';
 
             // get and sanitize the nonce, if we have one
@@ -164,8 +170,7 @@ class DCMM_metaboxes {
                 continue;
             }
 
-            // get posted data
-            // $new_meta_value = ( isset( $_POST[$meta_key] )  ? sanitize_text_field( $_POST[$meta_key] ) : '' );
+            // get posted data, checking if the field is an array...
             if ( is_array( $_POST[$meta_key] ) ) {
                 // ...if so, sanitize each value in the array...
                 $new_meta_value = array_map( 'sanitize_text_field', $_POST[$meta_key] );
@@ -174,23 +179,8 @@ class DCMM_metaboxes {
                 $new_meta_value = sanitize_text_field( $_POST[$meta_key] );
             }
 
-            // get meta value of the post
-            $meta_value = get_post_meta( $post_id, $meta_key, true );
-
-            // if new meta was added, and there was no previous value, add it
-            if ( $new_meta_value && empty( $meta_value ) ) {
-                add_post_meta( $post_id, $meta_key, $new_meta_value, true );
-            }
-
-            // if there was existing meta, but it doesn't match the new meta, update it
-            elseif ( $new_meta_value && $new_meta_value != $meta_value ) {
-                update_post_meta( $post_id, $meta_key, $new_meta_value );
-            }
-
-            // if there is no new meta, but an old one exists, delete it
-            elseif ( '' == $new_meta_value && $meta_value ) {
-                delete_post_meta( $post_id, $meta_key, $meta_value );
-            }
+            // update the object & post meta
+            $member->save( $post_keys_index, $new_meta_value );
         }
 
         // Not using WP user functionality for now - come back to this in the future
