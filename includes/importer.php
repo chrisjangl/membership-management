@@ -7,11 +7,6 @@ namespace DCMM_Importer;
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-\add_action( 'init', __NAMESPACE__ . '\stop_heartbeat', 1 );
-function stop_heartbeat() {
-    wp_deregister_script('heartbeat');
-}
-
 // add a submenu page to the Members CPT menu
 \add_action( 'admin_menu', __NAMESPACE__ . '\membership_importer_menu' );
 
@@ -30,6 +25,7 @@ function get_importer_page_slug() {
  * @return string
  */
 function get_membership_menu_page_slug() {
+
     include_once( 'class-member.php' );
     $DCMM_info = new \DCMM_Member();
     $our_post_type = $DCMM_info->get_post_type();
@@ -78,7 +74,8 @@ function membership_importer_page() {
     // give report if we've already imported
     // TODO: need to report if there's been errors
     if ( isset( $_GET['imported'] ) ) {
-        echo '<div class="notice notice-success is-dismissible"><p>' . sprintf( _n( '%d member imported.', '%d members imported.', $_GET['imported'], 'default' ), $_GET['imported'] ) . '</p></div>';
+        $imported_count = absint( $_GET['imported'] );
+        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( sprintf( _n( '%d member imported.', '%d members imported.', $imported_count, 'default' ), $imported_count ) ) . '</p></div>';
     }
     ?>
     <style>
@@ -95,6 +92,7 @@ function membership_importer_page() {
     <div class="wrap">
         <h1><?php _e( 'Import Members', 'dc-membership' ); ?></h1>
         <p>You'll need to format your .csv with the headings shown below. <b>Membership Status</b> should be either "Active" or "Inactive".</p>
+        <p><b>NOTE:</b> At present, this will only <i>import</i> members. It will not update existing members.</p>
         <table class="borders">
             <tbody>
                 <tr>
@@ -168,10 +166,10 @@ function membership_importer_page() {
  * - Zip
  * 
  * TODO: allow user to map fields to their own column headings
- * TODO: sanitize inputs 
  * TODO: Create error handlers and messages
  * TODO: Create a log of imports
  * TODO: Create way to update existing members
+ * TODO: Suppress email notifications when creating user!!
  * 
  * @uses wp_verify_nonce()
  * @uses wp_safe_redirect()
@@ -187,6 +185,10 @@ function membership_importer_page() {
  */
 function handle_import() {
 
+    require_once( ABSPATH . 'wp-admin/includes/file.php' );
+    WP_Filesystem();
+    global $wp_filesystem;
+
     // skip if we already imported
     if ( isset( $_GET['imported'] ) ) {
         return;
@@ -198,8 +200,13 @@ function handle_import() {
     }
 
     // verify the nonce
-    if ( ! wp_verify_nonce( $_POST['dcmm-membership-importer-nonce'], 'dcmm-membership-importer' ) ) {
+    if ( ! wp_verify_nonce( sanitize_text_field( $_POST['dcmm-membership-importer-nonce'] ), 'dcmm-membership-importer' ) ) {
         return;
+    }
+
+    // Check user capabilities
+    if ( ! current_user_can( 'upload_files' ) ) {
+        wp_die( __( 'Sorry, you do not have the required permissions to upload files.' ) );
     }
 
     // only run if a file was uploaded
@@ -215,6 +222,12 @@ function handle_import() {
         return;
     }
 
+    // make sure we're dealing with a CSV
+    if ( ! wp_check_filetype( $file['name'], array( 'csv' ) ) ) {
+        return false;
+    }
+
+
     // retrieve the file extension
     $extension = pathinfo( $file['name'], PATHINFO_EXTENSION );
 
@@ -222,14 +235,17 @@ function handle_import() {
     if ( 'csv' !== $extension ) {
         return;
     }
-
+    
     // get the post type for Members
     include_once( 'class-member.php' );
     $DCMM_info = new \DCMM_Member();
     $our_post_type = $DCMM_info->get_post_type();
 
+
+    // start processing the CSV data
+
     // retrieve the file contents
-    $csv = file_get_contents( $file['tmp_name'] );
+    $csv = $wp_filesystem->get_contents( $file['tmp_name'] );
 
     // convert the CSV to an array
     $rows = array_map( 'str_getcsv', explode( "\n", $csv ) );
@@ -246,6 +262,7 @@ function handle_import() {
 
     // loop through the rows
     foreach ( $rows as $row ) {
+
         // combine the header and row into an associative array
         $data = array_combine( $header, $row );
 
@@ -254,34 +271,34 @@ function handle_import() {
             continue;
         }
 
-        // TODO: These need to be sanitized
         // (maybe) initiliaze info from $data
-        $first_name = isset( $data['first name'] ) ? $data['first name'] : null;
-        $last_name = isset( $data['last name'] ) ? $data['last name'] : null;
-        $email = isset( $data['email'] ) ? $data['email'] : null;
+        $first_name = isset( $data['first name'] ) ? sanitize_text_field( $data['first name'] ) : null;
+        $last_name = isset( $data['last name'] ) ? sanitize_text_field( $data['last name'] ): null;
+        $email = isset( $data['email'] ) ? sanitize_email( $data['email'] ): null;
+        $phone = isset( $data['phone'] ) ? preg_replace('/[^0-9]/', '', $data['phone'] ) : null;
+        $membership_status = isset( $data['membership status'] ) ? sanitize_text_field( $data['membership status'] ) : null;
+        $street = isset( $data['street'] ) ? sanitize_text_field( $data['street'] ) : null;
+        $street2 = isset( $data['street 2'] ) ? sanitize_text_field( $data['street 2'] ) : null;
+        $city = isset( $data['city'] ) ? sanitize_text_field( $data['city'] ) : null;
+        $state = isset( $data['state'] ) ? sanitize_text_field( $data['state'] ) : null;
+        $zip = isset( $data['zip'] ) ? sanitize_text_field( $data['zip'] ) : null;
 
-        // bail if we don't have an email
-        if ( ! isset( $email ) ) {
-            continue;
+        // Build post title (LastName, FirstName)
+        $post_title = '';
+        if ( !is_null( $last_name ) && !empty( $last_name ) ) {
+            $post_title .= $last_name;
+
+            if ( !is_null( $first_name ) && !empty( $first_name ) ) {
+                $post_title .= ', ';
+            }
         }
 
-        $phone = isset( $data['phone'] ) ? $data['phone'] : null;
-        $membership_status = isset( $data['membership status'] ) ? $data['membership status'] : null;
-        $street = isset( $data['street'] ) ? $data['street'] : null;
-        $street2 = isset( $data['street 2'] ) ? $data['street 2'] : null;
-        $city = isset( $data['city'] ) ? $data['city'] : null;
-        $state = isset( $data['state'] ) ? $data['state'] : null;
-        $zip = isset( $data['zip'] ) ? $data['zip'] : null;
-
-
-        // Build post title (First Name + Last Name)
-        $post_title = '';
-        if ( isset( $first_name ) ) {
+        if ( !is_null( $first_name ) && !empty( $first_name ) ) {
             $post_title .= $first_name;
         }
 
-        if ( isset( $last_name ) ) {
-            $post_title .= ' ' . $last_name;
+        if ( empty( $post_title ) ) {
+            $post_title = 'unknown member';
         }
 
         // create the CPT
@@ -291,9 +308,7 @@ function handle_import() {
             'post_status' => 'publish',
         ) );
 
-        if ( is_wp_error( $post_id ) ) {
-
-            // record the email address 
+        if ( is_wp_error( $post_id ) ) { 
 
             $failed_imports++;
 
@@ -301,41 +316,49 @@ function handle_import() {
         } else {
             $successful_imports++;
         }
-
-        // save the member's email to the post
-        update_post_meta( $post_id, 'dcmm_email', $email );
-
-
+        
         // TODO: I'm repeating this exact code in wp-content/plugins/dc-membership/includes/class-member-metaboxes.php, save_meta(). How can I make it DRY?
         // check if we have a user for this member, and create one if not
-        if ( ! $user_id = get_post_meta( $post_id, 'dcmm_wp_user_id', true ) ) {
+        // if ( ! $user_id = get_post_meta( $post_id, 'dcmm_wp_user_id', true ) ) {
             
-            include_once( 'class-member.php');
-            $member = new \DCMM_Member( $email );
+            //     include_once( 'class-member.php');
+            //     $member = new \DCMM_Member( $email );
+            
+            //     // TODO: need to check if $member is successful
+            
+            //     $user_id = $member->get_wp_user_id();
+            //     update_post_meta( $post_id, 'dcmm_wp_user_id', $user_id );
+        // }
+            
+            // store the post ID in the user's meta
+            // update_user_meta( $user_id, 'dcmm_post_id', $post_id );
 
-            // TODO: need to check if $member is successful
+        // get the newly created CPT post, as a Member object
+        require_once( 'class-member.php' );
+        $member = new \DCMM_Member( $post_id );
 
-            $user_id = $member->get_wp_user_id();
-            update_post_meta( $post_id, 'dcmm_wp_user_id', $user_id );
-        }
+        // get meta keys for the CPT
+        $meta_keys = $member->get_meta_keys();
 
-        // store the post ID in the user's meta
-        update_user_meta( $user_id, 'dcmm_post_id', $post_id );
-
-        // update the WP_User's meta:
+        // update the CPT post's meta with Member info:
         // First name
         if ( isset( $first_name ) ) {
-            update_user_meta( $user_id, 'dcmm_first_name', $first_name );
+            $member->save( 'first_name', $first_name );
         }
 
         // Last name
         if ( isset( $last_name ) ) {
-            update_user_meta( $user_id, 'dcmm_last_name', $last_name );
+            $member->save( 'last_name', $last_name );
+        }
+
+        // Email
+        if ( isset( $email ) ) {
+            $member->save( 'email', $email );
         }
 
         // Phone
         if ( isset( $phone ) ) {
-            update_user_meta( $user_id, 'dcmm_phone', $phone );
+            $member->save( 'phone', $phone );
         }
 
         // Address:
@@ -366,12 +389,12 @@ function handle_import() {
 
         // If we had any of them, set the address
         if ( is_array( $address ) ) {
-            update_user_meta( $user_id, 'dcmm_mailing_address', $address );
+            $member->save( 'address', $address );
         }
 
         // Set the membership status
         if ( isset( $membership_status ) ) {
-            update_user_meta( $user_id, 'dcmm_status', strtolower($membership_status) );
+            $member->save( 'status', $membership_status );
         }
     }
 
