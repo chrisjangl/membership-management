@@ -107,7 +107,8 @@ function dcmm_custom_columns( $default_columns ) {
 	$dcmm_columns = array(
 		'cb' => $default_columns['cb'],
 		'name' => 'Name',
-		'status' => __( 'Membership Status', 'dcmm' )
+		'status' => __( 'Membership Status', 'dcmm' ),
+		'address' => __( 'Address', 'dcmm' )
 	);
 
 	return $dcmm_columns;
@@ -128,6 +129,18 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 	switch ( $column_name ) {
 		case 'name':
 			echo $member->get('last_name') . ', ' . $member->get('first_name');
+			break;
+		case 'address':
+			$address = $member->get('address');
+			$street_1 = $address['street1'];
+			$street_2 = $address['street2'];
+			$city = $address['city'];
+			$state = $address['state'];
+			$zip = $address['zip'];
+
+			$formatted_address = ( $street_1 ? $street_1 . "<br>" : '' ) . ( $street_2 ? $street_2 . "<br>": '' ) . ( $city ? $city . ", " : "" ) . ( $state ? $state . " " : "" ) . ' ' . $zip;
+
+			echo $formatted_address;
 			break;
 		case 'status':
 			echo $member->get( 'status');
