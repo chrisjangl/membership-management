@@ -30,9 +30,23 @@ function construct_member_post_type( ) {
  * register different functions to fire on action hooks
  */
 function register_action_hooks() {
+
+	$our_post_type = get_post_type();
 	
 	// register our post type
 	\add_action( 'init', '\DCMM_Post_Type\dcmm_register_post_type' );
+
+	// customize the columns shown in the All Members screen
+	\add_action( "manage_{$our_post_type}_posts_columns", '\DCMM_Post_Type\dcmm_custom_columns', 10, 1 );
+
+	// populate our custom columns
+	\add_action( "manage_{$our_post_type}_posts_custom_column", '\DCMM_Post_Type\dcmm_populate_custom_columns', 10, 2 );
+
+	// make the columns sortable
+	\add_filter( "manage_edit-{$our_post_type}_sortable_columns", '\DCMM_Post_Type\dcmm_sortable_columns' );
+
+	// handle custom sorting
+	\add_action( 'pre_get_posts', '\DCMM_Post_Type\dcmm_sortable_columns_orderby' );
 
 }
 
@@ -79,7 +93,101 @@ function dcmm_register_post_type() {
 }
 
 /**
- * add meta box to the edit Member screen, associate an exam with that course
+ * Customize the columns shown in the All Members screen.
+ * 
+ * Add a Name column and a Membership Status column, and brings the 
+ * cb column from what we were passed.
+ * 
+ * @param array $default_columns
+ * 
+ * @return array $columns
+ */
+function dcmm_custom_columns( $default_columns ) {
+
+	$dcmm_columns = array(
+		'cb' => $default_columns['cb'],
+		'name' => 'Name',
+		'status' => __( 'Membership Status', 'dcmm' )
+	);
+
+	return $dcmm_columns;
+}
+
+/**
+ * Populate our custom columns
+ * 
+ * @param string $column_name
+ * @param int $post_id
+ * 
+ * @return void
+ */
+function dcmm_populate_custom_columns( $column_name, $post_id ) {
+	
+	$member = new \DCMM_Member( $post_id );
+
+	switch ( $column_name ) {
+		case 'name':
+			echo $member->get('last_name') . ', ' . $member->get('first_name');
+			break;
+		case 'status':
+			echo $member->get( 'status');
+			break;
+	}
+}
+
+/**
+ * Make the columns sortable
+ * 
+ * @param array $columns
+ * 
+ * @return array $columns
+ */
+function dcmm_sortable_columns( $columns ) {
+	
+	$columns['name'] = 'dcmm_name';
+	$columns['status'] = 'dcmm_status';
+
+	return $columns;
+}
+
+/**
+ * Handle custom sorting for columns.
+ * 
+ * Handles sorting for the Name and Status columns.
+ * 
+ * @param WP_Query $query
+ * 
+ * @return void
+ */
+function dcmm_sortable_columns_orderby( $query ) {
+	
+	if( ! is_admin()  || ! $query->is_main_query() ) {
+		return;
+	}
+
+	$orderby = $query->get( 'orderby' );
+
+	$member = new \DCMM_Member();
+	$meta_keys = $member->get_meta_keys();
+
+
+	if( 'dcmm_name' == $orderby ) {
+		$meta_key = $meta_keys['last_name'];
+		$query->set( 'meta_key', $meta_key );
+		$query->set( 'orderby', 'meta_value' );
+	}
+
+	if( 'dcmm_status' == $orderby ) {
+		$meta_key = $meta_keys['status'];
+		$query->set( 'meta_key', $meta_key );
+		$query->set( 'orderby', 'meta_value' );
+	}
+
+}
+
+
+/**
+ * add our meta boxes to the edit Member screen
  * 
  * TODO: link to the metabox class
  * @return void
