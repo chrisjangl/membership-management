@@ -316,22 +316,6 @@ function handle_import() {
         } else {
             $successful_imports++;
         }
-        
-        // TODO: I'm repeating this exact code in wp-content/plugins/dc-membership/includes/class-member-metaboxes.php, save_meta(). How can I make it DRY?
-        // check if we have a user for this member, and create one if not
-        // if ( ! $user_id = get_post_meta( $post_id, 'dcmm_wp_user_id', true ) ) {
-            
-            //     include_once( 'class-member.php');
-            //     $member = new \DCMM_Member( $email );
-            
-            //     // TODO: need to check if $member is successful
-            
-            //     $user_id = $member->get_wp_user_id();
-            //     update_post_meta( $post_id, 'dcmm_wp_user_id', $user_id );
-        // }
-            
-            // store the post ID in the user's meta
-            // update_user_meta( $user_id, 'dcmm_post_id', $post_id );
 
         // get the newly created CPT post, as a Member object
         require_once( 'class-member.php' );
