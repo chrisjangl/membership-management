@@ -56,7 +56,7 @@ function dcmm_register_post_type() {
 		'not_found'          => __( 'No Members found' ),
 		'not_found_in_trash' => __( 'No Members found in the Trash' ), 
 		'parent_item_colon'  => '',
-		'menu_name'          => 'Members'
+		'menu_name'          => 'Members',
 	);
 
 	$args = array(
@@ -69,7 +69,7 @@ function dcmm_register_post_type() {
 		'slug'			=> 'member',
 		'exclude_from_search' => true,
 		'menu_position' => 5,
-		'menu_icon'		=> 'dashicons-user', 
+		'menu_icon'		=> 'dashicons-money', 
 		'supports'      => array( 'title', 'custom_fields' ),
 		'has_archive'   => false,
 	);
