@@ -137,18 +137,29 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 			break;
 		case 'address':
 			$address = $member->get('address');
-			$street_1 = $address['street1'];
-			$street_2 = $address['street2'];
-			$city = $address['city'];
-			$state = $address['state'];
-			$zip = $address['zip'];
 
-			$formatted_address = ( $street_1 ? $street_1 . "<br>" : '' ) . ( $street_2 ? $street_2 . "<br>": '' ) . ( $city ? $city . ", " : "" ) . ( $state ? $state . " " : "" ) . ' ' . $zip;
+			if ( ! is_array( $address ) || empty( $address ) ) {
+				echo __( '---', 'dcmm' );
+				
+			} else {
 
-			echo $formatted_address;
+				$street_1 = isset ( $address['street1'] ) ? $address['street1'] : '';
+				$street_2 = isset ( $address['street2'] ) ? $address['street2'] : '';
+				$city = isset ( $address['city'] ) ? $address['city'] : '';
+				$state = isset ( $address['state'] ) ? $address['state'] : '';
+				$zip = isset ( $address['zip'] ) ? $address['zip'] : '';
+
+				$formatted_address = ( $street_1 ? $street_1 . "<br>" : '' ) . ( $street_2 ? $street_2 . "<br>": '' ) . ( $city ? $city . ", " : "" ) . ( $state ? $state . " " : "" ) . ' ' . $zip;
+				
+				echo $formatted_address;
+			}
 			break;
 		case "phone":
-			echo $member->get('phone');
+			if ( ! $member->get( 'phone' ) ) {
+				echo __( '---', 'dcmm' );
+			} else {
+				echo $member->get('phone');
+			}
 			break;
 		case 'status':
 			echo $member->get( 'status');

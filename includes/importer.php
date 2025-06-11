@@ -324,6 +324,9 @@ function handle_import() {
         // get meta keys for the CPT
         $meta_keys = $member->get_meta_keys();
 
+        // Initialize address array to avoid undefined variable warning
+        $address = [];
+
         // update the CPT post's meta with Member info:
         // First name
         if ( isset( $first_name ) ) {
@@ -371,8 +374,8 @@ function handle_import() {
             $address['zip'] = $zip;
         }
 
-        // If we had any of them, set the address
-        if ( is_array( $address ) ) {
+        // If we had any address fields, set the address
+        if ( !empty( $address ) && is_array( $address ) ) {
             $member->save( 'address', $address );
         }
 
