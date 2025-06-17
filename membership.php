@@ -27,4 +27,8 @@ include( 'includes/my-account.php' );
  * Importer
  */
 include( 'includes/importer.php' );
-  
+
+/**
+ * Settings
+ */
+include( 'includes/settings.php' );
