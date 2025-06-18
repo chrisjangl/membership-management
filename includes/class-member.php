@@ -33,6 +33,7 @@ class DCMM_Member extends WP_User {
 	protected static $meta_keys = array(
 		'nonce_prefix' => 'dcmm_member_info_',
 		'status'	=>	'dcmm_' . 'status',
+		'wp_user_id' => 'dcmm_' . 'wp_user_id',
 		'first_name' => 'dcmm_' . 'first_name',
 		'last_name' => 'dcmm_' . 'last_name',
 		'email' => 'dcmm_' . 'email',
@@ -45,7 +46,7 @@ class DCMM_Member extends WP_User {
 		'zip' => 'dcmm_' . 'zip',
 		
 	);
-	// protected static $db_table_name = 'custom_lms_exam_strations';
+
 	static $instance;
 
 	// Member info
@@ -297,17 +298,109 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
+	 * Checks if there is a WP User associated with this Member
+	 * 
+	 * @return bool True if there is a WP User, false if not
+	 */
+	function has_wp_user() {
+		return !empty( $this->member_id );
+	}
+
+	/**
 	 * Gets the ID of the associated WP User, as stored in our DCMM_Member object
 	 * 
-	 * @return int The ID of the WP User
-	 * 
+	 * @return int The ID of the WP User | FALSE if there is no WP User
 	 */
 	function get_wp_user_id() {
-		return $this->member_id;
+		
+		if ( ! $this->has_wp_user() ) {
+			return false;
+		} else {
+			return $this->member_id;
+		}
+	}
+
+	/**
+	 * Creates a WP User account for this Member, using their email address.
+	 * 
+	 * TODO: create more robust error handling
+	 * 
+	 * @uses \DCMM_Users\create_member_as_user()
+	 * 
+	 * @return int The ID of the WP User | WP_Error if there was an error (usually no email address)
+	 */
+	function create_wp_user() {
+
+		// make sure we have an email address
+		if ( empty( $this->email ) ) {
+			return new WP_Error( 'no_email', 'No email address found for this member' );
+		}
+
+		// if there is no WP User, create one
+		if ( ! $this->has_wp_user() ) {
+			// create a WP User with the role of "Organizational Member"
+			include_once( 'functions-user-role.php' );
+			$user_ID = \DCMM_Users\create_member_as_user( $this->email );
+
+			// if user was created successfully, save the ID to the object & CPT
+			if ( ! \is_wp_error( $user_ID ) ) {
+				$this->save( 'wp_user_id', $user_ID );
+			}
+		} else {
+			// if there is already a WP User, do nothing
+			$user_ID = $this->get_wp_user_id();
+		}
+
+		return $user_ID;
+	}
+
+	/**
+	 * AJAX handler to create a WP User account for a Member
+	 * 
+	 * TODO: check if there's an email address before trying to create the WP User
+	 * TODO: create more robust error handling
+	 * 
+	 * @uses \DCMM_Member::ajax_create_wp_user_account()
+	 * 
+	 * @return void
+	 */
+	public static function ajax_create_wp_user_account() {
+		
+		// check nonce
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'dcmm_create_wp_user_account' ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
+		}
+
+		// get the CPT ID
+		if ( ! isset( $_POST['cpt_id'] ) || ! is_numeric( $_POST['cpt_id'] ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid CPT ID' ) );
+		}
+
+		$cpt_id = intval( $_POST['cpt_id'] );
+
+		// create a new Member object
+		$member = new DCMM_Member( $cpt_id );
+
+		// if there's no email address, return error
+		if ( empty( $member->email ) ) {
+			wp_send_json_error( array( 'message' => 'No email address found for this member' ) );
+		}
+
+		// create the WP User
+		$member->create_wp_user();
+
+		if ( $member->has_wp_user() ) {
+			wp_send_json_success( array( 'message' => 'WP User created successfully', 'user_id' => $member->get_wp_user_id() ) );
+		} else {
+			wp_send_json_error( array( 'message' => 'Failed to create WP User' ) );
+		}
 	}
 
 	/**
 	 * Loads the user's meta into the object
+	 * 
+	 * TODO: Look into whether I need to include member status in this?
+	 * TODO: make this more efficient by allowing to load only specific meta
 	 * 
 	 * @param int $cpt_id The CPT post ID of the Member
 	 * 
@@ -327,6 +420,9 @@ class DCMM_Member extends WP_User {
 		// get the meta keys for the CPT
 		$meta_keys = \DCMM_Member::get_meta_keys();
 
+		// load member's WP User ID
+		$this->load_wp_user_id_onto_member_object( $cpt_id );
+
 		// load member's first name
 		$this->load_first_name_onto_member_object( $cpt_id );
 
@@ -342,6 +438,27 @@ class DCMM_Member extends WP_User {
 		// load member's mailing address
 		$this->load_mailing_address_onto_member_object( $cpt_id );
 
+	}
+
+	/**
+	 * Loads the user's WP User ID into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_wp_user_id_onto_member_object( $cpt_id = null ) {
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the user's WP User ID
+		$this->member_id = get_post_meta( $cpt_id, $meta_keys['wp_user_id'], true );
 	}
 
 	/**
@@ -498,6 +615,8 @@ class DCMM_Member extends WP_User {
 	/**
 	 * Save the Member's info to CPT post meta
 	 * 
+	 * TODO: make this more efficient by only updating the relevant property after saving the meta
+	 * 
 	 * @param string $key The meta key to save. Use the key from \DCMM_Member::get_meta_keys()
 	 * @param mixed $value The value to save
 	 * 
@@ -506,6 +625,7 @@ class DCMM_Member extends WP_User {
 	 * @return bool True if the meta was saved, false if not
 	 */
 	public function save( $key, $value ) {
+
 		// get the meta keys for the CPT
 		$meta_keys = \DCMM_Member::get_meta_keys();
 
@@ -533,6 +653,7 @@ class DCMM_Member extends WP_User {
 		}
 
 		// and then make sure to update the Member object
+		// TODO: make this more efficient by only updating the relevant property
 		$this->load_member_meta( $this->cpt_id );
 
 		return true;

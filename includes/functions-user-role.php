@@ -43,7 +43,7 @@ add_action( 'show_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
 add_action( 'edit_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
 
 /**
- * Creates a WP User with the role of 'member'
+ * Creates a WP User with the role of 'Organizational Member'
  * 
  * @return int $user_id
  */
@@ -51,8 +51,16 @@ function create_member_as_user( $email ) {
 
     // check if email is registered to WP user
     $user = \get_user_by( 'email', $email );
+
     if ( $user ) {
-        // if so, return the user
+
+        // if so, check if WP user has role of "Member"
+        if ( !is_organizational_member( $user->get( 'id' ) ) ) {
+            // if not, set the role to "Member"
+            $user->set_role( 'member' );
+        }
+
+        // return the user
         return $user->ID;
     } else {
         // if not, create a WP user, giving it a role of "Member"
@@ -87,7 +95,6 @@ function is_organizational_member( $user_ID ) {
     } else {
         return false;
     }
-
 }
 
 

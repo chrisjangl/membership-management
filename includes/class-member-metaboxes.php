@@ -20,20 +20,27 @@ class DCMM_metaboxes {
         add_action( 'load-post-new.php', array ( $this, 'post_meta_box_setup' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'dcmm_enqueue_admin_scripts' ) );
 
+        // register AJAX action for creating WP user account (used in WP user metabox)
+        require_once('class-member.php');
+        add_action( 'wp_ajax_dcmm_create_wp_user_account', array( 'DCMM_Member', 'ajax_create_wp_user_account' ) );
+
     }
 
-    /** register our functions that relate to the metaboxes
-    */
+    /** 
+     * register our functions that relate to the metaboxes
+     */
      function post_meta_box_setup() {
         add_action( 'add_meta_boxes_dcmm-member', array( $this, 'add_metaboxes' ) );
         add_action( 'save_post', array( $this, 'save_meta' ), 10, 2 );
     }
 
-    /** register the metaboxes and their callbacks
-    **/
+    /** 
+     * register the metaboxes and their callbacks
+     */
      function add_metaboxes() {
         add_meta_box( 'contact_info', 'Contact Info', array( $this, 'create_metabox_contact_info' ), 'dcmm-member', 'normal', 'high' );
         add_meta_box( 'membership_status', "Membership Status", array( $this, 'create_metabox_membership_status' ), 'dcmm-member', 'side' );
+        add_meta_box( 'user_account', "User Account", array( $this, 'create_metabox_wp_user' ), 'dcmm-member', 'side' );
     }
 
     /**
@@ -46,9 +53,10 @@ class DCMM_metaboxes {
      * @return void
      */
     function dcmm_enqueue_admin_scripts( $hook ) {
+
         if ( 'edit.php' != $hook
-        && 'post.php' != $hook
-        && 'post-new.php' != $hook ) {
+            && 'post.php' != $hook
+            && 'post-new.php' != $hook ) {
             return;
         }
         wp_enqueue_style( 'dcmm_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
@@ -74,14 +82,80 @@ class DCMM_metaboxes {
     /**
      * Create the metabox for the WP user
      * 
-     * TODO: Show a link to the WP User profile if the user exists.
+     * TODO: move the JS to a separate file
      */
     function create_metabox_wp_user() {
 
         // Toggle for creating a WP User for this member.
         $wp_user_id = get_post_meta( get_the_id(), "dcmm_wp_user_id", true );
-        ?>
+        
+        require_once('class-member.php');
+        $CPT_post_id = get_the_id();
 
+        // Get the membership status
+        $member = new DCMM_Member( $CPT_post_id );
+
+        if ( ! $member->has_wp_user() ) {
+            echo '<p>This member does not have a WordPress user account.</p>';
+            echo '<p><a href="#" class="button button-secondary" data-action="create_wp_user">Create WP User Account</a></p>';
+
+            // when clicked, use AJAX to run DCMM_Member::create_wp_user_account()
+            ?>
+            <script>
+            jQuery(document).ready(function($) {
+                $('.button-secondary').on('click', function(e) {
+                    e.preventDefault();
+                    var data = {
+                        'action': 'dcmm_create_wp_user_account',
+                        'cpt_id': <?php echo get_the_id(); ?>,
+                        'nonce': '<?php echo wp_create_nonce( 'dcmm_create_wp_user_account' ); ?>'
+                    };
+
+                    // AJAX call, with success, failure, and always handlers
+                    var ajaxurl = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
+                    console.log(ajaxurl);
+
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: data,
+                        success: function(response) {
+                            console.log('AJAX Success:', response);
+
+                            if ( response.success ) {
+                                alert('User account created: ' + response.data.message);
+                                location.reload();
+                            } else {
+                                alert('Error: ' + response.data.message);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error:', error);
+                        }
+                    })
+                });
+            });
+            </script>
+
+            <?php
+            return;
+        }
+
+        $meta_keys = $member->get_meta_keys();
+        $nonce_prefix = $meta_keys['nonce_prefix'];
+        $membership_status = $member->get( 'status' );
+        ?>
+        
+        <p>
+            <?php
+            $user_info = get_userdata( $wp_user_id );
+            if ( $user_info ) {
+                echo 'This member has a WordPress user account: <a href="' . esc_url( get_edit_user_link( $wp_user_id ) ) . '">' . esc_html( $user_info->user_login ) . '</a>';
+            } else {
+                echo 'This member has a WordPress user account with ID ' . esc_html( $wp_user_id ) . ', but the user could not be found.';
+            }
+            ?>
+        </p>
         <?php
 
     }
@@ -99,10 +173,8 @@ class DCMM_metaboxes {
         $meta_keys = $member->get_meta_keys();
         $nonce_prefix = $meta_keys['nonce_prefix'];
         $membership_status = $member->get( 'status' );
-        ?>
 
-        <h3>Membership Status</h3>
-        <?php wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' ); ?>
+        wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' ); ?>
         
         <p>
             <label for="dcmm_status">Membership status:</label>
