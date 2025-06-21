@@ -45,9 +45,12 @@ add_action( 'edit_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
 /**
  * Creates a WP User with the role of 'Organizational Member'
  * 
+ * @param string $email The email address of the user to create
+ * @param int $cpt_id The post ID of the Member (cpt) to associate with the WP User
+ * 
  * @return int $user_id
  */
-function create_member_as_user( $email ) {
+function create_member_as_user( $email, $cpt_id ) {
 
     // check if email is registered to WP user
     $user = \get_user_by( 'email', $email );
@@ -56,17 +59,41 @@ function create_member_as_user( $email ) {
 
         // if so, check if WP user has role of "Member"
         if ( !is_organizational_member( $user->get( 'id' ) ) ) {
+
             // if not, set the role to "Member"
             $user->set_role( 'member' );
         }
 
+        // update the user meta with the CPT ID
+        $cpt_id_saved = \update_user_meta( $user->ID, 'dcmm_cpt_id', $cpt_id );
+        
+        // if the CPT ID was not saved, log an error
+        if ( ! $cpt_id_saved ) {
+            
+            //log the error
+            \error_log( 'Error saving CPT ID for user: ' . $user->ID . ' with CPT ID: ' . $cpt_id );
+            
+        }
+
         // return the user
         return $user->ID;
+
     } else {
         // if not, create a WP user, giving it a role of "Member"
         $user_id = \wp_create_user( $email, \wp_generate_password(), $email );
         $user = new \WP_User( $user_id );
         $user->set_role( 'member' );
+
+        // update the user meta with the CPT ID
+        $cpt_id_saved = \update_user_meta( $user_id, 'dcmm_cpt_id', $cpt_id );
+
+        if ( ! $cpt_id_saved ) {
+            
+            //log the error
+            \error_log( 'Error saving CPT ID for user: ' . $user_id . ' with CPT ID: ' . $cpt_id );
+            
+        }
+
         return $user->ID;
     }
 }
@@ -99,11 +126,12 @@ function is_organizational_member( $user_ID ) {
 
 
 /**
- * Update member meta
+ * Save the member's CPT ID as a user meta key.
  * 
- * For now, this info is being stored in the CPT.
+ * Used to associate the member's CPT with their WP User account.
  * 
- * TODO:convert the post meta to user meta here
+ * TODO: evaluate whether this is the best way to do this.
+ * 
  */
  function update_member_meta( $member_id, $meta_key, $meta_value ) {
 

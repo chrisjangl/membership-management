@@ -148,7 +148,7 @@ class DCMM_Member extends WP_User {
 				
 				// if not, create a WP user, giving it a role of "Organizational Member"
 				include_once( 'functions-user-role.php' );
-				$member_ID = \DCMM_Users\create_member_as_user( $email );
+				$member_ID = \DCMM_Users\create_member_as_user( $email, $this->cpt_id );
 
 				if ( ! \is_wp_error( $member_ID ) ) {
 					$this->member_id = $member_ID;
@@ -340,11 +340,15 @@ class DCMM_Member extends WP_User {
 		if ( ! $this->has_wp_user() ) {
 			// create a WP User with the role of "Organizational Member"
 			include_once( 'functions-user-role.php' );
-			$user_ID = \DCMM_Users\create_member_as_user( $this->email );
+			$user_ID = \DCMM_Users\create_member_as_user( $this->email, $this->cpt_id );
 
 			// if user was created successfully, save the ID to the object & CPT
 			if ( ! \is_wp_error( $user_ID ) ) {
 				$this->save( 'wp_user_id', $user_ID );
+
+				// and save the CPT ID to the WP User meta
+				$user_meta_saved = add_user_meta( $user_ID, 'dcmm_post_id', $this->cpt_id );
+
 			}
 		} else {
 			// if there is already a WP User, do nothing

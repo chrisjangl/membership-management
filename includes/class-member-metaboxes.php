@@ -123,7 +123,7 @@ class DCMM_metaboxes {
                             console.log('AJAX Success:', response);
 
                             if ( response.success ) {
-                                alert('User account created: ' + response.data.message);
+                                alert('Success: ' + response.data.message);
                                 location.reload();
                             } else {
                                 alert('Error: ' + response.data.message);
