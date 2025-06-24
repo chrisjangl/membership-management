@@ -298,6 +298,15 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
+	 * Gets the ID of the Member custom post type
+	 * 
+	 * @return int The ID of the Member post type
+	 */
+	function get_member_id() {
+		return $this->cpt_id;
+	}
+
+	/**
 	 * Checks if there is a WP User associated with this Member
 	 * 
 	 * @return bool True if there is a WP User, false if not

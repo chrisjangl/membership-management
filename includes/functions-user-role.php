@@ -10,6 +10,8 @@
  */
 namespace DCMM_Users;
 
+use DCMM_Member;
+
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
@@ -17,6 +19,23 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 function create_member_role() {
     add_role( 'member', 'Organization Member', get_role( 'subscriber' )->capabilities );
+}
+
+/**
+ * Get a user meta key
+ * 
+ * (for now) This is used to store the CPT ID of the Member (cpt) associated with the WP User.
+ * 
+ * TODO: flesh this out to include more user meta keys in the future
+ * 
+ * @param string $key The key to get, defaults to false
+ * 
+ * @return string The user meta key
+ */
+function get_user_meta_key( $key = false ) {
+
+    // return the user meta key used to store the CPT ID
+    return 'dcmm_cpt_id';
 }
 
 /** 
@@ -55,6 +74,9 @@ function create_member_as_user( $email, $cpt_id ) {
     // check if email is registered to WP user
     $user = \get_user_by( 'email', $email );
 
+    // get the user meta key for the CPT ID
+    $cpt_id_meta_key = get_user_meta_key( 'cpt_id');
+
     if ( $user ) {
 
         // if so, check if WP user has role of "Member"
@@ -65,7 +87,7 @@ function create_member_as_user( $email, $cpt_id ) {
         }
 
         // update the user meta with the CPT ID
-        $cpt_id_saved = \update_user_meta( $user->ID, 'dcmm_cpt_id', $cpt_id );
+        $cpt_id_saved = \update_user_meta( $user->ID, $cpt_id_meta_key, $cpt_id );
         
         // if the CPT ID was not saved, log an error
         if ( ! $cpt_id_saved ) {
@@ -85,7 +107,7 @@ function create_member_as_user( $email, $cpt_id ) {
         $user->set_role( 'member' );
 
         // update the user meta with the CPT ID
-        $cpt_id_saved = \update_user_meta( $user_id, 'dcmm_cpt_id', $cpt_id );
+        $cpt_id_saved = \update_user_meta( $user_id, $cpt_id_meta_key, $cpt_id );
 
         if ( ! $cpt_id_saved ) {
             
@@ -121,6 +143,51 @@ function is_organizational_member( $user_ID ) {
         return true;
     } else {
         return false;
+    }
+}
+
+/**
+ * Get the DCMM_Member object for a WP User
+ * 
+ * If no user ID is passed, it will try to get the currently logged in User.
+ * 
+ * @param int $user_ID The user ID to get the WP_User object for
+ * 
+ * @return WP_User|false The WP_User object if the user is a member, false if not
+ */
+function get_member( $user_ID = false ) {
+
+    // if no user ID is passed, try to get the current user ID
+    if ( ! $user_ID ) {
+        $user_ID = \get_current_user_id();
+    }
+    // if no user ID is set, return false
+    if ( ! $user_ID || ! is_int( $user_ID ) ) {
+        return false;
+    }
+
+    // check whether user is a Organizational Member
+    if ( ! is_organizational_member( $user_ID ) ) {
+        return false;
+    }
+
+    $cpt_id_meta_key = get_user_meta_key();
+
+    // otherwise, get the DCMM_Member object for the user
+    $cpt_id = \get_user_meta( $user_ID, $cpt_id_meta_key, true );
+
+   if ( ! $cpt_id ) {
+        return false; // no CPT ID found for the user
+    }
+
+    // get the member post object
+    $member = new \DCMM_Member( $cpt_id );
+
+    // if the member post object is valid, return it
+    if ( $member instanceof( 'DCMM_Member' ) ) {
+        return $member;
+    } else {
+        return false; // no valid member post object found
     }
 }
 
