@@ -82,8 +82,104 @@ function dcmm_my_account_shortcode() {
         return ob_get_clean();
     }
 }
-add_shortcode( 'dcms_my_account', 'dcmm_my_account_shortcode' );
+// add_shortcode( 'dcms_my_account', 'dcmm_my_account_shortcode' );
+add_shortcode( 'member_login', 'dcmm_render_login_form' );
 
+/** 
+ * Membership login form
+ * 
+ * Used with shortcode
+ */
+function dcmm_render_login_form() {
+
+    if ( is_user_logged_in() ) {
+        wp_redirect( home_url( '/member-dashboard/' ) );
+        exit;
+    }
+
+    ob_start();
+
+    if ( isset( $_GET['login'] ) && $_GET['login'] === 'failed' ) {
+        echo '<div class="dcmm-error">Invalid username or password.</div>';
+    }
+
+
+    $args = [
+        'echo'           => true,
+        'redirect'       => home_url( '/member-dashboard/' ),
+        'form_id'        => 'dcmm-loginform',
+        'label_username' => __( 'Username' ),
+        'label_password' => __( 'Password' ),
+        'label_remember' => __( 'Remember Me' ),
+        'label_log_in'   => __( 'Log In' ),
+        'remember'       => true
+    ];
+
+    wp_login_form( $args );
+
+    return ob_get_clean();
+}
+
+/**
+ * Redirect back to Member login on failed login
+ * 
+ * 
+ */
+function dcmm_login_failed_redirect() {
+    $referrer = wp_get_referer();
+
+    if ( ! empty( $referrer ) && strpos( $referrer, 'member-login' ) !== false ) {
+        wp_redirect( add_query_arg( 'login', 'failed', $referrer ) );
+        exit;
+    }
+}
+add_action( 'wp_login_failed', 'dcmm_login_failed_redirect' );
+
+/**
+ * Member's personal dashboard
+ * 
+ */
+function dcmm_render_dashboard() {
+
+    if ( ! is_user_logged_in() ) {
+        wp_redirect( home_url( '/member-login/' ) );
+        exit;
+    }
+
+    $user_id = get_current_user_id();
+    
+    // Check if the user is an organizational member
+    include_once( 'functions-user-role.php' );
+    if ( ! DCMM_Users\is_organizational_member( $user_id ) ) {
+        wp_redirect( home_url( '/member-login/' ) );
+        exit;
+    }
+
+    // get the member post ID for the current user
+    $member = DCMM_Users\get_member( $user_id );
+    $user_id = $member ? $member->get_wp_user_id() : null;
+    $cpt_id = $member ? $member->get_member_id() : null;
+
+    ob_start();
+
+    echo '<h2>Welcome, ' . esc_html( wp_get_current_user()->display_name ) . '</h2>';
+
+    if ( $cpt_id ) {
+        echo '<p>Member ID: ' . esc_html( $cpt_id ) . '</p>';
+        echo '<p>Status: ' . esc_html( $member->get( 'status' ) ) . '</p>';
+    } else {
+        echo '<p>No member record found.</p>';
+    }
+
+    echo '<p><a href="' . esc_url( wp_logout_url( home_url( '/member-login/' ) ) ) . '">Log out</a></p>';
+
+    return ob_get_clean();
+
+}
+add_shortcode( 'dcmm_member_dashboard', 'dcmm_render_dashboard' );
+
+   
+    
 /**
  * Allow users to update their own info, submitted by AJAX
  * 
