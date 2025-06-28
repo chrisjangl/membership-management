@@ -13,6 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 define( 'DCMM_VERSION', '1.0.0' );
 
+define( 'DCMM_PATH', plugin_dir_path( __FILE__ ) );
+define( 'DCMM_URL', plugin_dir_url( __FILE__ ) );
+
 /**
  * Member
  */

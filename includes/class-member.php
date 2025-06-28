@@ -19,13 +19,23 @@ class DCMM_Member extends WP_User {
 
 	/**
 	 * The ID of the WP User
+	 * 
+	 * TODO: This should be renamed to something like $wp_user_id
 	 */
 	protected $member_id = null;
 	
 	/**
 	 * The ID of the CPT post
+	 * 
+	 * TODO: This should be renamed to memberID
 	 */
 	protected $cpt_id = null;
+
+	/**
+	 * The ID of the WP User
+	 */
+	protected $wp_user_id = null;
+
 	protected static $our_post_type = 'dcmm-member';
 	protected static $meta_prefix = 'dcmm_';
 	
@@ -34,6 +44,8 @@ class DCMM_Member extends WP_User {
 		'nonce_prefix' => 'dcmm_member_info_',
 		'status'	=>	'dcmm_' . 'status',
 		'wp_user_id' => 'dcmm_' . 'wp_user_id',
+		'start_date' => 'dcmm_' . 'membership_start_date',
+		'dues_payment' => 'dcmm_' . 'last_dues_payment',
 		'first_name' => 'dcmm_' . 'first_name',
 		'last_name' => 'dcmm_' . 'last_name',
 		'email' => 'dcmm_' . 'email',
@@ -50,6 +62,8 @@ class DCMM_Member extends WP_User {
 	static $instance;
 
 	// Member info
+	protected $start_date = null;
+	protected $last_dues_payment = null;
 	protected $first_name = null;
 	protected $last_name = null;
 	protected $email = null;
@@ -86,7 +100,10 @@ class DCMM_Member extends WP_User {
 			if ( is_numeric( $key ) ) {
 
 				// it's a CPT post ID, add it to the object...
-				$this->cpt_id = $key;
+				// legacy property
+				$this->cpt_id = intval( $key );
+				// new property
+				$this->member_id = intval( $key );
 
 				// ...and get the email address
 				$email = get_post_meta( $key, self::$meta_keys['email'], true );
@@ -98,7 +115,7 @@ class DCMM_Member extends WP_User {
 		}
 
 		// load the member's meta (from the CPT) onto the Member object
-		$this->load_member_meta( $this->cpt_id );
+		$this->load_member_meta( $this->member_id );
 	
 		// register meta boxes
 		// TODO: move this elsewhere
@@ -139,19 +156,19 @@ class DCMM_Member extends WP_User {
 					$wordpress_user->set_role( 'organizational_member' );
 				}
 
-				$this->member_id = $wordpress_user->ID;
+				$this->wp_user_id = $wordpress_user->ID;
 
 				// load the user's meta to the object
-				$this->load_user_meta( $this->member_id );
+				$this->load_user_meta( $this->wp_user_id );
 
 			} else {
 				
 				// if not, create a WP user, giving it a role of "Organizational Member"
 				include_once( 'functions-user-role.php' );
-				$member_ID = \DCMM_Users\create_member_as_user( $email, $this->cpt_id );
+				$wp_user_id = \DCMM_Users\create_member_as_user( $email, $this->cpt_id );
 
-				if ( ! \is_wp_error( $member_ID ) ) {
-					$this->member_id = $member_ID;
+				if ( ! \is_wp_error( $wp_user_id ) ) {
+					$this->wp_user_id = $wp_user_id;
 				}
 			}
 		}
@@ -303,7 +320,7 @@ class DCMM_Member extends WP_User {
 	 * @return int The ID of the Member post type
 	 */
 	function get_member_id() {
-		return $this->cpt_id;
+		return $this->member_id;
 	}
 
 	/**
@@ -312,7 +329,7 @@ class DCMM_Member extends WP_User {
 	 * @return bool True if there is a WP User, false if not
 	 */
 	function has_wp_user() {
-		return !empty( $this->member_id );
+		return !empty( $this->wp_user_id );
 	}
 
 	/**
@@ -325,7 +342,7 @@ class DCMM_Member extends WP_User {
 		if ( ! $this->has_wp_user() ) {
 			return false;
 		} else {
-			return $this->member_id;
+			return $this->wp_user_id;
 		}
 	}
 
@@ -369,6 +386,8 @@ class DCMM_Member extends WP_User {
 
 	/**
 	 * AJAX handler to create a WP User account for a Member
+	 * 
+	 * Linked to the 'dcmm_create_wp_user_account' AJAX action
 	 * 
 	 * TODO: check if there's an email address before trying to create the WP User
 	 * TODO: create more robust error handling
@@ -436,6 +455,12 @@ class DCMM_Member extends WP_User {
 		// load member's WP User ID
 		$this->load_wp_user_id_onto_member_object( $cpt_id );
 
+		// load member's start date
+		$this->load_start_date_onto_member_object( $cpt_id );
+
+		// load member's dues payment
+		$this->load_dues_payment_onto_member_object( $cpt_id );
+
 		// load member's first name
 		$this->load_first_name_onto_member_object( $cpt_id );
 
@@ -470,8 +495,58 @@ class DCMM_Member extends WP_User {
 		// get the meta keys for the CPT
 		$meta_keys = \DCMM_Member::get_meta_keys();
 
+		// get the user's WP User ID...
+		$raw_value = get_post_meta( $cpt_id, $meta_keys['wp_user_id'], true );
+		
+		// if we get anything, make sure it's an integer
+		if ( is_numeric( $raw_value ) && $raw_value > 0 ) {
+			$this->wp_user_id = intval( $raw_value );
+		} else {
+			// if we didn't get a valid WP User ID, set it to null
+			$this->wp_user_id = null;
+		}
+	}
+
+	/**
+	 * Loads the user's start date into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_start_date_onto_member_object( $cpt_id = null ) {
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
 		// get the user's WP User ID
-		$this->member_id = get_post_meta( $cpt_id, $meta_keys['wp_user_id'], true );
+		$this->start_date = get_post_meta( $cpt_id, $meta_keys['start_date'], true );
+	}
+
+	/**
+	 * Loads the user's dues payment into the Member object
+	 * 
+	 * @param int $cpt_id The ID of the Member post type
+	 * 
+	 * @uses \DCMM_Member::get_meta_keys()
+	 * 
+	 * @return void
+	 */
+	protected function load_dues_payment_onto_member_object( $cpt_id = null ) {
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->cpt_id;
+		}
+
+		// get the meta keys for the CPT
+		$meta_keys = \DCMM_Member::get_meta_keys();
+
+		// get the user's WP User ID
+		$this->last_dues_payment = get_post_meta( $cpt_id, $meta_keys['dues_payment'], true );
 	}
 
 	/**
@@ -700,5 +775,51 @@ class DCMM_Member extends WP_User {
 		} else {
 			return false;
 		}
+	}
+
+	/**
+	 * Subscribe a member to the organization
+	 * 
+	 * Fires `dcmm_member_subscribed` action upon completion.
+	 * 
+	 * TODO: standardize how we're storing date/times
+	 * 
+	 * @param $cpt_id (optional) ID of the cpt Member to subscribe. If none passed, uses the curent object
+	 * @param $context (optional) Default: 'signup'. 
+	 * 
+	 */
+	private function subscribe_to_membership( $context = 'signup' ) {
+
+		if ( is_null( $cpt_id ) ) {
+			$cpt_id = $this->get_member_id();
+		}
+
+		$today = current_time( 'Y-m-d H:i:s' );
+
+		// store initial signup date, if doesn't already exist
+		$start_date_result = $this->save( 'start_date', $today );
+		
+		// record the dues payment
+		$dues_result = $this->save( 'dues_payment', $today );
+
+		// set member as active
+		$status_result = $this->save( 'status', 'active' );
+
+		do_action( 'dcmm_member_subscribed', $cpt_id, $context );
+
+		return true;
+
+	}
+
+	/**
+	 * Renew a member's membership
+	 * 
+	 */
+	function renew_membership( $context = 'manual' ) {
+
+		$today = current_time( 'Y-m-d H:i:s' );
+
+		return $this->subscribe_to_membership( "renew:$context" );
+
 	}
 }

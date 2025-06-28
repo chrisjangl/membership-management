@@ -4,16 +4,49 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 /**
  * Functionality relating to the user's My Account page
  */
-use \DCMM_Users\is_organizational_member;  
+use \DCMM_Users\is_organizational_member;
+
+/**
+ * Enqueue styles & scripts used on Member Account area
+ */
+function dcmm_enqueue_member_dashboard_styles_scripts() {
+
+    // Member dashboard JS
+    $dashboard_js_file = 'assets/js/member-dashboard.js';
+    $dashboard_js_path = DCMM_PATH . $dashboard_js_file;
+    $dashboard_js_ver = filemtime( $dashboard_js_path );
+    $dashboard_js_src = DCMM_URL . $dashboard_js_file;
+    $dashboard_js_dependencies = array( 'jquery' );
+
+    // TODO: 
+    // Member dashboard CSS
+    // $dashboard_css_file = 'assets/css/member-dashboard.css';
+    // $dashboard_css_path = DCMM_PATH . $dashboard_css_file;
+    // $dashboard_css_ver = filemtime( $dashboard_css_path );
+    // $dashboard_css_src = DCMM_URL . $dashboard_css_file;
+
+    // wp_enqueue_style( 'dcmm-member-dashboard', $dashboard_css_src, array(), $dashboard_css_ver );
+    wp_enqueue_script( 'dcmm-member-dashboard', $dashboard_js_src, $dashboard_js_dependencies, $dashboard_js_ver, true );
+    wp_localize_script( 'dcmm-member-dashboard', 'dcmm', [
+        'ajax_url' => admin_url( 'admin-ajax.php' ),
+        'nonce'    => wp_create_nonce( 'dcmm_renew_nonce' )
+    ] );
+
+}
+
+/**
+ * Register AJAX actions
+ */
+// update own info
+add_action( 'wp_ajax_dcms_update_own_info', 'dcmm_update_user_data' );
+// renew membership
+require_once('class-member.php');
+add_action( 'wp_ajax_dcmm_renew_membership', 'ajax_renew_membership' );
+
 
 // create shortcode to display the user's My Account page
 function dcmm_my_account_shortcode() {
-
-    wp_enqueue_style( 'dcmm_member_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'assets/css/member.css', array(), '1.0' );
-    // enqueue the JS, requiring jQuery as a dependency & passding the AJAX URL
-    wp_enqueue_script( 'dcmm_member_info', plugin_dir_url( dirname(__FILE__)  ) . 'assets/js/member-my-account.js', array('jquery'), '1.0' );
-    wp_localize_script( 'dcmm_member_info', 'dcmm', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
-    wp_enqueue_script( 'dcmm_member_info', plugin_dir_url( dirname(__FILE__)  ) . 'assets/js/member-my-account.js', array('jquery'), '1.0' );
+    dcmm_enqueue_member_dashboard_styles_scripts();
 
     // check if user is logged in
     if ( ! is_user_logged_in() ) {
@@ -146,6 +179,8 @@ function dcmm_render_dashboard() {
         exit;
     }
 
+    dcmm_enqueue_member_dashboard_styles_scripts();
+
     $user_id = get_current_user_id();
     
     // Check if the user is an organizational member
@@ -157,7 +192,7 @@ function dcmm_render_dashboard() {
 
     // get the member post ID for the current user
     $member = DCMM_Users\get_member( $user_id );
-    $user_id = $member ? $member->get_wp_user_id() : null;
+    // $user_id = $member ? $member->get_wp_user_id() : null;
     $cpt_id = $member ? $member->get_member_id() : null;
 
     ob_start();
@@ -165,8 +200,20 @@ function dcmm_render_dashboard() {
     echo '<h2>Welcome, ' . esc_html( wp_get_current_user()->display_name ) . '</h2>';
 
     if ( $cpt_id ) {
-        echo '<p>Member ID: ' . esc_html( $cpt_id ) . '</p>';
-        echo '<p>Status: ' . esc_html( $member->get( 'status' ) ) . '</p>';
+        
+        ob_start(); ?>
+        <p>Member ID: <?php echo esc_html( $cpt_id ); ?></p>
+        <p>Status: <?php echo esc_html( $member->get( 'status' ) ); ?></p>
+        <div id="dcmm-renew-response"></div>
+
+        <?php // if ( dcmm_member_needs_renewal( $member_id ) ) : ?>
+            <button id="dcmm-renew-button" class="button button-primary">Renew Membership</button>
+        <?php //endif; ?>
+
+        <?php 
+
+        echo ob_get_clean();
+
     } else {
         echo '<p>No member record found.</p>';
     }
@@ -177,8 +224,6 @@ function dcmm_render_dashboard() {
 
 }
 add_shortcode( 'dcmm_member_dashboard', 'dcmm_render_dashboard' );
-
-   
     
 /**
  * Allow users to update their own info, submitted by AJAX
@@ -258,5 +303,45 @@ function dcmm_update_user_data() {
     }
 }
 
-// register the ajax action
-add_action( 'wp_ajax_dcms_update_own_info', 'dcmm_update_user_data' );
+
+/**
+ * AJAX handler to renew a Member's membership
+ * 
+ * Linked to the 'dcmm_renew_membership' AJAX action
+ * 
+ * @uses \DCMM_Member->renew_membership()
+ * 
+ * @return void
+ */
+function ajax_renew_membership() {
+
+    // Check nonce
+    check_ajax_referer( 'dcmm_renew_nonce', 'nonce' );
+
+    // Require login
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( [ 'message' => 'User not logged in' ] );
+    }
+
+    $wp_user_id = get_current_user_id();
+
+    include_once( 'functions-user-role.php' );
+    // check if the user is an organizational member
+    if ( ! DCMM_Users\is_organizational_member( $wp_user_id ) ) {
+        wp_send_json_error( [ 'message' => 'User is not a member' ] );
+    }
+
+    // get the DCMM_Member object for the current user
+    $member  = DCMM_Users\get_member( $wp_user_id );
+
+    $result = $member->renew_membership( 'self-renewal' );
+
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+    }
+
+    wp_send_json_success( [
+        'message'     => 'Membership renewed successfully.',
+        'last_payment' => get_user_meta( $wp_user_id, 'last_dues_payment', true )
+    ] );
+}
