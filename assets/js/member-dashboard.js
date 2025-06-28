@@ -1,6 +1,34 @@
 // jquery ready function
 jQuery( document ).ready( function() {
 
+    // Handle subscription renewal
+    jQuery('#dcmm-renew-button').on('click', function (e) {
+
+        e.preventDefault();
+
+        const button = jQuery(this);
+        button.prop('disabled', true).text('Renewing...');
+
+        jQuery.post(dcmm.ajax_url, {
+            action: 'dcmm_renew_membership',
+            nonce: dcmm.nonce
+        })
+        .done(function (response) {
+            if (response.success) {
+                jQuery('#dcmm-renew-response').html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+            } else {
+                jQuery('#dcmm-renew-response').html('<div class="notice notice-error"><p>' + response.data.message + '</p></div>');
+            }
+        })
+        .fail(function () {
+            jQuery('#dcmm-renew-response').html('<div class="notice notice-error"><p>AJAX request failed.</p></div>');
+        })
+        .always(function () {
+            button.prop('disabled', false).text('Renew Membership');
+        });
+    });
+    
+    // Handle update info form submission
     jQuery( '#update-own-info' ).submit( function( event ) {
         // stop the form from submitting normally
         event.preventDefault();
