@@ -77,6 +77,7 @@ function create_member_as_user( $email, $cpt_id ) {
     // get the user meta key for the CPT ID
     $cpt_id_meta_key = get_user_meta_key( 'cpt_id');
 
+    // does a user with this email already exist?
     if ( $user ) {
 
         // if so, check if WP user has role of "Member"
@@ -86,21 +87,33 @@ function create_member_as_user( $email, $cpt_id ) {
             $user->set_role( 'member' );
         }
 
-        // update the user meta with the CPT ID
-        $cpt_id_saved = \update_user_meta( $user->ID, $cpt_id_meta_key, $cpt_id );
-        
-        // if the CPT ID was not saved, log an error
-        if ( ! $cpt_id_saved ) {
+        // check if the user already has a CPT ID saved
+        $existing_cpt_id = \get_user_meta( $user->ID, $cpt_id_meta_key, true );
+
+        // if the user already has a CPT ID saved, check if it matches the one we are trying to save
+        // careful here, need to make sure we don't miss where they match, but one is a string, and the other is an int
+        if ( $existing_cpt_id && $existing_cpt_id != $cpt_id ) {
             
-            //log the error
-            \error_log( 'Error saving CPT ID for user: ' . $user->ID . ' with CPT ID: ' . $cpt_id );
+            // if it does not match, throw an WP error
+            \wp_die(
+                sprintf(
+                    __( 'This email address is already associated with a member (CPT ID: %s). Please use a different email address.', 'dc-membership' ),
+                    $existing_cpt_id
+                ),
+                __( 'Email Address Already Registered', 'dc-membership' ),
+                array( 'response' => 400 )
+            );
+        } else if ( ! $existing_cpt_id ) {
             
-        }
+            // if it does not exist, add user meta with the CPT ID we were passed
+            $cpt_id_saved = \add_user_meta( $user->ID, $cpt_id_meta_key, $cpt_id, true );
+        } 
 
         // return the user
         return $user->ID;
 
     } else {
+        
         // if not, create a WP user, giving it a role of "Member"
         $user_id = \wp_create_user( $email, \wp_generate_password(), $email );
         $user = new \WP_User( $user_id );
@@ -161,6 +174,7 @@ function get_member( $user_ID = false ) {
     if ( ! $user_ID ) {
         $user_ID = \get_current_user_id();
     }
+    
     // if no user ID is set, return false
     if ( ! $user_ID || ! is_int( $user_ID ) ) {
         return false;
