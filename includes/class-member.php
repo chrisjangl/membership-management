@@ -790,9 +790,7 @@ class DCMM_Member extends WP_User {
 	 */
 	private function subscribe_to_membership( $context = 'signup' ) {
 
-		if ( is_null( $cpt_id ) ) {
-			$cpt_id = $this->get_member_id();
-		}
+		$cpt_id = $this->get_member_id();
 
 		$today = current_time( 'Y-m-d H:i:s' );
 

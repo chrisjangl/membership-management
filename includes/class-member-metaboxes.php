@@ -24,6 +24,10 @@ class DCMM_metaboxes {
         require_once('class-member.php');
         add_action( 'wp_ajax_dcmm_create_wp_user_account', array( 'DCMM_Member', 'ajax_create_wp_user_account' ) );
 
+
+        // add_filter( 'post_row_actions', array ( $this, 'dcmm_add_member_row_actions' ), 10, 2 );
+
+
     }
 
     /** 
@@ -170,6 +174,7 @@ class DCMM_metaboxes {
 
         // Get the membership status
         $member = new DCMM_Member( $CPT_post_id );
+        $member_id = $member->get_member_id();
         $meta_keys = $member->get_meta_keys();
         $nonce_prefix = $meta_keys['nonce_prefix'];
         $membership_status = $member->get( 'status' );
@@ -184,6 +189,28 @@ class DCMM_metaboxes {
                 <option value="inactive" <?php selected( $membership_status, 'inactive' ); ?>>Inactive</option>
             </select>
         </p>
+        <?php
+
+        // Renew link
+        $renew_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_manual_renew&member_id=' . $member_id ),
+            'dcmm_manual_renew_' . $member_id
+        );
+
+        // Cancel link
+        $cancel_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_manual_cancel&member_id=' . $member_id ),
+            'dcmm_manual_cancel_' . $member_id
+        );
+        ?>
+
+        <p>
+            <a href="<?php echo esc_url( $renew_url ); ?>" class="button button-primary">Renew Membership</a>
+            <br>
+            <br>
+            <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+        </p>
+
         <?php
     }
 

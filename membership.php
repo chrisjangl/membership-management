@@ -22,6 +22,11 @@ define( 'DCMM_URL', plugin_dir_url( __FILE__ ) );
 include( 'includes/register-post-type.php' );
 
 /**
+ * Admin logic
+ */
+include( 'includes/dcmm-admin.php' );
+
+/**
  * My Account
  */
 include( 'includes/my-account.php' );
