@@ -45,6 +45,7 @@ class DCMM_metaboxes {
         add_meta_box( 'contact_info', 'Contact Info', array( $this, 'create_metabox_contact_info' ), 'dcmm-member', 'normal', 'high' );
         add_meta_box( 'membership_status', "Membership Status", array( $this, 'create_metabox_membership_status' ), 'dcmm-member', 'side' );
         add_meta_box( 'user_account', "User Account", array( $this, 'create_metabox_wp_user' ), 'dcmm-member', 'side' );
+        add_meta_box( 'logs', "Action Log", array( $this, 'create_metabox_logs' ), 'dcmm-member', 'side' );
     }
 
     /**
@@ -212,6 +213,27 @@ class DCMM_metaboxes {
         </p>
 
         <?php
+    }
+
+    function create_metabox_logs() {
+
+        $logs = get_post_meta( get_the_ID(), 'dcmm_log', true );
+
+        if ( is_array( $logs ) && ! empty( $logs ) ) {
+            echo '<h4>Action Log:</h4><ul>';
+            foreach ( array_reverse( $logs ) as $log ) {
+                $user = get_user_by( 'id', $log['user_id'] );
+                printf(
+                    '<li><strong>%s</strong> by %s (%s) — %s</li>',
+                    esc_html( $log['action'] ),
+                    $user ? esc_html( $user->display_name ) : 'System',
+                    esc_html( $log['context'] ),
+                    esc_html( $log['time'] )
+                );
+            }
+            echo '</ul>';
+        }
+
     }
 
     /**

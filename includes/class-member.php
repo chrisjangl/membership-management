@@ -817,7 +817,36 @@ class DCMM_Member extends WP_User {
 
 		$today = current_time( 'Y-m-d H:i:s' );
 
+		$this->log( 'renew_membership', $context );
+
 		return $this->subscribe_to_membership( "renew:$context" );
 
+	}
+
+	/**
+	 * Log an action for the Member
+	 * 
+	 * @param string $action The action to log
+	 * @param string $context (optional) The context of the action
+	 * @param string $notes (optional) Additional notes about the action
+	 * 
+	 * @return void
+	 */
+	public function log( $action, $context = '', $notes = '' ) {
+		$logs = get_post_meta( $this->get_member_id(), 'dcmm_log', true );
+
+		if ( ! is_array( $logs ) ) {
+			$logs = array();
+		}
+
+		$logs[] = array(
+			'time'    => current_time( 'mysql' ),
+			'user_id' => get_current_user_id(),
+			'action'  => $action,
+			'context' => $context,
+			'notes'   => $notes,
+		);
+
+		update_post_meta( $this->get_member_id(), 'dcmm_log', $logs );
 	}
 }

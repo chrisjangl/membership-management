@@ -16,6 +16,9 @@ add_action( 'admin_post_dcmm_manual_cancel', 'dcmm_handle_manual_cancel' );
  *
  * This function checks if the user has the capability to edit posts, verifies the nonce,
  * and then renews the membership for the specified member ID.
+ * 
+ * TODO: Consider adding a check to ensure the member is not already active before renewing.
+ * TODO: Add a confirmation step before renewing.
  *
  * @return void
  */
@@ -40,6 +43,9 @@ function dcmm_handle_manual_renew() {
  *
  * This function checks if the user has the capability to edit posts, verifies the nonce,
  * and then cancels the membership for the specified member ID.
+ * 
+ * TODO: This should be in DCMM_Member class.
+ * TODO: Add a confirmation step before cancellation.
  *
  * @return void
  */
@@ -55,6 +61,9 @@ function dcmm_handle_manual_cancel() {
 	$member = new DCMM_Member( (int) $_GET['member_id'] );
 	$member->save( 'status', 'cancelled' );
 	$member->save( 'end_date', current_time( 'Y-m-d' ) );
+
+	// Log the cancellation
+	$member->log( 'cancel_membership', 'manual' );
 
 	wp_redirect( get_edit_post_link( $member->get_member_id(), 'url' ) . '&dcmm_msg=cancelled' );
 	exit;
