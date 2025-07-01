@@ -17,26 +17,6 @@ define( 'DCMM_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DCMM_URL', plugin_dir_url( __FILE__ ) );
 
 /**
- * Member
+ * Initialize
  */
-include( 'includes/register-post-type.php' );
-
-/**
- * Admin logic
- */
-include( 'includes/dcmm-admin.php' );
-
-/**
- * My Account
- */
-include( 'includes/my-account.php' );
-
-/**
- * Importer
- */
-include( 'includes/importer.php' );
-
-/**
- * Settings
- */
-include( 'includes/settings.php' );
+require_once( DCMM_PATH . 'includes/init.php' );

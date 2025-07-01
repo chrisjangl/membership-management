@@ -215,6 +215,10 @@ class DCMM_metaboxes {
         <?php
     }
 
+    /**
+     * Create metabox for action logs
+     * 
+     */
     function create_metabox_logs() {
 
         $logs = get_post_meta( get_the_ID(), 'dcmm_log', true );
