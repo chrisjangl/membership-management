@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 use \DCMM_Users\is_organizational_member;
 
 /**
- * Enqueue styles & scripts used on Member Account area
+ * Enqueue styles & scripts used on Member Account area (frontend)
  */
 function dcmm_enqueue_member_dashboard_styles_scripts() {
 
@@ -334,12 +334,14 @@ function ajax_renew_membership() {
     // get the DCMM_Member object for the current user
     $member  = DCMM_Users\get_member( $wp_user_id );
 
-    $result = $member->renew_membership( 'self-renewal' );
+    $result = $member->maybe_charge_for_renewal( 'self-renewal' );
 
     if ( is_wp_error( $result ) ) {
         wp_send_json_error( [ 'message' => $result->get_error_message() ] );
     }
 
+    // alternative:
+    // wp_send_json_success( [ 'message' => 'Renewal flow started.', 'result' => $result ] );
     wp_send_json_success( [
         'message'     => 'Membership renewed successfully.',
         'last_payment' => get_user_meta( $wp_user_id, 'last_dues_payment', true )

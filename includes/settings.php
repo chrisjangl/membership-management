@@ -20,6 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Modified array of pages with the settings page added.
  */
 function add_settings_page( ) {
+
     add_submenu_page(
         'edit.php?post_type=dcmm-member', // Parent slug
         __( 'Settings', 'dcmm-membership' ), // Page title
@@ -276,6 +277,7 @@ function get_settings( $setting = null ) {
  * 
  */
 function are_dues_enabled() {
+    
     $settings = get_settings();
     return ! empty( $settings['dcmm_enable_dues'] );
 }

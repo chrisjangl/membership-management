@@ -3,6 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 
 use \DCMM_Users\create_member_as_user;
+use DCMM\Gateways\Gateway_Manager;
 
 /**
  * Set up the Member post type
@@ -775,6 +776,36 @@ class DCMM_Member extends WP_User {
 		} else {
 			return false;
 		}
+	}
+
+	/**
+	 * Maybe charge for renewal dues
+	 * 
+	 * If dues are enabled, this will start the payment flow.
+	 * If dues are not enabled, it will renew the membership without charging.
+	 * 
+	 * @return mixed Returns a payment object or a WP_Error if dues are enabled but no amount is set.
+	 */
+	public function maybe_charge_for_renewal() {
+		
+		// check if dues are enabled
+		if ( ! \DCMM_Settings\are_dues_enabled() ) {
+			return $this->renew_membership( 'manual:no_dues' );
+		}
+
+		// If dues are enabled, get the amount
+		$amount = \DCMM_Settings\get_dues_amount();
+		if ( ! $amount || ! is_numeric( $amount) ) {
+
+			return new \WP_Error( 'invalid_dues_amount', 'Dues are enabled, but no valid amount is set.' );
+		}
+
+		// Load active gateway
+		$gateway = Gateway_Manager::get_default_gateway();
+
+		// start the payment flow
+		return $gateway->start_payment( $this, floatval( $amount) );
+
 	}
 
 	/**
