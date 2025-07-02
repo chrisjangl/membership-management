@@ -175,6 +175,173 @@ function register_settings() {
         ]
     );
 
+    // PayPal Settings Section
+    add_settings_section(
+        'dcmm_paypal_settings',
+        __( 'PayPal Settings', 'dcmm-membership' ),
+        function() {
+            ?>
+            <section class="dcmm-paypal-settings-section">
+                <p><?php esc_html_e( 'Configure PayPal payment processing for membership dues.', 'dcmm-membership' ); ?></p>
+                <div class="dcmm-paypal-setup-instructions" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
+                    <h4><?php esc_html_e( 'PayPal Setup Instructions:', 'dcmm-membership' ); ?></h4>
+                    <ol>
+                        <li>
+                            <strong><?php esc_html_e( 'Create a PayPal Developer Account:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Visit', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/" target="_blank">https://developer.paypal.com/</a> <?php esc_html_e( 'and sign in with your PayPal account.', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Create an Application:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Go to', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'My Apps & Credentials', 'dcmm-membership' ); ?></a> <?php esc_html_e( 'and click "Create App".', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Configure Your App:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Choose "Default Application" and select your business account. Make sure to enable "Accept payments" feature.', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Copy Credentials:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Copy the Client ID and Client Secret from your app details below.', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Set Up Webhooks (Optional):', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'For real-time payment notifications, configure webhooks in your PayPal app using the webhook URL shown below.', 'dcmm-membership' ); ?>
+                        </li>
+                    </ol>
+                    <p><em><?php esc_html_e( 'Start with Sandbox environment for testing, then switch to Live when ready for production.', 'dcmm-membership' ); ?></em></p>
+                </div>
+            </section>
+            <?php
+        },
+        'dcmm_settings_group'
+    );
+
+    // PayPal Environment (Sandbox vs Live)
+    add_settings_field(
+        'dcmm_paypal_environment',
+        __( 'PayPal Environment', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $environment = isset( $options['dcmm_paypal_environment'] ) ? esc_attr( $options['dcmm_paypal_environment'] ) : 'sandbox';
+            ?>
+            <select id="dcmm_paypal_environment" name="dcmm_settings[dcmm_paypal_environment]">
+                <option value="sandbox" <?php selected( $environment, 'sandbox' ); ?>><?php esc_html_e( 'Sandbox (Testing)', 'dcmm-membership' ); ?></option>
+                <option value="live" <?php selected( $environment, 'live' ); ?>><?php esc_html_e( 'Live (Production)', 'dcmm-membership' ); ?></option>
+            </select>
+            <p class="description">
+                <?php esc_html_e( 'Use Sandbox for testing, Live for production payments.', 'dcmm-membership' ); ?><br>
+                <strong><?php esc_html_e( 'Important:', 'dcmm-membership' ); ?></strong> 
+                <?php esc_html_e( 'Sandbox and Live environments use different credentials. Make sure your Client ID and Secret match the selected environment.', 'dcmm-membership' ); ?>
+            </p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_paypal_settings'
+    );
+
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_paypal_environment',
+        [
+            'type' => 'string',
+            'default' => 'sandbox',
+        ]
+    );
+
+    // PayPal Client ID
+    add_settings_field(
+        'dcmm_paypal_client_id',
+        __( 'PayPal Client ID', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $client_id = isset( $options['dcmm_paypal_client_id'] ) ? esc_attr( $options['dcmm_paypal_client_id'] ) : '';
+            ?>
+            <input type="text" id="dcmm_paypal_client_id" name="dcmm_settings[dcmm_paypal_client_id]" value="<?php echo esc_attr( $client_id ); ?>" class="regular-text" />
+            <p class="description">
+                <?php esc_html_e( 'Your PayPal application Client ID from the PayPal Developer Dashboard.', 'dcmm-membership' ); ?><br>
+                <strong><?php esc_html_e( 'Where to find:', 'dcmm-membership' ); ?></strong> 
+                <?php esc_html_e( 'Log in to', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'PayPal Developer Dashboard', 'dcmm-membership' ); ?></a>, 
+                <?php esc_html_e( 'click on your app, and copy the "Client ID" from the app details page.', 'dcmm-membership' ); ?>
+            </p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_paypal_settings'
+    );
+
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_paypal_client_id',
+        [
+            'type' => 'string',
+            'default' => '',
+        ]
+    );
+
+    // PayPal Client Secret
+    add_settings_field(
+        'dcmm_paypal_client_secret',
+        __( 'PayPal Client Secret', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $client_secret = isset( $options['dcmm_paypal_client_secret'] ) ? esc_attr( $options['dcmm_paypal_client_secret'] ) : '';
+            ?>
+            <input type="password" id="dcmm_paypal_client_secret" name="dcmm_settings[dcmm_paypal_client_secret]" value="<?php echo esc_attr( $client_secret ); ?>" class="regular-text" />
+            <p class="description">
+                <?php esc_html_e( 'Your PayPal application Client Secret. Keep this secure!', 'dcmm-membership' ); ?><br>
+                <strong><?php esc_html_e( 'Where to find:', 'dcmm-membership' ); ?></strong> 
+                <?php esc_html_e( 'In your PayPal app details page, click "Show" next to "Client Secret" and copy the revealed secret.', 'dcmm-membership' ); ?><br>
+                <em><?php esc_html_e( 'Note: Never share this secret publicly or commit it to version control.', 'dcmm-membership' ); ?></em>
+            </p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_paypal_settings'
+    );
+
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_paypal_client_secret',
+        [
+            'type' => 'string',
+            'default' => '',
+        ]
+    );
+
+    // PayPal Webhook ID
+    add_settings_field(
+        'dcmm_paypal_webhook_id',
+        __( 'PayPal Webhook ID', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $webhook_id = isset( $options['dcmm_paypal_webhook_id'] ) ? esc_attr( $options['dcmm_paypal_webhook_id'] ) : '';
+            $webhook_url = site_url( '/wp-json/dcmm/v1/paypal-webhook' );
+            ?>
+            <input type="text" id="dcmm_paypal_webhook_id" name="dcmm_settings[dcmm_paypal_webhook_id]" value="<?php echo esc_attr( $webhook_id ); ?>" class="regular-text" />
+            <p class="description">
+                <?php esc_html_e( 'Optional: Webhook ID from PayPal for real-time payment notifications.', 'dcmm-membership' ); ?><br>
+                <strong><?php esc_html_e( 'Your Webhook URL:', 'dcmm-membership' ); ?></strong> <code><?php echo esc_html( $webhook_url ); ?></code><br><br>
+                <strong><?php esc_html_e( 'How to set up webhooks:', 'dcmm-membership' ); ?></strong><br>
+                1. <?php esc_html_e( 'In your PayPal app, scroll to "Features" section and click "Add Webhook"', 'dcmm-membership' ); ?><br>
+                2. <?php esc_html_e( 'Enter the webhook URL above', 'dcmm-membership' ); ?><br>
+                3. <?php esc_html_e( 'Select these event types: "Checkout order approved", "Payment capture completed", "Payment capture denied"', 'dcmm-membership' ); ?><br>
+                4. <?php esc_html_e( 'Save the webhook and copy the "Webhook ID" back here', 'dcmm-membership' ); ?><br>
+                <em><?php esc_html_e( 'Webhooks provide real-time payment updates but are not required for basic functionality.', 'dcmm-membership' ); ?></em>
+            </p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_paypal_settings'
+    );
+
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_paypal_webhook_id',
+        [
+            'type' => 'string',
+            'default' => '',
+        ]
+    );
+
     // Add JavaScript to show/hide the specific date field based on the join policy selection
     add_action( 'admin_footer', function() {
         ?>
@@ -303,3 +470,80 @@ function get_dues_amount() {
  * @return string Membership period (yearly or monthly).
  * 
  */
+function get_membership_period() {
+    $settings = get_settings();
+    return isset( $settings['dcmm_membership_term_length'] ) ? $settings['dcmm_membership_term_length'] : 'monthly';
+}
+
+/**
+ * Get PayPal environment setting.
+ * 
+ * @since 1.1.0
+ * @return string 'sandbox' or 'live'
+ */
+function get_paypal_environment() {
+    $settings = get_settings();
+    return isset( $settings['dcmm_paypal_environment'] ) ? $settings['dcmm_paypal_environment'] : 'sandbox';
+}
+
+/**
+ * Get PayPal Client ID.
+ * 
+ * @since 1.1.0
+ * @return string PayPal Client ID or empty string
+ */
+function get_paypal_client_id() {
+    $settings = get_settings();
+    return isset( $settings['dcmm_paypal_client_id'] ) ? $settings['dcmm_paypal_client_id'] : '';
+}
+
+/**
+ * Get PayPal Client Secret.
+ * 
+ * @since 1.1.0
+ * @return string PayPal Client Secret or empty string
+ */
+function get_paypal_client_secret() {
+    $settings = get_settings();
+    return isset( $settings['dcmm_paypal_client_secret'] ) ? $settings['dcmm_paypal_client_secret'] : '';
+}
+
+/**
+ * Get PayPal Webhook ID.
+ * 
+ * @since 1.1.0
+ * @return string PayPal Webhook ID or empty string
+ */
+function get_paypal_webhook_id() {
+    $settings = get_settings();
+    return isset( $settings['dcmm_paypal_webhook_id'] ) ? $settings['dcmm_paypal_webhook_id'] : '';
+}
+
+/**
+ * Check if PayPal is properly configured.
+ * 
+ * @since 1.1.0
+ * @return bool True if PayPal has required settings configured
+ */
+function is_paypal_configured() {
+    $client_id = get_paypal_client_id();
+    $client_secret = get_paypal_client_secret();
+    
+    return ! empty( $client_id ) && ! empty( $client_secret );
+}
+
+/**
+ * Get PayPal API base URL based on environment.
+ * 
+ * @since 1.1.0
+ * @return string PayPal API base URL
+ */
+function get_paypal_api_base_url() {
+    $environment = get_paypal_environment();
+    
+    if ( $environment === 'live' ) {
+        return 'https://api-m.paypal.com';
+    }
+    
+    return 'https://api-m.sandbox.paypal.com';
+}

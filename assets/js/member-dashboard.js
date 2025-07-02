@@ -15,7 +15,17 @@ jQuery( document ).ready( function() {
         })
         .done(function (response) {
             if (response.success) {
-                jQuery('#dcmm-renew-response').html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+                // Check if we need to redirect to PayPal
+                if (response.data.requires_redirect && response.data.redirect_url) {
+                    jQuery('#dcmm-renew-response').html('<div class="notice notice-info"><p>' + response.data.message + '</p></div>');
+                    // Redirect to PayPal after a short delay to show the message
+                    setTimeout(function() {
+                        window.location.href = response.data.redirect_url;
+                    }, 1000);
+                } else {
+                    // Regular success message (no payment required)
+                    jQuery('#dcmm-renew-response').html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+                }
             } else {
                 jQuery('#dcmm-renew-response').html('<div class="notice notice-error"><p>' + response.data.message + '</p></div>');
             }
@@ -23,8 +33,14 @@ jQuery( document ).ready( function() {
         .fail(function () {
             jQuery('#dcmm-renew-response').html('<div class="notice notice-error"><p>AJAX request failed.</p></div>');
         })
-        .always(function () {
-            button.prop('disabled', false).text('Renew Membership');
+        .always(function (response) {
+            // Don't reset button if we're redirecting to PayPal
+            if (response && response.success && response.data && response.data.requires_redirect) {
+                button.text('Redirecting to PayPal...');
+                // Button stays disabled since we're redirecting
+            } else {
+                button.prop('disabled', false).text('Renew Membership');
+            }
         });
     });
     

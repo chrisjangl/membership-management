@@ -36,13 +36,21 @@ abstract class Abstract_Gateway implements Payment_Gateway_Interface {
 			$logs = [];
 		}
 
+		$user_id = get_current_user_id();
+		// If no user is logged in (webhook/return context), use 0 and note it's a system event
+		if ( ! $user_id ) {
+			$user_id = 0;
+			$message = '[System] ' . $message;
+		}
+
 		$logs[] = [
 			'time'    => current_time( 'mysql' ),
-			'user_id' => get_current_user_id(),
+			'user_id' => $user_id,
 			'message' => $message,
 		];
 
-		update_post_meta( $member_id, 'dcmm_payment_log', $logs );
+		$result = update_post_meta( $member_id, 'dcmm_payment_log', $logs );
+		error_log( 'Payment log updated for member ' . $member_id . ': ' . ($result ? 'success' : 'failed') );
 	}
 
     function handle_notification( $data ) {

@@ -199,6 +199,18 @@ function dcmm_render_dashboard() {
 
     echo '<h2>Welcome, ' . esc_html( wp_get_current_user()->display_name ) . '</h2>';
 
+    // Display payment status messages
+    if ( isset( $_GET['payment'] ) && isset( $_GET['message'] ) ) {
+        $payment_status = sanitize_text_field( $_GET['payment'] );
+        $message = sanitize_text_field( $_GET['message'] );
+        
+        if ( $payment_status === 'success' ) {
+            echo '<div class="notice notice-success"><p>' . esc_html( urldecode( $message ) ) . '</p></div>';
+        } elseif ( $payment_status === 'error' ) {
+            echo '<div class="notice notice-error"><p>' . esc_html( urldecode( $message ) ) . '</p></div>';
+        }
+    }
+
     if ( $cpt_id ) {
         
         ob_start(); ?>
@@ -340,8 +352,16 @@ function ajax_renew_membership() {
         wp_send_json_error( [ 'message' => $result->get_error_message() ] );
     }
 
-    // alternative:
-    // wp_send_json_success( [ 'message' => 'Renewal flow started.', 'result' => $result ] );
+    // Check if result contains PayPal redirect data
+    if ( is_array( $result ) && isset( $result['type'] ) && $result['type'] === 'paypal_redirect' ) {
+        wp_send_json_success( [
+            'message' => 'Redirecting to PayPal for payment...',
+            'redirect_url' => $result['redirect_url'],
+            'requires_redirect' => true
+        ] );
+    }
+
+    // For non-payment renewals (no dues), membership was renewed directly
     wp_send_json_success( [
         'message'     => 'Membership renewed successfully.',
         'last_payment' => get_user_meta( $wp_user_id, 'last_dues_payment', true )
