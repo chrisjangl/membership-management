@@ -8,12 +8,9 @@ use DCMM\Gateways\Gateway_Manager;
 /**
  * Set up the Member post type
  * 
- * TODO: Need to convert this from a singleton-eque class to a regular class
  * TODO: Need to handle the case where the email address is changed in the CPT
- * 
  * TODO: create method to check if user is member
  * TODO: this class should only be a Member object; get rid of developer helpers (post type, etc.)
- * 
  */
 
 class DCMM_Member extends WP_User {
