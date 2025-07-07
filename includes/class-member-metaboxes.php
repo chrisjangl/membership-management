@@ -192,8 +192,8 @@ class DCMM_metaboxes {
         </p>
         <?php
 
-        // Renew link
-        $renew_url = wp_nonce_url(
+        // Renew link with email option
+        $renew_url_base = wp_nonce_url(
             admin_url( 'admin-post.php?action=dcmm_manual_renew&member_id=' . $member_id ),
             'dcmm_manual_renew_' . $member_id
         );
@@ -205,12 +205,32 @@ class DCMM_metaboxes {
         );
         ?>
 
-        <p>
-            <a href="<?php echo esc_url( $renew_url ); ?>" class="button button-primary">Renew Membership</a>
-            <br>
-            <br>
-            <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
-        </p>
+        <div class="dcmm-renewal-options">
+            <p>
+                <label for="dcmm_send_email">
+                    <input type="checkbox" id="dcmm_send_email" checked> 
+                    Send email receipt
+                </label>
+            </p>
+            <p>
+                <a href="#" class="button button-primary dcmm-renew-button" data-base-url="<?php echo esc_url( $renew_url_base ); ?>">Renew Membership</a>
+                <br><br>
+                <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+            </p>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            $('.dcmm-renew-button').on('click', function(e) {
+                e.preventDefault();
+                var baseUrl = $(this).data('base-url');
+                var sendEmailCheckbox = $('#dcmm_send_email');
+                var sendEmail = sendEmailCheckbox.length && sendEmailCheckbox.is(':checked') ? '1' : '0';
+                var finalUrl = baseUrl + '&send_email=' + sendEmail;
+                window.location.href = finalUrl;
+            });
+        });
+        </script>
 
         <?php
     }

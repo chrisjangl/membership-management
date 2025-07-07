@@ -34,6 +34,13 @@ function dcmm_handle_manual_renew() {
 	$member = new DCMM_Member( (int) $_GET['member_id'] );
 	$member->renew_membership( 'manual' );
 
+	// Send email if requested
+	$send_email = isset( $_GET['send_email'] ) && $_GET['send_email'] === '1';
+	if ( $send_email ) {
+		$email_handler = DCMM_Email_Handler::get_instance();
+		$email_handler->send_manual_renewal_email( $member, true );
+	}
+
 	wp_redirect( get_edit_post_link( $member->get_member_id(), 'url' ) . '&dcmm_msg=renewed' );
 	exit;
 }

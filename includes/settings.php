@@ -342,21 +342,236 @@ function register_settings() {
         ]
     );
 
+    // Email Settings Section
+    add_settings_section(
+        'dcmm_email_settings',
+        __( 'Email Settings', 'dcmm-membership' ),
+        function() {
+            ?>
+            <section class="dcmm-email-settings-section">
+                <p><?php esc_html_e( 'Configure email notifications for member signups and renewals.', 'dcmm-membership' ); ?></p>
+                <div class="dcmm-email-merge-tags" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
+                    <h4><?php esc_html_e( 'Available Merge Tags:', 'dcmm-membership' ); ?></h4>
+                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your email templates:', 'dcmm-membership' ); ?></p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{first_name}">{first_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{last_name}">{last_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{full_name}">{full_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{email}">{email}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{membership_start_date}">{membership_start_date}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{membership_status}">{membership_status}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{renewal_date}">{renewal_date}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{site_name}">{site_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{site_url}">{site_url}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{payment_details}">{payment_details}</button>
+                    </div>
+                    <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                        <strong>Note:</strong> <code>{payment_details}</code> will only show content in renewal emails when payment was made.
+                    </p>
+                </div>
+            </section>
+            <?php
+        },
+        'dcmm_settings_group'
+    );
+
+    // Email From Name
+    add_settings_field(
+        'dcmm_email_from_name',
+        __( 'From Name', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $from_name = isset( $options['from_name'] ) ? esc_attr( $options['from_name'] ) : get_bloginfo('name');
+            ?>
+            <input type="text" id="dcmm_email_from_name" name="dcmm_email_settings[from_name]" value="<?php echo esc_attr( $from_name ); ?>" class="regular-text" />
+            <p class="description"><?php esc_html_e( 'Name that appears in the "From" field of emails.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Email From Email
+    add_settings_field(
+        'dcmm_email_from_email',
+        __( 'From Email', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $from_email = isset( $options['from_email'] ) ? esc_attr( $options['from_email'] ) : get_option('admin_email');
+            ?>
+            <input type="email" id="dcmm_email_from_email" name="dcmm_email_settings[from_email]" value="<?php echo esc_attr( $from_email ); ?>" class="regular-text" />
+            <p class="description"><?php esc_html_e( 'Email address that appears in the "From" field of emails.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Enable Welcome Emails
+    add_settings_field(
+        'dcmm_enable_welcome_emails',
+        __( 'Welcome Emails', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $checked = isset( $options['enable_welcome_emails'] ) ? (bool) $options['enable_welcome_emails'] : true;
+            ?>
+            <input type="checkbox" id="dcmm_enable_welcome_emails" name="dcmm_email_settings[enable_welcome_emails]" value="1" <?php checked( $checked ); ?> />
+            <label for="dcmm_enable_welcome_emails"><?php esc_html_e( 'Send welcome emails to new members', 'dcmm-membership' ); ?></label>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Welcome Email Subject
+    add_settings_field(
+        'dcmm_welcome_email_subject',
+        __( 'Welcome Email Subject', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $subject = isset( $options['welcome_subject'] ) ? esc_attr( $options['welcome_subject'] ) : 'Welcome to Your Membership!';
+            ?>
+            <input type="text" id="dcmm_welcome_email_subject" name="dcmm_email_settings[welcome_subject]" value="<?php echo esc_attr( $subject ); ?>" class="regular-text" />
+            <p class="description"><?php esc_html_e( 'Subject line for welcome emails.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Welcome Email Template
+    add_settings_field(
+        'dcmm_welcome_email_template',
+        __( 'Welcome Email Template', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $template = isset( $options['welcome_template'] ) ? $options['welcome_template'] : '';
+            
+            // Settings for the TinyMCE editor
+            $editor_settings = array(
+                'textarea_name' => 'dcmm_email_settings[welcome_template]',
+                'media_buttons' => true,
+                'textarea_rows' => 12,
+                'teeny' => false,
+                'tinymce' => array(
+                    'toolbar1' => 'formatselect,bold,italic,underline,strikethrough,|,bullist,numlist,|,link,unlink,|,image,|,alignleft,aligncenter,alignright,|,undo,redo',
+                    'toolbar2' => 'forecolor,backcolor,|,hr,|,charmap,|,removeformat,|,outdent,indent,|,wp_adv',
+                    'toolbar3' => '',
+                ),
+                'quicktags' => array(
+                    'buttons' => 'strong,em,link,block,del,ins,img,ul,ol,li,code,more,close'
+                )
+            );
+            
+            ?>
+            <div class="dcmm-email-template-editor">
+                <?php wp_editor( $template, 'dcmm_welcome_email_template', $editor_settings ); ?>
+                <p class="description">
+                    <?php esc_html_e( 'HTML template for welcome emails. Leave blank to use default template.', 'dcmm-membership' ); ?><br>
+                    <strong><?php esc_html_e( 'Tip:', 'dcmm-membership' ); ?></strong> <?php esc_html_e( 'Use the merge tags listed above to personalize your emails.', 'dcmm-membership' ); ?>
+                </p>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Enable Renewal Emails
+    add_settings_field(
+        'dcmm_enable_renewal_emails',
+        __( 'Renewal Emails', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $checked = isset( $options['enable_renewal_emails'] ) ? (bool) $options['enable_renewal_emails'] : true;
+            ?>
+            <input type="checkbox" id="dcmm_enable_renewal_emails" name="dcmm_email_settings[enable_renewal_emails]" value="1" <?php checked( $checked ); ?> />
+            <label for="dcmm_enable_renewal_emails"><?php esc_html_e( 'Send renewal confirmation emails', 'dcmm-membership' ); ?></label>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Renewal Email Subject
+    add_settings_field(
+        'dcmm_renewal_email_subject',
+        __( 'Renewal Email Subject', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $subject = isset( $options['renewal_subject'] ) ? esc_attr( $options['renewal_subject'] ) : 'Membership Renewal Confirmation';
+            ?>
+            <input type="text" id="dcmm_renewal_email_subject" name="dcmm_email_settings[renewal_subject]" value="<?php echo esc_attr( $subject ); ?>" class="regular-text" />
+            <p class="description"><?php esc_html_e( 'Subject line for renewal emails.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Renewal Email Template
+    add_settings_field(
+        'dcmm_renewal_email_template',
+        __( 'Renewal Email Template', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_email_settings', array() );
+            $template = isset( $options['renewal_template'] ) ? $options['renewal_template'] : '';
+            
+            // Settings for the TinyMCE editor
+            $editor_settings = array(
+                'textarea_name' => 'dcmm_email_settings[renewal_template]',
+                'media_buttons' => true,
+                'textarea_rows' => 12,
+                'teeny' => false,
+                'tinymce' => array(
+                    'toolbar1' => 'formatselect,bold,italic,underline,strikethrough,|,bullist,numlist,|,link,unlink,|,image,|,alignleft,aligncenter,alignright,|,undo,redo',
+                    'toolbar2' => 'forecolor,backcolor,|,hr,|,charmap,|,removeformat,|,outdent,indent,|,wp_adv',
+                    'toolbar3' => '',
+                ),
+                'quicktags' => array(
+                    'buttons' => 'strong,em,link,block,del,ins,img,ul,ol,li,code,more,close'
+                )
+            );
+            
+            ?>
+            <div class="dcmm-email-template-editor">
+                <?php wp_editor( $template, 'dcmm_renewal_email_template', $editor_settings ); ?>
+                <p class="description">
+                    <?php esc_html_e( 'HTML template for renewal emails. Leave blank to use default template.', 'dcmm-membership' ); ?><br>
+                    <strong><?php esc_html_e( 'Tip:', 'dcmm-membership' ); ?></strong> <?php esc_html_e( 'Use the merge tags listed above to personalize your emails.', 'dcmm-membership' ); ?>
+                </p>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_email_settings'
+    );
+
+    // Register email settings
+    register_setting( 'dcmm_settings_group', 'dcmm_email_settings' );
+
     // Add JavaScript to show/hide the specific date field based on the join policy selection
     add_action( 'admin_footer', function() {
+        // Only run this JavaScript on the settings page
+        if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'dcmm_settings' ) {
+            return;
+        }
         ?>
         <script type="text/javascript">
             jQuery(document).ready(function($) {
                 // Function to toggle the dues amount field based on the dues enabled checkbox
                 function toggleDuesAmountField() {
                     var amountRow = $('#dcmm_dues_amount').closest('tr');
-                    var duesEnabled = document.getElementById('dcmm_enable_dues').checked;
-                    if (duesEnabled) {
-                        amountRow.show();
-                        console.debug('on');
-                    } else {
-                        amountRow.hide();
-                        console.debug('off');
+                    var duesEnabledElement = document.getElementById('dcmm_enable_dues');
+                    if (duesEnabledElement) {
+                        var duesEnabled = duesEnabledElement.checked;
+                        if (duesEnabled) {
+                            amountRow.show();
+                            console.debug('on');
+                        } else {
+                            amountRow.hide();
+                            console.debug('off');
+                        }
                     }
                 }
 
@@ -383,8 +598,58 @@ function register_settings() {
                 $('#dcmm_join_policy').change(function() {
                     toggleSpecificDateField();
                 });
+
+                // Handle merge tag button clicks
+                $('.dcmm-merge-tag').on('click', function(e) {
+                    e.preventDefault();
+                    var tag = $(this).data('tag');
+                    
+                    // Try to insert into the active TinyMCE editor
+                    if (typeof tinymce !== 'undefined') {
+                        var activeEditor = tinymce.activeEditor;
+                        if (activeEditor && !activeEditor.isHidden()) {
+                            activeEditor.execCommand('mceInsertContent', false, tag);
+                            return;
+                        }
+                    }
+                    
+                    // Fallback: find the last focused textarea
+                    var $activeTextarea = $('.dcmm-email-template-editor textarea:focus, .dcmm-email-template-editor textarea').last();
+                    if ($activeTextarea.length) {
+                        var textarea = $activeTextarea[0];
+                        var startPos = textarea.selectionStart;
+                        var endPos = textarea.selectionEnd;
+                        var textValue = textarea.value;
+                        
+                        textarea.value = textValue.substring(0, startPos) + tag + textValue.substring(endPos);
+                        textarea.selectionStart = textarea.selectionEnd = startPos + tag.length;
+                        textarea.focus();
+                    }
+                });
             });
         </script>
+        
+        <style>
+        .dcmm-email-template-editor {
+            margin-bottom: 20px;
+        }
+        
+        .dcmm-merge-tag {
+            font-family: monospace;
+            font-size: 11px;
+            margin: 2px;
+            white-space: nowrap;
+        }
+        
+        .dcmm-merge-tag:hover {
+            background-color: #0073aa;
+            color: white;
+        }
+        
+        .dcmm-email-merge-tags {
+            border-radius: 4px;
+        }
+        </style>
         <?php
     });
 

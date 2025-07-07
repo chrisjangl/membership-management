@@ -36,3 +36,8 @@ include( 'settings.php' );
  * Payment Gateways
  */
 include_once( 'gateways.php' );
+
+/**
+ * Email Handler
+ */
+include_once( 'class-email-handler.php' );
