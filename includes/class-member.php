@@ -44,6 +44,8 @@ class DCMM_Member extends WP_User {
 		'wp_user_id' => 'dcmm_' . 'wp_user_id',
 		'start_date' => 'dcmm_' . 'membership_start_date',
 		'dues_payment' => 'dcmm_' . 'last_dues_payment',
+		'expiration_date' => 'dcmm_' . 'expiration_date',
+		'settings_hash' => 'dcmm_' . 'settings_hash',
 		'first_name' => 'dcmm_' . 'first_name',
 		'last_name' => 'dcmm_' . 'last_name',
 		'email' => 'dcmm_' . 'email',
@@ -811,6 +813,9 @@ class DCMM_Member extends WP_User {
 	 * Fires `dcmm_member_subscribed` action upon completion.
 	 * 
 	 * TODO: standardize how we're storing date/times
+	 * TODO: fix start date being overridden 
+	 * TODO: add support for different contexts (e.g. 'renewal', 'signup')
+	 * TODO: Fix that we don't always have a dues payment
 	 * 
 	 * @param $cpt_id (optional) ID of the cpt Member to subscribe. If none passed, uses the curent object
 	 * @param $context (optional) Default: 'signup'. 
@@ -830,6 +835,9 @@ class DCMM_Member extends WP_User {
 
 		// set member as active
 		$status_result = $this->save( 'status', 'active' );
+		
+		// Calculate and store expiration date
+		$this->get_expiration_date();
 
 		do_action( 'dcmm_member_subscribed', $cpt_id, $context );
 
@@ -847,8 +855,196 @@ class DCMM_Member extends WP_User {
 
 		$this->log( 'renew_membership', $context );
 
-		return $this->subscribe_to_membership( "renew:$context" );
+		$result = $this->subscribe_to_membership( "renew:$context" );
+		
+		// Force recalculation of expiration date after renewal
+		$this->save( 'settings_hash', '' );
+		$this->get_expiration_date();
 
+		return $result;
+
+	}
+
+	/**
+	 * Get the member's membership expiration date
+	 * 
+	 * Uses hybrid approach: stores calculated date in database for performance,
+	 * but recalculates when membership settings change.
+	 * 
+	 * @return string|null Expiration date in Y-m-d format or null if no expiration
+	 */
+	public function get_expiration_date() {
+
+		// Check if we have a stored expiration date and settings hash
+		$stored_date = $this->get_meta_keys( 'expiration_date' );
+		$stored_hash = $this->get_meta_keys( 'settings_hash' );
+		$current_hash = $this->get_settings_hash();
+		
+		// If no stored date or settings have changed, recalculate
+		if ( ! $stored_date || $stored_hash !== $current_hash ) {
+			$calculated_date = $this->calculate_expiration_date();
+			
+			if ( $calculated_date ) {
+				$this->save( 'expiration_date', $calculated_date );
+				$this->save( 'settings_hash', $current_hash );
+			}
+			
+			return $calculated_date;
+		}
+		
+		return $stored_date;
+	}
+
+	/**
+	 * Calculate expiration date based on membership settings and start date
+	 * 
+	 * TODO: Fix anchor date being considered when join policy is 'rolling'
+	 * 
+	 * @return string|null Expiration date in Y-m-d format or null if no expiration
+	 */
+	private function calculate_expiration_date() {
+
+		$start_date = $this->get( 'start_date' );
+		if ( ! $start_date ) {
+			return null;
+		}
+		
+		// Get membership settings
+		$join_policy = DCMM_Settings\get_settings( 'dcmm_join_policy' );
+		$term_length = DCMM_Settings\get_settings( 'dcmm_membership_term_length' );
+		$anchor_date = DCMM_Settings\get_settings( 'dcmm_anchor_date' );
+		
+		// Default to rolling monthly if no settings
+		if ( ! $join_policy ) $join_policy = 'rolling';
+		if ( ! $term_length ) $term_length = 'monthly';
+		
+		$start_timestamp = strtotime( $start_date );
+		
+		switch ( $join_policy ) {
+			case 'rolling':
+				return $this->calculate_rolling_expiration( $start_timestamp, $term_length );
+				
+			case 'fixed_term':
+				return $this->calculate_fixed_term_expiration( $start_timestamp, $term_length );
+				
+			case 'anchored_full_term':
+				return $this->calculate_anchored_expiration( $start_timestamp, $term_length, $anchor_date );
+				
+			default:
+				return $this->calculate_rolling_expiration( $start_timestamp, $term_length );
+		}
+	}
+
+	/**
+	 * Calculate rolling (anniversary-based) expiration
+	 * 
+	 * @param int $start_timestamp Start date timestamp
+	 * @param string $term_length Term length (yearly, monthly, seasonal)
+	 * @return string Expiration date in Y-m-d format
+	 */
+	private function calculate_rolling_expiration( $start_timestamp, $term_length ) {
+		switch ( $term_length ) {
+			case 'yearly':
+				return date( 'Y-m-d', strtotime( '+1 year', $start_timestamp ) );
+				
+			case 'monthly':
+				return date( 'Y-m-d', strtotime( '+1 month', $start_timestamp ) );
+				
+			case 'seasonal':
+				// For seasonal, expire at end of season (assuming 6 months)
+				return date( 'Y-m-d', strtotime( '+6 months', $start_timestamp ) );
+				
+			default:
+				return date( 'Y-m-d', strtotime( '+1 month', $start_timestamp ) );
+		}
+	}
+
+	/**
+	 * Calculate fixed term expiration (everyone expires on same date)
+	 * 
+	 * @param int $start_timestamp Start date timestamp
+	 * @param string $term_length Term length (yearly, monthly, seasonal)
+	 * @return string Expiration date in Y-m-d format
+	 */
+	private function calculate_fixed_term_expiration( $start_timestamp, $term_length ) {
+		$current_year = date( 'Y' );
+		
+		switch ( $term_length ) {
+			case 'yearly':
+				// Everyone expires December 31st
+				return $current_year . '-12-31';
+				
+			case 'monthly':
+				// Everyone expires at end of current month
+				return date( 'Y-m-t' );
+				
+			case 'seasonal':
+				// Everyone expires at end of season (June 30th or December 31st)
+				$current_month = date( 'n' );
+				if ( $current_month <= 6 ) {
+					return $current_year . '-06-30';
+				} else {
+					return $current_year . '-12-31';
+				}
+				
+			default:
+				return date( 'Y-m-t' );
+		}
+	}
+
+	/**
+	 * Calculate anchored full term expiration
+	 * 
+	 * @param int $start_timestamp Start date timestamp
+	 * @param string $term_length Term length (yearly, monthly, seasonal)
+	 * @param string $anchor_date Anchor date setting
+	 * @return string Expiration date in Y-m-d format
+	 */
+	private function calculate_anchored_expiration( $start_timestamp, $term_length, $anchor_date ) {
+		if ( ! $anchor_date ) {
+			// Fallback to fixed term if no anchor date set
+			return $this->calculate_fixed_term_expiration( $start_timestamp, $term_length );
+		}
+		
+		$current_year = date( 'Y' );
+		$anchor_this_year = $current_year . '-' . date( 'm-d', strtotime( $anchor_date ) );
+		
+		// If we're past this year's anchor date, use next year's
+		if ( time() > strtotime( $anchor_this_year ) ) {
+			return ( $current_year + 1 ) . '-' . date( 'm-d', strtotime( $anchor_date ) );
+		}
+		
+		return $anchor_this_year;
+	}
+
+	/**
+	 * Generate hash of relevant membership settings
+	 * 
+	 * @return string Settings hash
+	 */
+	private function get_settings_hash() {
+		$settings = array(
+			'join_policy' => DCMM_Settings\get_settings( 'dcmm_join_policy' ),
+			'term_length' => DCMM_Settings\get_settings( 'dcmm_membership_term_length' ),
+			'anchor_date' => DCMM_Settings\get_settings( 'dcmm_anchor_date' ),
+		);
+		
+		return md5( serialize( $settings ) );
+	}
+
+	/**
+	 * Check if membership is expired
+	 * 
+	 * @return bool True if expired, false otherwise
+	 */
+	public function is_expired() {
+		$expiration_date = $this->get_expiration_date();
+		
+		if ( ! $expiration_date ) {
+			return false; // No expiration date means not expired
+		}
+		
+		return strtotime( $expiration_date ) < time();
 	}
 
 	/**

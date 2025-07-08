@@ -179,6 +179,8 @@ class DCMM_metaboxes {
         $meta_keys = $member->get_meta_keys();
         $nonce_prefix = $meta_keys['nonce_prefix'];
         $membership_status = $member->get( 'status' );
+        // By calling get_expiration_date(), we ensure that the expiration date is calculated if settings have changed
+        $expiration_date = $member->get_expiration_date();
 
         wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' ); ?>
         
@@ -190,7 +192,17 @@ class DCMM_metaboxes {
                 <option value="inactive" <?php selected( $membership_status, 'inactive' ); ?>>Inactive</option>
             </select>
         </p>
+
         <?php
+        // if status is active, show expiration date
+        if ( 'active' === $membership_status ) {
+            ?>
+            <p>
+                <label for="dcmm_expiration_date">Expiration Date:</label>
+                <input type="date" name="dcmm_expiration_date" id="dcmm_expiration_date" value="<?php echo esc_attr( $expiration_date ); ?>" readonly />
+            </p>
+            <?php
+        }
 
         // Renew link with email option
         $renew_url_base = wp_nonce_url(
