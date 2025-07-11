@@ -550,6 +550,245 @@ function register_settings() {
     // Register email settings
     register_setting( 'dcmm_settings_group', 'dcmm_email_settings' );
 
+    // Expiration Notification Settings Section
+    add_settings_section(
+        'dcmm_expiration_notification_settings',
+        __( 'Expiration Notification Settings', 'dcmm-membership' ),
+        function() {
+            ?>
+            <section class="dcmm-expiration-notification-section">
+                <p><?php esc_html_e( 'Configure automated email notifications for membership expiration reminders.', 'dcmm-membership' ); ?></p>
+                <div class="dcmm-expiration-merge-tags" style="background: #f9f9f9; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
+                    <h4><?php esc_html_e( 'Available Merge Tags for Expiration Emails:', 'dcmm-membership' ); ?></h4>
+                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your expiration email templates:', 'dcmm-membership' ); ?></p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{first_name}">{first_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{last_name}">{last_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{full_name}">{full_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{email}">{email}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{membership_status}">{membership_status}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{expiration_date}">{expiration_date}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{days_until_expiration}">{days_until_expiration}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{renewal_url}">{renewal_url}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{site_name}">{site_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{site_url}">{site_url}</button>
+                    </div>
+                    <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                        <strong>Note:</strong> <code>{renewal_url}</code> will link to your member dashboard renewal page.
+                    </p>
+                </div>
+            </section>
+            <?php
+        },
+        'dcmm_settings_group'
+    );
+
+    // Enable Expiration Notifications
+    add_settings_field(
+        'dcmm_enable_expiration_notifications',
+        __( 'Enable Expiration Notifications', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_expiration_notification_settings', array() );
+            $enabled = isset( $options['enabled'] ) ? (bool) $options['enabled'] : false;
+            ?>
+            <input type="checkbox" id="dcmm_enable_expiration_notifications" name="dcmm_expiration_notification_settings[enabled]" value="1" <?php checked( $enabled ); ?> />
+            <label for="dcmm_enable_expiration_notifications"><?php esc_html_e( 'Send automated expiration reminder emails to members', 'dcmm-membership' ); ?></label>
+            <p class="description"><?php esc_html_e( 'When enabled, members will receive automated emails before their membership expires.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_expiration_notification_settings'
+    );
+
+    // 30 Day Notification
+    add_settings_field(
+        'dcmm_30_day_notification',
+        __( '30 Day Notification', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_expiration_notification_settings', array() );
+            $enabled = isset( $options['notifications']['30_days']['enabled'] ) ? (bool) $options['notifications']['30_days']['enabled'] : true;
+            $subject = isset( $options['notifications']['30_days']['subject'] ) ? esc_attr( $options['notifications']['30_days']['subject'] ) : 'Your membership expires in 30 days';
+            $template = isset( $options['notifications']['30_days']['template'] ) ? wp_kses_post( $options['notifications']['30_days']['template'] ) : '';
+            ?>
+            <div class="dcmm-notification-field">
+                <label>
+                    <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][30_days][enabled]" value="1" <?php checked( $enabled ); ?> />
+                    <?php esc_html_e( 'Send 30 days before expiration', 'dcmm-membership' ); ?>
+                </label>
+                <div class="dcmm-notification-details" style="margin-top: 10px;">
+                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <input type="text" name="dcmm_expiration_notification_settings[notifications][30_days][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
+                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <div class="dcmm-email-template-editor">
+                        <?php
+                        wp_editor( $template, 'dcmm_30_day_template', array(
+                            'textarea_name' => 'dcmm_expiration_notification_settings[notifications][30_days][template]',
+                            'media_buttons' => false,
+                            'textarea_rows' => 10,
+                            'teeny' => true,
+                            'tinymce' => array(
+                                'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,undo,redo',
+                                'toolbar2' => ''
+                            )
+                        ));
+                        ?>
+                    </div>
+                </div>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_expiration_notification_settings'
+    );
+
+    // 7 Day Notification
+    add_settings_field(
+        'dcmm_7_day_notification',
+        __( '7 Day Notification', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_expiration_notification_settings', array() );
+            $enabled = isset( $options['notifications']['7_days']['enabled'] ) ? (bool) $options['notifications']['7_days']['enabled'] : true;
+            $subject = isset( $options['notifications']['7_days']['subject'] ) ? esc_attr( $options['notifications']['7_days']['subject'] ) : 'Your membership expires in 7 days';
+            $template = isset( $options['notifications']['7_days']['template'] ) ? wp_kses_post( $options['notifications']['7_days']['template'] ) : '';
+            ?>
+            <div class="dcmm-notification-field">
+                <label>
+                    <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][7_days][enabled]" value="1" <?php checked( $enabled ); ?> />
+                    <?php esc_html_e( 'Send 7 days before expiration', 'dcmm-membership' ); ?>
+                </label>
+                <div class="dcmm-notification-details" style="margin-top: 10px;">
+                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <input type="text" name="dcmm_expiration_notification_settings[notifications][7_days][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
+                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <div class="dcmm-email-template-editor">
+                        <?php
+                        wp_editor( $template, 'dcmm_7_day_template', array(
+                            'textarea_name' => 'dcmm_expiration_notification_settings[notifications][7_days][template]',
+                            'media_buttons' => false,
+                            'textarea_rows' => 10,
+                            'teeny' => true,
+                            'tinymce' => array(
+                                'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,undo,redo',
+                                'toolbar2' => ''
+                            )
+                        ));
+                        ?>
+                    </div>
+                </div>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_expiration_notification_settings'
+    );
+
+    // 1 Day Notification
+    add_settings_field(
+        'dcmm_1_day_notification',
+        __( '1 Day Notification', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_expiration_notification_settings', array() );
+            $enabled = isset( $options['notifications']['1_day']['enabled'] ) ? (bool) $options['notifications']['1_day']['enabled'] : true;
+            $subject = isset( $options['notifications']['1_day']['subject'] ) ? esc_attr( $options['notifications']['1_day']['subject'] ) : 'Your membership expires tomorrow';
+            $template = isset( $options['notifications']['1_day']['template'] ) ? wp_kses_post( $options['notifications']['1_day']['template'] ) : '';
+            ?>
+            <div class="dcmm-notification-field">
+                <label>
+                    <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][1_day][enabled]" value="1" <?php checked( $enabled ); ?> />
+                    <?php esc_html_e( 'Send 1 day before expiration', 'dcmm-membership' ); ?>
+                </label>
+                <div class="dcmm-notification-details" style="margin-top: 10px;">
+                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <input type="text" name="dcmm_expiration_notification_settings[notifications][1_day][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
+                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <div class="dcmm-email-template-editor">
+                        <?php
+                        wp_editor( $template, 'dcmm_1_day_template', array(
+                            'textarea_name' => 'dcmm_expiration_notification_settings[notifications][1_day][template]',
+                            'media_buttons' => false,
+                            'textarea_rows' => 10,
+                            'teeny' => true,
+                            'tinymce' => array(
+                                'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,undo,redo',
+                                'toolbar2' => ''
+                            )
+                        ));
+                        ?>
+                    </div>
+                </div>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_expiration_notification_settings'
+    );
+
+    // Expired Notification
+    add_settings_field(
+        'dcmm_expired_notification',
+        __( 'Expired Notification', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_expiration_notification_settings', array() );
+            $enabled = isset( $options['notifications']['expired']['enabled'] ) ? (bool) $options['notifications']['expired']['enabled'] : true;
+            $subject = isset( $options['notifications']['expired']['subject'] ) ? esc_attr( $options['notifications']['expired']['subject'] ) : 'Your membership has expired';
+            $template = isset( $options['notifications']['expired']['template'] ) ? wp_kses_post( $options['notifications']['expired']['template'] ) : '';
+            ?>
+            <div class="dcmm-notification-field">
+                <label>
+                    <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][expired][enabled]" value="1" <?php checked( $enabled ); ?> />
+                    <?php esc_html_e( 'Send on expiration day', 'dcmm-membership' ); ?>
+                </label>
+                <div class="dcmm-notification-details" style="margin-top: 10px;">
+                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <input type="text" name="dcmm_expiration_notification_settings[notifications][expired][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
+                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <div class="dcmm-email-template-editor">
+                        <?php
+                        wp_editor( $template, 'dcmm_expired_template', array(
+                            'textarea_name' => 'dcmm_expiration_notification_settings[notifications][expired][template]',
+                            'media_buttons' => false,
+                            'textarea_rows' => 10,
+                            'teeny' => true,
+                            'tinymce' => array(
+                                'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,undo,redo',
+                                'toolbar2' => ''
+                            )
+                        ));
+                        ?>
+                    </div>
+                </div>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_expiration_notification_settings'
+    );
+
+    // Register expiration notification settings
+    register_setting( 'dcmm_settings_group', 'dcmm_expiration_notification_settings' );
+
+    // My Account Page setting
+    add_settings_field(
+        'dcmm_my_account_page',
+        __( 'My Account Page', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $selected_page = isset( $options['dcmm_my_account_page'] ) ? $options['dcmm_my_account_page'] : '';
+            wp_dropdown_pages( array(
+                'name' => 'dcmm_settings[dcmm_my_account_page]',
+                'id' => 'dcmm_my_account_page',
+                'selected' => $selected_page,
+                'show_option_none' => 'Select a page...',
+                'option_none_value' => ''
+            ) );
+            ?>
+            <p class="description"><?php esc_html_e( 'Select the page that contains your member dashboard shortcode. This will be used for renewal links in expiration emails.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_membership_settings'
+    );
+
     // Add JavaScript to show/hide the specific date field based on the join policy selection
     add_action( 'admin_footer', function() {
         // Only run this JavaScript on the settings page
@@ -600,7 +839,7 @@ function register_settings() {
                 });
 
                 // Handle merge tag button clicks
-                $('.dcmm-merge-tag').on('click', function(e) {
+                $('.dcmm-merge-tag, .dcmm-expiration-merge-tag').on('click', function(e) {
                     e.preventDefault();
                     var tag = $(this).data('tag');
                     
@@ -634,19 +873,55 @@ function register_settings() {
             margin-bottom: 20px;
         }
         
-        .dcmm-merge-tag {
+        .dcmm-merge-tag, .dcmm-expiration-merge-tag {
             font-family: monospace;
             font-size: 11px;
             margin: 2px;
             white-space: nowrap;
         }
         
-        .dcmm-merge-tag:hover {
+        .dcmm-merge-tag:hover, .dcmm-expiration-merge-tag:hover {
             background-color: #0073aa;
             color: white;
         }
         
+        .dcmm-expiration-merge-tag {
+            background-color: #f0f8f0;
+            border-color: #28a745;
+        }
+        
+        .dcmm-expiration-merge-tag:hover {
+            background-color: #28a745;
+            color: white;
+        }
+        
         .dcmm-email-merge-tags {
+            border-radius: 4px;
+        }
+        
+        .dcmm-notification-field {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .dcmm-notification-field label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .dcmm-notification-details {
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        
+        .dcmm-expiration-notification-section {
+            margin-bottom: 20px;
+        }
+        
+        .dcmm-expiration-merge-tags {
             border-radius: 4px;
         }
         </style>

@@ -41,3 +41,13 @@ include_once( 'gateways.php' );
  * Email Handler
  */
 include_once( 'class-email-handler.php' );
+
+/**
+ * Notification Logger
+ */
+include_once( 'class-notification-logger.php' );
+
+/**
+ * Expiration Scheduler
+ */
+include_once( 'class-expiration-scheduler.php' );

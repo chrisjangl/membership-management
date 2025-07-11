@@ -876,8 +876,8 @@ class DCMM_Member extends WP_User {
 	public function get_expiration_date() {
 
 		// Check if we have a stored expiration date and settings hash
-		$stored_date = $this->get_meta_keys( 'expiration_date' );
-		$stored_hash = $this->get_meta_keys( 'settings_hash' );
+		$stored_date = $this->get( 'expiration_date' );
+		$stored_hash = $this->get( 'settings_hash' );
 		$current_hash = $this->get_settings_hash();
 		
 		// If no stored date or settings have changed, recalculate

@@ -44,80 +44,6 @@ require_once('class-member.php');
 add_action( 'wp_ajax_dcmm_renew_membership', 'ajax_renew_membership' );
 
 
-// create shortcode to display the user's My Account page
-function dcmm_my_account_shortcode() {
-    dcmm_enqueue_member_dashboard_styles_scripts();
-
-    // check if user is logged in
-    if ( ! is_user_logged_in() ) {
-
-        ob_start();
-
-        // if not, display login form
-        echo wp_kses( wp_login_form(), 'post' );
-
-        return ob_get_clean();
-    } else {
-
-        // get current user's ID
-        $user_id = get_current_user_id();
-        $CPT_post_id = get_user_meta( $user_id, 'dcmm_post_id', true );
-
-        // and then get the Member object
-        require_once('class-member.php');
-        $member = new DCMM_Member( $CPT_post_id );
-
-        // TODO: user DC_Member class to get this info
-        // $first_name = get_user_meta( $user_id, 'dcmm_first_name', true );
-        // $last_name = get_user_meta( $user_id, 'dcmm_last_name', true );
-        // $email = get_post_meta( $CPT_post_id, 'dcmm_email', true );
-        // $phone = get_user_meta( $user_id, 'dcmm_phone', true );
-        // $mailing_address = get_user_meta( $user_id, 'dcmm_mailing_address', true );
-        $membership_status = $member->get( 'status' );
-
-        // TODO: do we still need this?
-        require_once( 'functions-user-role.php' );
-
-        ob_start();
-
-        // check if user is a member...
-        if ( \DCMM_Users\is_organizational_member( $user_id ) ) {
-
-            // ...if so, display My Account page
-            ?>
-            <h3>Membership Status</h3>
-            <p>Your membership is: <b><?php echo esc_html( $membership_status ); ?></b>.</p>
-
-            <form action="" method="post" id="update-own-info">
-
-                <?php
-                wp_nonce_field( basename( __FILE__ ), 'dcmm_update_nonce' );
-
-                $member->get_member_info_form();
-                ?>
-
-                <input type="hidden" name="user_id" value="<?php echo esc_attr( $user_id ); ?>" />
-                <input type="submit" name="update_own_info" value="Update Info" />
-            </form>
-
-            <?php
-        } else {
-            // if not, display My Account page
-            ?>
-            <h2>My Account</h2>
-            <hr>
-            <h3>Membership Status</h3>
-            <p>You are not a member.</p>
-            <?php
-        }
-
-        // get the user's info
-        return ob_get_clean();
-    }
-}
-// add_shortcode( 'dcms_my_account', 'dcmm_my_account_shortcode' );
-add_shortcode( 'member_login', 'dcmm_render_login_form' );
-
 /** 
  * Membership login form
  * 
@@ -126,7 +52,16 @@ add_shortcode( 'member_login', 'dcmm_render_login_form' );
 function dcmm_render_login_form() {
 
     if ( is_user_logged_in() ) {
-        wp_redirect( home_url( '/member-dashboard/' ) );
+        // Check if there's a redirect URL in the query string
+        $redirect_to = isset($_GET['redirect_to']) ? urldecode($_GET['redirect_to']) : home_url( '/member-dashboard/' );
+        
+        // Validate the redirect URL is from our site for security
+        if (strpos($redirect_to, home_url()) === 0) {
+            wp_redirect( $redirect_to );
+        } else {
+            // TODO: get Dashboard URL from settings
+            wp_redirect( home_url( '/member-dashboard/' ) );
+        }
         exit;
     }
 
@@ -136,10 +71,12 @@ function dcmm_render_login_form() {
         echo '<div class="dcmm-error">Invalid username or password.</div>';
     }
 
+    // Preserve the original destination URL if provided
+    $redirect_to = isset($_GET['redirect_to']) ? urldecode($_GET['redirect_to']) : home_url( '/member-dashboard/' );
 
     $args = [
         'echo'           => true,
-        'redirect'       => home_url( '/member-dashboard/' ),
+        'redirect'       => $redirect_to,
         'form_id'        => 'dcmm-loginform',
         'label_username' => __( 'Username' ),
         'label_password' => __( 'Password' ),
@@ -152,6 +89,7 @@ function dcmm_render_login_form() {
 
     return ob_get_clean();
 }
+add_shortcode( 'member_login', 'dcmm_render_login_form' );
 
 /**
  * Redirect back to Member login on failed login
@@ -199,7 +137,18 @@ function dcmm_render_dashboard() {
 
     echo '<h2>Welcome, ' . esc_html( wp_get_current_user()->display_name ) . '</h2>';
 
-    // Display payment status messages
+    // TODO: we should be showing this during "renewal period", not based on click from email
+    // Check if this is a renewal request from email
+    $show_renewal_notice = isset($_GET['dcmm_action']) && $_GET['dcmm_action'] === 'renew';
+    
+    if ($show_renewal_notice) {
+        echo '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 15px; margin: 15px 0;">';
+        echo '<h4 style="margin-top: 0; color: #856404;">🔔 Renewal Reminder</h4>';
+        echo '<p>You\'ve clicked a renewal link from an expiration notification email. Use the "Renew Membership" button below to renew your membership.</p>';
+        echo '</div>';
+    }
+
+    // (maybe) Display payment status messages
     if ( isset( $_GET['payment'] ) && isset( $_GET['message'] ) ) {
         $payment_status = sanitize_text_field( $_GET['payment'] );
         $message = sanitize_text_field( $_GET['message'] );
@@ -213,14 +162,46 @@ function dcmm_render_dashboard() {
 
     if ( $cpt_id ) {
         
+        $expiration_date = $member->get_expiration_date();
+        $is_expired = $member->is_expired();
+        $status = $member->get( 'status' );
+        
         ob_start(); ?>
-        <p>Member ID: <?php echo esc_html( $cpt_id ); ?></p>
-        <p>Status: <?php echo esc_html( $member->get( 'status' ) ); ?></p>
+        
+        <div style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin: 15px 0;">
+            <h3 style="margin-top: 0;">Membership Information</h3>
+            <p><strong>Member ID:</strong> <?php echo esc_html( $cpt_id ); ?></p>
+            <p><strong>Status:</strong> 
+                <span style="color: <?php echo $status === 'active' ? '#28a745' : '#dc3545'; ?>;">
+                    <?php echo esc_html( ucfirst($status) ); ?>
+                </span>
+            </p>
+            <?php if ($expiration_date): ?>
+                <p><strong>Expiration Date:</strong> 
+                    <span style="color: <?php echo $is_expired ? '#dc3545' : '#666'; ?>;">
+                        <?php echo esc_html( date('F j, Y', strtotime($expiration_date)) ); ?>
+                        <?php if ($is_expired): ?>
+                            <em>(Expired)</em>
+                        <?php else: ?>
+                            <?php 
+                            $days_left = ceil((strtotime($expiration_date) - time()) / (24 * 60 * 60));
+                            echo "($days_left days remaining)";
+                            ?>
+                        <?php endif; ?>
+                    </span>
+                </p>
+            <?php endif; ?>
+        </div>
+        
         <div id="dcmm-renew-response"></div>
 
-        <?php // if ( dcmm_member_needs_renewal( $member_id ) ) : ?>
+        <?php 
+        // TODO: Should only show renew button during "renewal period"
+        if ($status === 'active'): ?>
             <button id="dcmm-renew-button" class="button button-primary">Renew Membership</button>
-        <?php //endif; ?>
+        <?php else: ?>
+            <p style="color: #dc3545;"><em>Membership renewal is only available for active members.</em></p>
+        <?php endif; ?>
 
         <?php 
 
@@ -236,6 +217,57 @@ function dcmm_render_dashboard() {
 
 }
 add_shortcode( 'dcmm_member_dashboard', 'dcmm_render_dashboard' );
+
+/**
+ * Preserve renewal parameters through login
+ * 
+ * If a user clicks a link in an email, they may be directed to the login page first.
+ * This function ensures that the renewal action is preserved through the login process.
+ * 
+ * @since 1.1.0
+ */
+function dcmm_preserve_renewal_parameters() {
+
+    // TODO: get Login & Dashboard URLs from settings
+    // Only run on login pages or when redirecting for login
+    if (!is_user_logged_in() && (is_page('member-login') || is_page('member-dashboard'))) {
+        
+        // If someone visits member-dashboard with dcmm_action=renew but isn't logged in,
+        // redirect them to login with the original URL preserved
+        if (isset($_GET['dcmm_action']) && $_GET['dcmm_action'] === 'renew' && !is_user_logged_in()) {
+            $current_url = home_url($_SERVER['REQUEST_URI']);
+            $login_url = home_url('/member-login/');
+            $redirect_url = add_query_arg('redirect_to', urlencode($current_url), $login_url);
+            
+            wp_redirect($redirect_url);
+            exit;
+        }
+    }
+}
+add_action('template_redirect', 'dcmm_preserve_renewal_parameters');
+
+/**
+ * Handle login redirect to preserve renewal parameters
+ * 
+ * TODO: Make sure this isn't duplicating logic in dcmm_preserve_renewal_parameters()
+ * 
+ * @param string $redirect_to The URL to redirect to
+ * @param string $request The requested redirect URL
+ * @param WP_User|WP_Error $user The logged-in user object or WP_Error on failure
+ * @return string The URL to redirect to after login
+ * @since 1.1.0
+ */
+function dcmm_login_redirect($redirect_to, $request, $user) {
+
+    // If there's a specific redirect_to parameter, use it
+    if (!empty($request) && strpos($request, home_url()) === 0) {
+        return $request;
+    }
+    
+    // Default to member dashboard
+    return home_url('/member-dashboard/');
+}
+add_filter('login_redirect', 'dcmm_login_redirect', 10, 3);
     
 /**
  * Allow users to update their own info, submitted by AJAX

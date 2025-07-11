@@ -17,6 +17,24 @@ define( 'DCMM_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DCMM_URL', plugin_dir_url( __FILE__ ) );
 
 /**
+ * Plugin activation hook
+ */
+function dcmm_activate_plugin() {
+    require_once( DCMM_PATH . 'includes/class-notification-logger.php' );
+    DCMM_Notification_Logger::create_table();
+}
+register_activation_hook( __FILE__, 'dcmm_activate_plugin' );
+
+/**
+ * Plugin deactivation hook
+ */
+function dcmm_deactivate_plugin() {
+    require_once( DCMM_PATH . 'includes/class-expiration-scheduler.php' );
+    DCMM_Expiration_Scheduler::unschedule_cron_job();
+}
+register_deactivation_hook( __FILE__, 'dcmm_deactivate_plugin' );
+
+/**
  * Initialize
  */
 require_once( DCMM_PATH . 'includes/init.php' );

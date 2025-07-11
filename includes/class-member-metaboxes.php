@@ -173,17 +173,25 @@ class DCMM_metaboxes {
         require_once('class-member.php');
         $CPT_post_id = get_the_id();
 
-        // Get the membership status
+        // prep the Member object
         $member = new DCMM_Member( $CPT_post_id );
         $member_id = $member->get_member_id();
         $meta_keys = $member->get_meta_keys();
         $nonce_prefix = $meta_keys['nonce_prefix'];
+
+        // Get the membership status
         $membership_status = $member->get( 'status' );
         // By calling get_expiration_date(), we ensure that the expiration date is calculated if settings have changed
         $expiration_date = $member->get_expiration_date();
 
-        wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' ); ?>
+        wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' );
+        wp_nonce_field( $nonce_prefix, 'dcmm_expiration_date_nonce' ); ?>
         
+        <?php
+        /**
+         * Membership status dropdown
+         */ 
+        ?>
         <p>
             <label for="dcmm_status">Membership status:</label>
             <select name="dcmm_status" id="dcmm_status">
@@ -199,7 +207,7 @@ class DCMM_metaboxes {
             ?>
             <p>
                 <label for="dcmm_expiration_date">Expiration Date:</label>
-                <input type="date" name="dcmm_expiration_date" id="dcmm_expiration_date" value="<?php echo esc_attr( $expiration_date ); ?>" readonly />
+                <input type="date" name="dcmm_expiration_date" id="dcmm_expiration_date" value="<?php echo esc_attr( $expiration_date ); ?>"  />
             </p>
             <?php
         }
@@ -292,7 +300,8 @@ class DCMM_metaboxes {
             'last_name',
             'phone',
             'address',
-            'status'
+            'status',
+            'expiration_date',
         );
 
         require_once('class-member.php');
