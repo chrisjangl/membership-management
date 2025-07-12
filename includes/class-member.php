@@ -1138,7 +1138,7 @@ class DCMM_Member extends WP_User {
 	 * @return int Number of days before expiration that renewal becomes available
 	 */
 	private function get_renewal_window_days() {
-		$options = get_option( 'dcmm_expiration_notification_settings', array() );
+		$options = get_option( 'dcmm_settings', array() );
 		return isset( $options['renewal_window_days'] ) ? intval( $options['renewal_window_days'] ) : 30;
 	}
 
@@ -1148,7 +1148,7 @@ class DCMM_Member extends WP_User {
 	 * @return int Number of days after expiration that renewal is still allowed
 	 */
 	private function get_grace_period_days() {
-		$options = get_option( 'dcmm_expiration_notification_settings', array() );
+		$options = get_option( 'dcmm_settings', array() );
 		return isset( $options['grace_period_days'] ) ? intval( $options['grace_period_days'] ) : 30;
 	}
 

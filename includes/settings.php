@@ -38,17 +38,228 @@ add_action( 'admin_menu', __NAMESPACE__ . '\add_settings_page' );
  * @since 1.1.0
  */
 function settings_page_callback() {
+    // Get current tab
+    $current_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'general';
+    
+    // Define tabs
+    $tabs = array(
+        'general' => __('General', 'dcmm-membership'),
+        'payments' => __('Payment Gateways', 'dcmm-membership'),
+        'emails' => __('Email & Notifications', 'dcmm-membership')
+    );
     ?>
     <div class="wrap">
         <h1><?php esc_html_e( 'Membership Management Settings', 'dcmm-membership' ); ?></h1>
-        <form method="post" action="options.php">
+        
+        <!-- Tab Navigation -->
+        <nav class="nav-tab-wrapper">
+            <?php foreach ($tabs as $tab_key => $tab_label): ?>
+                <a href="<?php echo esc_url(add_query_arg('tab', $tab_key, admin_url('edit.php?post_type=dcmm-member&page=dcmm_settings'))); ?>" 
+                   class="nav-tab <?php echo $current_tab === $tab_key ? 'nav-tab-active' : ''; ?>">
+                    <?php echo esc_html($tab_label); ?>
+                </a>
+            <?php endforeach; ?>
+        </nav>
+        
+        <!-- Tab Content -->
+        <div class="tab-content">
             <?php
-            settings_fields( 'dcmm_settings_group' );
-            do_settings_sections( 'dcmm_settings_group' );
-            submit_button();
+            switch ($current_tab) {
+                case 'general':
+                    render_general_tab();
+                    break;
+                case 'payments':
+                    render_payments_tab();
+                    break;
+                case 'emails':
+                    render_emails_tab();
+                    break;
+                default:
+                    render_general_tab();
+                    break;
+            }
             ?>
-        </form>
+        </div>
     </div>
+    
+    <style>
+    .tab-content {
+        background: #fff;
+        border: 1px solid #ccd0d4;
+        border-top: none;
+        padding: 20px;
+        margin-top: 0;
+    }
+    .nav-tab-wrapper {
+        margin-bottom: 0;
+    }
+    </style>
+    <?php
+}
+
+/**
+ * Render General tab content
+ */
+function render_general_tab() {
+    ?>
+    <form method="post" action="options.php">
+        <?php
+        settings_fields( 'dcmm_settings_group' );
+        
+        // Render only membership settings section
+        echo '<h2>' . __('Membership Settings', 'dcmm-membership') . '</h2>';
+        echo '<table class="form-table" role="presentation">';
+        do_settings_fields( 'dcmm_settings_group', 'dcmm_membership_settings' );
+        echo '</table>';
+        
+        submit_button();
+        ?>
+    </form>
+    <?php
+}
+
+/**
+ * Render Payment Gateways tab content
+ */
+function render_payments_tab() {
+    ?>
+    <form method="post" action="options.php">
+        <?php
+        settings_fields( 'dcmm_settings_group' );
+        
+        // Render PayPal settings section
+        echo '<h2>' . __('PayPal Settings', 'dcmm-membership') . '</h2>';
+        
+        // Show the section description
+        $paypal_section_callback = function() {
+            ?>
+            <section class="dcmm-paypal-settings-section">
+                <p><?php esc_html_e( 'Configure PayPal payment processing for membership dues.', 'dcmm-membership' ); ?></p>
+                <div class="dcmm-paypal-setup-instructions" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
+                    <h4><?php esc_html_e( 'PayPal Setup Instructions:', 'dcmm-membership' ); ?></h4>
+                    <ol>
+                        <li>
+                            <strong><?php esc_html_e( 'Create a PayPal Developer Account:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Visit', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/" target="_blank">https://developer.paypal.com/</a> <?php esc_html_e( 'and sign in with your PayPal account.', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Create an Application:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Go to', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'My Apps & Credentials', 'dcmm-membership' ); ?></a> <?php esc_html_e( 'and click "Create App".', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Configure Your App:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Choose "Default Application" and select your business account. Make sure to enable "Accept payments" feature.', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Copy Credentials:', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'Copy the Client ID and Client Secret from your app details below.', 'dcmm-membership' ); ?>
+                        </li>
+                        <li>
+                            <strong><?php esc_html_e( 'Set Up Webhooks (Optional):', 'dcmm-membership' ); ?></strong><br>
+                            <?php esc_html_e( 'For real-time payment notifications, configure webhooks in your PayPal app using the webhook URL shown below.', 'dcmm-membership' ); ?>
+                        </li>
+                    </ol>
+                    <p><em><?php esc_html_e( 'Start with Sandbox environment for testing, then switch to Live when ready for production.', 'dcmm-membership' ); ?></em></p>
+                </div>
+            </section>
+            <?php
+        };
+        $paypal_section_callback();
+        
+        echo '<table class="form-table" role="presentation">';
+        do_settings_fields( 'dcmm_settings_group', 'dcmm_paypal_settings' );
+        echo '</table>';
+        
+        submit_button();
+        ?>
+    </form>
+    <?php
+}
+
+/**
+ * Render Email & Notifications tab content
+ */
+function render_emails_tab() {
+    ?>
+    <form method="post" action="options.php">
+        <?php
+        settings_fields( 'dcmm_settings_group' );
+        
+        // Email Settings Section
+        echo '<h2>' . __('Email Settings', 'dcmm-membership') . '</h2>';
+        
+        // Show the section description with merge tags
+        $email_section_callback = function() {
+            ?>
+            <section class="dcmm-email-settings-section">
+                <p><?php esc_html_e( 'Configure email notifications for member signups and renewals.', 'dcmm-membership' ); ?></p>
+                <div class="dcmm-email-merge-tags" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
+                    <h4><?php esc_html_e( 'Available Merge Tags:', 'dcmm-membership' ); ?></h4>
+                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your email templates:', 'dcmm-membership' ); ?></p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{first_name}">{first_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{last_name}">{last_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{full_name}">{full_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{email}">{email}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{membership_start_date}">{membership_start_date}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{membership_status}">{membership_status}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{renewal_date}">{renewal_date}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{site_name}">{site_name}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{site_url}">{site_url}</button>
+                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{payment_details}">{payment_details}</button>
+                    </div>
+                    <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                        <strong>Note:</strong> <code>{payment_details}</code> will only show content in renewal emails when payment was made.
+                    </p>
+                </div>
+            </section>
+            <?php
+        };
+        $email_section_callback();
+        
+        echo '<table class="form-table" role="presentation">';
+        do_settings_fields( 'dcmm_settings_group', 'dcmm_email_settings' );
+        echo '</table>';
+        
+        // Expiration Notification Settings Section
+        echo '<h2>' . __('Expiration Notification Settings', 'dcmm-membership') . '</h2>';
+        
+        // Show the expiration section description
+        $expiration_section_callback = function() {
+            ?>
+            <section class="dcmm-expiration-notification-section">
+                <p><?php esc_html_e( 'Configure automated email notifications for membership expiration reminders.', 'dcmm-membership' ); ?></p>
+                <div class="dcmm-expiration-merge-tags" style="background: #f9f9f9; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
+                    <h4><?php esc_html_e( 'Available Merge Tags for Expiration Emails:', 'dcmm-membership' ); ?></h4>
+                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your expiration email templates:', 'dcmm-membership' ); ?></p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{first_name}">{first_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{last_name}">{last_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{full_name}">{full_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{email}">{email}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{membership_status}">{membership_status}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{expiration_date}">{expiration_date}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{days_until_expiration}">{days_until_expiration}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{renewal_url}">{renewal_url}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{site_name}">{site_name}</button>
+                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{site_url}">{site_url}</button>
+                    </div>
+                    <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                        <strong>Note:</strong> <code>{renewal_url}</code> will link to your member dashboard renewal page.
+                    </p>
+                </div>
+            </section>
+            <?php
+        };
+        $expiration_section_callback();
+        
+        echo '<table class="form-table" role="presentation">';
+        do_settings_fields( 'dcmm_settings_group', 'dcmm_expiration_notification_settings' );
+        echo '</table>';
+        
+        submit_button();
+        ?>
+    </form>
     <?php
 }
 
@@ -137,6 +348,53 @@ function register_settings() {
         'dcmm_membership_settings'
     );
 
+    // Renewal Window Settings
+    add_settings_field(
+        'dcmm_renewal_window_settings',
+        __( 'Renewal Window Settings', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $renewal_window_days = isset( $options['renewal_window_days'] ) ? intval( $options['renewal_window_days'] ) : 30;
+            $grace_period_days = isset( $options['grace_period_days'] ) ? intval( $options['grace_period_days'] ) : 30;
+            $renewal_notice_days = isset( $options['renewal_notice_days'] ) ? intval( $options['renewal_notice_days'] ) : 7;
+            ?>
+            <div class="dcmm-renewal-window-settings">
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="renewal_window_days"><?php esc_html_e( 'Renewal Window (days)', 'dcmm-membership' ); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="renewal_window_days" name="dcmm_settings[renewal_window_days]" value="<?php echo esc_attr( $renewal_window_days ); ?>" min="1" max="365" />
+                            <p class="description"><?php esc_html_e( 'Number of days before expiration that renewal becomes available. Default: 30 days.', 'dcmm-membership' ); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="grace_period_days"><?php esc_html_e( 'Grace Period (days)', 'dcmm-membership' ); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="grace_period_days" name="dcmm_settings[grace_period_days]" value="<?php echo esc_attr( $grace_period_days ); ?>" min="0" max="365" />
+                            <p class="description"><?php esc_html_e( 'Number of days after expiration that renewal is still allowed. Default: 30 days.', 'dcmm-membership' ); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="renewal_notice_days"><?php esc_html_e( 'Renewal Notice (days)', 'dcmm-membership' ); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="renewal_notice_days" name="dcmm_settings[renewal_notice_days]" value="<?php echo esc_attr( $renewal_notice_days ); ?>" min="1" max="365" />
+                            <p class="description"><?php esc_html_e( 'Show renewal notice X days before renewal window opens. Default: 7 days.', 'dcmm-membership' ); ?></p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_membership_settings'
+    );
+
     register_setting(
         'dcmm_settings_group',
         'dcmm_membership_term_length',
@@ -172,6 +430,34 @@ function register_settings() {
         [
             'type' => 'string',
             'default' => 'fixed_term',
+        ]
+    );
+
+    // Register renewal window settings
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_renewal_window_days',
+        [
+            'type' => 'integer',
+            'default' => 30,
+        ]
+    );
+
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_grace_period_days',
+        [
+            'type' => 'integer',
+            'default' => 30,
+        ]
+    );
+
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_renewal_notice_days',
+        [
+            'type' => 'integer',
+            'default' => 7,
         ]
     );
 
@@ -764,52 +1050,6 @@ function register_settings() {
         'dcmm_expiration_notification_settings'
     );
 
-    // Renewal Window Settings
-    add_settings_field(
-        'dcmm_renewal_window_settings',
-        __( 'Renewal Window Settings', 'dcmm-membership' ),
-        function() {
-            $options = get_option( 'dcmm_expiration_notification_settings', array() );
-            $renewal_window_days = isset( $options['renewal_window_days'] ) ? intval( $options['renewal_window_days'] ) : 30;
-            $grace_period_days = isset( $options['grace_period_days'] ) ? intval( $options['grace_period_days'] ) : 30;
-            $renewal_notice_days = isset( $options['renewal_notice_days'] ) ? intval( $options['renewal_notice_days'] ) : 7;
-            ?>
-            <div class="dcmm-renewal-window-settings">
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">
-                            <label for="renewal_window_days"><?php esc_html_e( 'Renewal Window (days)', 'dcmm-membership' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="number" id="renewal_window_days" name="dcmm_expiration_notification_settings[renewal_window_days]" value="<?php echo esc_attr( $renewal_window_days ); ?>" min="1" max="365" />
-                            <p class="description"><?php esc_html_e( 'Number of days before expiration that renewal becomes available. Default: 30 days.', 'dcmm-membership' ); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="grace_period_days"><?php esc_html_e( 'Grace Period (days)', 'dcmm-membership' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="number" id="grace_period_days" name="dcmm_expiration_notification_settings[grace_period_days]" value="<?php echo esc_attr( $grace_period_days ); ?>" min="0" max="365" />
-                            <p class="description"><?php esc_html_e( 'Number of days after expiration that renewal is still allowed. Default: 30 days.', 'dcmm-membership' ); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="renewal_notice_days"><?php esc_html_e( 'Renewal Notice (days)', 'dcmm-membership' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="number" id="renewal_notice_days" name="dcmm_expiration_notification_settings[renewal_notice_days]" value="<?php echo esc_attr( $renewal_notice_days ); ?>" min="1" max="365" />
-                            <p class="description"><?php esc_html_e( 'Show renewal notice X days before renewal window opens. Default: 7 days.', 'dcmm-membership' ); ?></p>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <?php
-        },
-        'dcmm_settings_group',
-        'dcmm_expiration_notification_settings'
-    );
 
     // Register expiration notification settings
     register_setting( 'dcmm_settings_group', 'dcmm_expiration_notification_settings' );
@@ -1133,4 +1373,37 @@ function get_paypal_api_base_url() {
     }
     
     return 'https://api-m.sandbox.paypal.com';
+}
+
+/**
+ * Get renewal window days setting.
+ * 
+ * @since 1.1.0
+ * @return int Number of days before expiration that renewal becomes available
+ */
+function get_renewal_window_days() {
+    $settings = get_settings();
+    return isset( $settings['renewal_window_days'] ) ? intval( $settings['renewal_window_days'] ) : 30;
+}
+
+/**
+ * Get grace period days setting.
+ * 
+ * @since 1.1.0
+ * @return int Number of days after expiration that renewal is still allowed
+ */
+function get_grace_period_days() {
+    $settings = get_settings();
+    return isset( $settings['grace_period_days'] ) ? intval( $settings['grace_period_days'] ) : 30;
+}
+
+/**
+ * Get renewal notice days setting.
+ * 
+ * @since 1.1.0
+ * @return int Number of days before renewal window opens to show notice
+ */
+function get_renewal_notice_days() {
+    $settings = get_settings();
+    return isset( $settings['renewal_notice_days'] ) ? intval( $settings['renewal_notice_days'] ) : 7;
 }
