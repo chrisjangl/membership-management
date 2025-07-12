@@ -197,7 +197,7 @@ class DCMM_metaboxes {
             <select name="dcmm_status" id="dcmm_status">
                 <option value="--" <?php selected( $membership_status, '' ); ?>>--</option>
                 <option value="active" <?php selected( $membership_status, 'active' ); ?>>Active</option>
-                <option value="inactive" <?php selected( $membership_status, 'inactive' ); ?>>Inactive</option>
+                <option value="expired" <?php selected( $membership_status, 'expired' ); ?>>Expired</option>
             </select>
         </p>
 

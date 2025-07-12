@@ -162,7 +162,33 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 			}
 			break;
 		case 'status':
-			echo $member->get( 'status');
+			$status = $member->get( 'status');
+			$renewal_status = $member->get_renewal_status();
+			
+			// Status with renewal window indicator
+			echo '<span class="dcmm-status-' . esc_attr($status) . '">' . esc_html(ucfirst($status)) . '</span>';
+			
+			// Add renewal window indicator
+			if ($status === 'active') {
+				switch ($renewal_status) {
+					case 'available':
+						echo '<br><span class="dcmm-renewal-indicator dcmm-available" title="Renewal available">🟢 Renewable</span>';
+						break;
+					case 'too_early':
+						$days = $member->get_days_until_renewal_window();
+						echo '<br><span class="dcmm-renewal-indicator dcmm-pending" title="Renewal in ' . $days . ' days">🟡 ' . $days . 'd</span>';
+						break;
+					case 'grace':
+						echo '<br><span class="dcmm-renewal-indicator dcmm-grace" title="In grace period">🟠 Grace</span>';
+						break;
+				}
+			} elseif ($status === 'expired') {
+				if ($renewal_status === 'grace') {
+					echo '<br><span class="dcmm-renewal-indicator dcmm-grace" title="Grace period - can still renew">🟠 Grace</span>';
+				} elseif ($renewal_status === 'suspended') {
+					echo '<br><span class="dcmm-renewal-indicator dcmm-suspended" title="Grace period expired">🔴 Suspended</span>';
+				}
+			}
 			break;
 	}
 }

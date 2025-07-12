@@ -1048,6 +1048,111 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
+	 * Check if member is in renewal window (can renew)
+	 * 
+	 * @return bool True if in renewal window, false otherwise
+	 */
+	public function is_in_renewal_window() {
+		$expiration_date = $this->get_expiration_date();
+		
+		if ( ! $expiration_date ) {
+			return false; // No expiration date means no renewal window
+		}
+		
+		$renewal_window_days = $this->get_renewal_window_days();
+		$renewal_window_start = strtotime( $expiration_date . ' -' . $renewal_window_days . ' days' );
+		$grace_period_days = $this->get_grace_period_days();
+		$grace_period_end = strtotime( $expiration_date . ' +' . $grace_period_days . ' days' );
+		
+		$current_time = time();
+		
+		// Can renew from window start until end of grace period
+		return $current_time >= $renewal_window_start && $current_time <= $grace_period_end;
+	}
+
+	/**
+	 * Get renewal window start date
+	 * 
+	 * @return string|false Renewal window start date (Y-m-d format) or false if no expiration
+	 */
+	public function get_renewal_window_start() {
+		$expiration_date = $this->get_expiration_date();
+		
+		if ( ! $expiration_date ) {
+			return false;
+		}
+		
+		$renewal_window_days = $this->get_renewal_window_days();
+		return date( 'Y-m-d', strtotime( $expiration_date . ' -' . $renewal_window_days . ' days' ) );
+	}
+
+	/**
+	 * Get current renewal status
+	 * 
+	 * @return string Renewal status: 'too_early', 'available', 'grace', 'suspended'
+	 */
+	public function get_renewal_status() {
+		$expiration_date = $this->get_expiration_date();
+		
+		if ( ! $expiration_date ) {
+			return 'no_expiration'; // No expiration date set
+		}
+		
+		$current_time = time();
+		$expiration_timestamp = strtotime( $expiration_date );
+		$renewal_window_days = $this->get_renewal_window_days();
+		$grace_period_days = $this->get_grace_period_days();
+		
+		$renewal_window_start = strtotime( $expiration_date . ' -' . $renewal_window_days . ' days' );
+		$grace_period_end = strtotime( $expiration_date . ' +' . $grace_period_days . ' days' );
+		
+		if ( $current_time < $renewal_window_start ) {
+			return 'too_early';
+		} elseif ( $current_time >= $renewal_window_start && $current_time <= $expiration_timestamp ) {
+			return 'available';
+		} elseif ( $current_time > $expiration_timestamp && $current_time <= $grace_period_end ) {
+			return 'grace';
+		} else {
+			return 'suspended';
+		}
+	}
+
+	/**
+	 * Get days until renewal window opens
+	 * 
+	 * @return int Days until renewal window opens (negative if already open/past)
+	 */
+	public function get_days_until_renewal_window() {
+		$renewal_window_start = $this->get_renewal_window_start();
+		
+		if ( ! $renewal_window_start ) {
+			return 0;
+		}
+		
+		return ceil( ( strtotime( $renewal_window_start ) - time() ) / ( 24 * 60 * 60 ) );
+	}
+
+	/**
+	 * Get renewal window days setting
+	 * 
+	 * @return int Number of days before expiration that renewal becomes available
+	 */
+	private function get_renewal_window_days() {
+		$options = get_option( 'dcmm_expiration_notification_settings', array() );
+		return isset( $options['renewal_window_days'] ) ? intval( $options['renewal_window_days'] ) : 30;
+	}
+
+	/**
+	 * Get grace period days setting
+	 * 
+	 * @return int Number of days after expiration that renewal is still allowed
+	 */
+	private function get_grace_period_days() {
+		$options = get_option( 'dcmm_expiration_notification_settings', array() );
+		return isset( $options['grace_period_days'] ) ? intval( $options['grace_period_days'] ) : 30;
+	}
+
+	/**
 	 * Log an action for the Member
 	 * 
 	 * @param string $action The action to log

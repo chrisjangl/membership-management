@@ -764,6 +764,53 @@ function register_settings() {
         'dcmm_expiration_notification_settings'
     );
 
+    // Renewal Window Settings
+    add_settings_field(
+        'dcmm_renewal_window_settings',
+        __( 'Renewal Window Settings', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_expiration_notification_settings', array() );
+            $renewal_window_days = isset( $options['renewal_window_days'] ) ? intval( $options['renewal_window_days'] ) : 30;
+            $grace_period_days = isset( $options['grace_period_days'] ) ? intval( $options['grace_period_days'] ) : 30;
+            $renewal_notice_days = isset( $options['renewal_notice_days'] ) ? intval( $options['renewal_notice_days'] ) : 7;
+            ?>
+            <div class="dcmm-renewal-window-settings">
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="renewal_window_days"><?php esc_html_e( 'Renewal Window (days)', 'dcmm-membership' ); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="renewal_window_days" name="dcmm_expiration_notification_settings[renewal_window_days]" value="<?php echo esc_attr( $renewal_window_days ); ?>" min="1" max="365" />
+                            <p class="description"><?php esc_html_e( 'Number of days before expiration that renewal becomes available. Default: 30 days.', 'dcmm-membership' ); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="grace_period_days"><?php esc_html_e( 'Grace Period (days)', 'dcmm-membership' ); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="grace_period_days" name="dcmm_expiration_notification_settings[grace_period_days]" value="<?php echo esc_attr( $grace_period_days ); ?>" min="0" max="365" />
+                            <p class="description"><?php esc_html_e( 'Number of days after expiration that renewal is still allowed. Default: 30 days.', 'dcmm-membership' ); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="renewal_notice_days"><?php esc_html_e( 'Renewal Notice (days)', 'dcmm-membership' ); ?></label>
+                        </th>
+                        <td>
+                            <input type="number" id="renewal_notice_days" name="dcmm_expiration_notification_settings[renewal_notice_days]" value="<?php echo esc_attr( $renewal_notice_days ); ?>" min="1" max="365" />
+                            <p class="description"><?php esc_html_e( 'Show renewal notice X days before renewal window opens. Default: 7 days.', 'dcmm-membership' ); ?></p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_expiration_notification_settings'
+    );
+
     // Register expiration notification settings
     register_setting( 'dcmm_settings_group', 'dcmm_expiration_notification_settings' );
 
