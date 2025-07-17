@@ -36,3 +36,29 @@
 
     }
 }
+
+// buttons
+button, .button {
+    & + a {
+        margin-top: 10px !important;
+        // display: none !important;
+    }
+}
+
+// record offline payment form
+#dcmm-offline-payment-form {
+    tr {
+        display: flex;
+        flex-direction: column;
+        row-gap: 5px;
+        margin-bottom: 5px;
+
+        th {
+            padding: 0;
+        }
+
+        td {
+            padding: 0;
+        }
+    }
+}

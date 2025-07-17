@@ -226,21 +226,203 @@ class DCMM_metaboxes {
         ?>
 
         <div class="dcmm-renewal-options">
-            <p>
-                <label for="dcmm_send_email">
-                    <input type="checkbox" id="dcmm_send_email" checked> 
-                    Send email receipt
-                </label>
-            </p>
-            <p>
-                <a href="#" class="button button-primary dcmm-renew-button" data-base-url="<?php echo esc_url( $renew_url_base ); ?>">Renew Membership</a>
-                <br><br>
-                <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
-            </p>
+            <?php
+            // Check if offline payments are enabled
+            if ( function_exists( 'DCMM_Settings\are_offline_payments_enabled' ) && DCMM_Settings\are_offline_payments_enabled() ) {
+                // Show payment form on button click
+                ?>
+                <p>
+                    <a href="#" class="button button-primary dcmm-show-payment-form">Renew Membership</a>
+                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+                </p>
+                
+                <div id="dcmm-payment-form" style="display: none; margin-top: 15px; padding: 15px; border: 1px solid #ddd; background: #f9f9f9;">
+                    <h4>Record Payment Details</h4>
+                    <div id="dcmm-offline-payment-form">
+                        <?php wp_nonce_field( 'dcmm_offline_payment_' . $member_id, 'dcmm_offline_payment_nonce' ); ?>
+                        <input type="hidden" id="dcmm_action" value="dcmm_offline_payment">
+                        <input type="hidden" id="dcmm_member_id" value="<?php echo esc_attr( $member_id ); ?>">
+                        
+                        <table class="form-table">
+                            <tr>
+                                <th><label for="payment_amount">Payment Amount:</label></th>
+                                <td>
+                                    $<input type="number" id="payment_amount" name="payment_amount" 
+                                           value="<?php echo esc_attr( DCMM_Settings\get_dues_amount() ); ?>" 
+                                           step="0.01" min="0" style="width: 100px;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="payment_method">Payment Method:</label></th>
+                                <td>
+                                    <select id="payment_method" name="payment_method">
+                                        <option value="">Select method...</option>
+                                        <?php
+                                        $methods = DCMM_Settings\get_offline_payment_methods();
+                                        foreach ( $methods as $key => $label ) {
+                                            echo '<option value="' . esc_attr( $key ) . '">' . esc_html( $label ) . '</option>';
+                                        }
+                                        ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="payment_reference">Reference #:</label></th>
+                                <td>
+                                    <input type="text" id="payment_reference" name="payment_reference" 
+                                           placeholder="Check #, Transaction ID, etc." style="width: 200px;">
+                                    <?php if ( DCMM_Settings\is_offline_reference_required() ): ?>
+                                        <span style="color: red;">*</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="payment_date">Payment Date:</label></th>
+                                <td>
+                                    <input type="date" id="payment_date" name="payment_date" 
+                                           value="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>" style="width: 150px;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="payment_notes">Notes:</label></th>
+                                <td>
+                                    <textarea id="payment_notes" name="payment_notes" rows="3" 
+                                              placeholder="Optional notes about this payment..."></textarea>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <td>
+                                    <label for="send_email_receipt">
+                                        <input type="checkbox" id="send_email_receipt" name="send_email_receipt" value="1" checked>
+                                        Send email receipt to member
+                                    </label>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <p>
+                            <button type="button" class="button button-primary dcmm-submit-payment" data-member-id="<?php echo esc_attr( $member_id ); ?>">Record Payment & Subscribe</button>
+                            <a href="#" class="button dcmm-cancel-payment-form">Cancel</a>
+                        </p>
+                    </div>
+                </div>
+                <?php
+            } else {
+                // Original simple renewal flow
+                ?>
+                <p>
+                    <label for="dcmm_send_email">
+                        <input type="checkbox" id="dcmm_send_email" checked> 
+                        Send email receipt
+                    </label>
+                </p>
+                <p>
+                    <a href="#" class="button button-primary dcmm-renew-button" data-base-url="<?php echo esc_url( $renew_url_base ); ?>">Renew Membership</a>
+                    <br><br>
+                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+                </p>
+                <?php
+            }
+            ?>
         </div>
 
         <script>
         jQuery(document).ready(function($) {
+            <?php if ( function_exists( 'DCMM_Settings\are_offline_payments_enabled' ) && DCMM_Settings\are_offline_payments_enabled() ): ?>
+            // Offline payment form handling
+            $('.dcmm-show-payment-form').on('click', function(e) {
+                e.preventDefault();
+                $('#dcmm-payment-form').slideDown();
+                $(this).hide();
+            });
+            
+            $('.dcmm-cancel-payment-form').on('click', function(e) {
+                e.preventDefault();
+                $('#dcmm-payment-form').slideUp();
+                $('.dcmm-show-payment-form').show();
+            });
+            
+            $('.dcmm-submit-payment').on('click', function(e) {
+                e.preventDefault();
+                
+                // Validate required fields
+                var amount = $('#payment_amount').val();
+                var method = $('#payment_method').val();
+                var date = $('#payment_date').val();
+                var reference = $('#payment_reference').val();
+                
+                if (!amount || parseFloat(amount) <= 0) {
+                    alert('Please enter a valid payment amount');
+                    $('#payment_amount').focus();
+                    return;
+                }
+                
+                if (!method) {
+                    alert('Please select a payment method');
+                    $('#payment_method').focus();
+                    return;
+                }
+                
+                if (!date) {
+                    alert('Please enter a payment date');
+                    $('#payment_date').focus();
+                    return;
+                }
+                
+                // Check if reference is required
+                <?php if ( DCMM_Settings\is_offline_reference_required() ): ?>
+                if (!reference) {
+                    alert('Reference number is required');
+                    $('#payment_reference').focus();
+                    return;
+                }
+                <?php endif; ?>
+                
+                // Collect form data
+                var formData = new FormData();
+                formData.append('action', $('#dcmm_action').val());
+                formData.append('member_id', $('#dcmm_member_id').val());
+                formData.append('dcmm_offline_payment_nonce', $('input[name="dcmm_offline_payment_nonce"]').val());
+                formData.append('payment_amount', $('#payment_amount').val());
+                formData.append('payment_method', $('#payment_method').val());
+                formData.append('payment_reference', $('#payment_reference').val());
+                formData.append('payment_date', $('#payment_date').val());
+                formData.append('payment_notes', $('#payment_notes').val());
+                formData.append('send_email_receipt', $('#send_email_receipt').is(':checked') ? '1' : '0');
+                
+                // Submit via AJAX first to check for errors, then redirect
+                $.ajax({
+                    url: '<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        // If we get here, submission was successful
+                        if (response.success && response.data.redirect_url) {
+                            window.location.href = response.data.redirect_url;
+                        } else {
+                            alert('Payment processed but unable to redirect');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        // Try to parse JSON error response
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.data && response.data.redirect_url) {
+                                window.location.href = response.data.redirect_url;
+                            } else {
+                                alert('Error submitting payment: ' + (response.data.message || error));
+                            }
+                        } catch (e) {
+                            alert('Error submitting payment: ' + error);
+                        }
+                    }
+                });
+            });
+            <?php else: ?>
+            // Original renewal button handling
             $('.dcmm-renew-button').on('click', function(e) {
                 e.preventDefault();
                 var baseUrl = $(this).data('base-url');
@@ -249,6 +431,7 @@ class DCMM_metaboxes {
                 var finalUrl = baseUrl + '&send_email=' + sendEmail;
                 window.location.href = finalUrl;
             });
+            <?php endif; ?>
         });
         </script>
 
@@ -262,16 +445,52 @@ class DCMM_metaboxes {
     function create_metabox_logs() {
 
         $logs = get_post_meta( get_the_ID(), 'dcmm_log', true );
+        $payment_logs = get_post_meta( get_the_ID(), 'dcmm_payment_log', true );
 
+        // Combine and sort all logs by time
+        $all_logs = array();
+        
+        // Add general logs
         if ( is_array( $logs ) && ! empty( $logs ) ) {
+            foreach ( $logs as $log ) {
+                $all_logs[] = array(
+                    'type' => 'general',
+                    'time' => $log['time'],
+                    'user_id' => $log['user_id'],
+                    'action' => $log['action'],
+                    'context' => $log['context'],
+                    'message' => $log['action'] . ' (' . $log['context'] . ')'
+                );
+            }
+        }
+        
+        // Add payment logs
+        if ( is_array( $payment_logs ) && ! empty( $payment_logs ) ) {
+            foreach ( $payment_logs as $log ) {
+                $all_logs[] = array(
+                    'type' => 'payment',
+                    'time' => $log['time'],
+                    'user_id' => $log['user_id'],
+                    'message' => $log['message']
+                );
+            }
+        }
+
+        if ( ! empty( $all_logs ) ) {
+            // Sort by time (newest first)
+            usort( $all_logs, function( $a, $b ) {
+                return strtotime( $b['time'] ) - strtotime( $a['time'] );
+            });
+            
             echo '<h4>Action Log:</h4><ul>';
-            foreach ( array_reverse( $logs ) as $log ) {
+            foreach ( $all_logs as $log ) {
                 $user = get_user_by( 'id', $log['user_id'] );
+                $user_display = $user ? esc_html( $user->display_name ) : 'System';
+                
                 printf(
-                    '<li><strong>%s</strong> by %s (%s) — %s</li>',
-                    esc_html( $log['action'] ),
-                    $user ? esc_html( $user->display_name ) : 'System',
-                    esc_html( $log['context'] ),
+                    '<li><strong>%s</strong> by %s — %s</li>',
+                    esc_html( $log['message'] ),
+                    $user_display,
                     esc_html( $log['time'] )
                 );
             }

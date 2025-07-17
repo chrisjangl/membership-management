@@ -181,6 +181,38 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
+	 * Check if a member exists
+	 * 
+	 * Checks the CPT ID, making sure it's of our post type, and that it isn't trashed, etc.
+	 * 
+	 * @return bool 
+	 */
+	function exists() {
+		// Check if we have a valid member ID
+		if ( empty( $this->member_id ) || ! is_numeric( $this->member_id ) ) {
+			return false;
+		}
+		
+		// Check if the post exists
+		$post = get_post( $this->member_id );
+		if ( ! $post ) {
+			return false;
+		}
+		
+		// Check if it's the correct post type
+		if ( $post->post_type !== self::$our_post_type ) {
+			return false;
+		}
+		
+		// Check if the post is published (not trashed, etc.)
+		if ( $post->post_status !== 'publish' ) {
+			return false;
+		}
+		
+		return true;
+	}
+
+	/**
 	 * Gets the meta keys for the Member post type.
 	 * 
 	 * If a value is passed in that matches a key, the value is returned; 

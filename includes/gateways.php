@@ -12,6 +12,7 @@
 
 require_once( 'gateways/interface-payment-gateway.php' );
 require_once( 'gateways/class-abstract-gateway.php' );
+require_once( 'gateways/class-gateway-offline.php' );
 require_once( 'gateways/paypal/class-gateway-paypal.php' );
 require_once( 'gateways/paypal/endpoints.php' );
 require_once( 'gateways/class-gateway-manager.php' );

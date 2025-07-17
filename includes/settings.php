@@ -106,6 +106,21 @@ function render_general_tab() {
         <?php
         settings_fields( 'dcmm_settings_group' );
         
+        // Preserve offline payment settings as hidden fields
+        $current_settings = get_option( 'dcmm_settings', array() );
+        $offline_fields = array( 'dcmm_enable_offline_payments', 'dcmm_offline_payment_methods', 'dcmm_offline_require_reference' );
+        foreach ( $offline_fields as $field ) {
+            if ( isset( $current_settings[$field] ) ) {
+                if ( is_array( $current_settings[$field] ) ) {
+                    foreach ( $current_settings[$field] as $key => $value ) {
+                        echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . '][' . esc_attr($key) . ']" value="' . esc_attr($value) . '">';
+                    }
+                } else {
+                    echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . ']" value="' . esc_attr($current_settings[$field]) . '">';
+                }
+            }
+        }
+        
         // Render only membership settings section
         echo '<h2>' . __('Membership Settings', 'dcmm-membership') . '</h2>';
         echo '<table class="form-table" role="presentation">';
@@ -126,6 +141,21 @@ function render_payments_tab() {
     <form method="post" action="options.php">
         <?php
         settings_fields( 'dcmm_settings_group' );
+        
+        // Preserve general membership settings as hidden fields
+        $current_settings = get_option( 'dcmm_settings', array() );
+        $general_fields = array( 'dcmm_enable_dues', 'dcmm_dues_amount', 'dcmm_membership_term_length', 'dcmm_join_policy', 'dcmm_anchor_date', 'dcmm_my_account_page', 'renewal_window_days', 'grace_period_days', 'renewal_notice_days' );
+        foreach ( $general_fields as $field ) {
+            if ( isset( $current_settings[$field] ) ) {
+                echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . ']" value="' . esc_attr($current_settings[$field]) . '">';
+            }
+        }
+        
+        // Render Offline Payment settings section
+        echo '<h2>' . __('Offline Payment Settings', 'dcmm-membership') . '</h2>';
+        echo '<table class="form-table" role="presentation">';
+        do_settings_fields( 'dcmm_settings_group', 'dcmm_offline_payment_settings' );
+        echo '</table>';
         
         // Render PayPal settings section
         echo '<h2>' . __('PayPal Settings', 'dcmm-membership') . '</h2>';
@@ -294,14 +324,6 @@ function register_settings() {
         'dcmm_membership_settings'
     );
 
-    register_setting(
-        'dcmm_settings_group',
-        'dcmm_enable_feature',
-        [
-            'type' => 'boolean',
-            'default' => false,
-        ]
-    );
 
     // Dues amount setting
     add_settings_field(
@@ -460,6 +482,91 @@ function register_settings() {
             'default' => 7,
         ]
     );
+
+    // Offline Payment Settings Section
+    add_settings_section(
+        'dcmm_offline_payment_settings',
+        __( 'Offline Payment Settings', 'dcmm-membership' ),
+        function() {
+            ?>
+            <section class="dcmm-offline-payment-settings-section">
+                <p><?php esc_html_e( 'Configure offline payment options for manual payment recording by administrators.', 'dcmm-membership' ); ?></p>
+            </section>
+            <?php
+        },
+        'dcmm_settings_group'
+    );
+
+    // Enable Offline Payments
+    add_settings_field(
+        'dcmm_enable_offline_payments',
+        __( 'Enable Offline Payments', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $enabled = isset( $options['dcmm_enable_offline_payments'] ) ? (bool) $options['dcmm_enable_offline_payments'] : false;
+            ?>
+            <input type="checkbox" id="dcmm_enable_offline_payments" name="dcmm_settings[dcmm_enable_offline_payments]" value="1" <?php checked( $enabled ); ?> />
+            <label for="dcmm_enable_offline_payments"><?php esc_html_e( 'Allow administrators to record offline payments when renewing memberships', 'dcmm-membership' ); ?></label>
+            <p class="description"><?php esc_html_e( 'When enabled, the renewal button in the admin will prompt for payment details before processing the renewal.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_offline_payment_settings'
+    );
+
+
+    // Offline Payment Methods
+    add_settings_field(
+        'dcmm_offline_payment_methods',
+        __( 'Payment Methods', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $methods = isset( $options['dcmm_offline_payment_methods'] ) ? $options['dcmm_offline_payment_methods'] : array(
+                'cash' => 'Cash',
+                'check' => 'Check',
+                'transfer' => 'Bank Transfer',
+                'other' => 'Other'
+            );
+            ?>
+            <div class="dcmm-payment-methods">
+                <p><?php esc_html_e( 'Configure available payment methods for offline payments:', 'dcmm-membership' ); ?></p>
+                <table class="form-table">
+                    <?php foreach ( $methods as $key => $label ): ?>
+                    <tr>
+                        <td>
+                            <input type="text" name="dcmm_settings[dcmm_offline_payment_methods][<?php echo esc_attr( $key ); ?>]" 
+                                   value="<?php echo esc_attr( $label ); ?>" class="regular-text" 
+                                   placeholder="Payment method name" />
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </table>
+                <p class="description"><?php esc_html_e( 'These options will appear in the payment method dropdown when recording offline payments.', 'dcmm-membership' ); ?></p>
+            </div>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_offline_payment_settings'
+    );
+
+
+    // Require Reference Numbers
+    add_settings_field(
+        'dcmm_offline_require_reference',
+        __( 'Reference Numbers', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings' );
+            $required = isset( $options['dcmm_offline_require_reference'] ) ? (bool) $options['dcmm_offline_require_reference'] : false;
+            ?>
+            <input type="checkbox" id="dcmm_offline_require_reference" name="dcmm_settings[dcmm_offline_require_reference]" value="1" <?php checked( $required ); ?> />
+            <label for="dcmm_offline_require_reference"><?php esc_html_e( 'Require reference numbers for offline payments', 'dcmm-membership' ); ?></label>
+            <p class="description"><?php esc_html_e( 'When enabled, administrators must enter a reference number (check number, transaction ID, etc.) for each offline payment.', 'dcmm-membership' ); ?></p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_offline_payment_settings'
+    );
+
 
     // PayPal Settings Section
     add_settings_section(
@@ -1406,4 +1513,44 @@ function get_grace_period_days() {
 function get_renewal_notice_days() {
     $settings = get_settings();
     return isset( $settings['renewal_notice_days'] ) ? intval( $settings['renewal_notice_days'] ) : 7;
+}
+
+/**
+ * Check if offline payments are enabled.
+ * 
+ * @since 1.1.0
+ * @return bool True if offline payments are enabled, false otherwise.
+ */
+function are_offline_payments_enabled() {
+    $settings = get_settings();
+    return ! empty( $settings['dcmm_enable_offline_payments'] );
+}
+
+/**
+ * Get offline payment methods.
+ * 
+ * @since 1.1.0
+ * @return array Available offline payment methods.
+ */
+function get_offline_payment_methods() {
+    $settings = get_settings();
+    $default_methods = array(
+        'cash' => 'Cash',
+        'check' => 'Check',
+        'transfer' => 'Bank Transfer',
+        'other' => 'Other'
+    );
+    
+    return isset( $settings['dcmm_offline_payment_methods'] ) ? $settings['dcmm_offline_payment_methods'] : $default_methods;
+}
+
+/**
+ * Check if reference numbers are required for offline payments.
+ * 
+ * @since 1.1.0
+ * @return bool True if reference numbers are required, false otherwise.
+ */
+function is_offline_reference_required() {
+    $settings = get_settings();
+    return ! empty( $settings['dcmm_offline_require_reference'] );
 }
