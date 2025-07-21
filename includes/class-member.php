@@ -756,6 +756,17 @@ class DCMM_Member extends WP_User {
 
 		// get current value of the meta key
 		$current_value = get_post_meta( $this->cpt_id, $meta_keys[$key], true );
+		
+		// Track status changes for hooks
+		$status_changed = false;
+		$old_status = null;
+		$new_status = null;
+		
+		if ( $key === 'status' && $value !== $current_value ) {
+			$status_changed = true;
+			$old_status = $current_value;
+			$new_status = $value;
+		}
 
 		// if new meta was added, and there was no previous value, add it
 		if ( $value && '' == $current_value ) {
@@ -775,6 +786,13 @@ class DCMM_Member extends WP_User {
 		// and then make sure to update the Member object
 		// TODO: make this more efficient by only updating the relevant property
 		$this->load_member_meta( $this->cpt_id );
+		
+		// Fire status change hook if status was updated
+		if ( $status_changed ) {
+			// Log if debugging enabled
+			// error_log("DCMM: Firing member status change hook - Member: {$this->cpt_id}, Old: {$old_status}, New: {$new_status}");
+			do_action( 'dcmm_member_status_changed', $this->cpt_id, $old_status, $new_status );
+		}
 
 		return true;
 	}
@@ -870,6 +888,15 @@ class DCMM_Member extends WP_User {
 		
 		// Calculate and store expiration date
 		$this->get_expiration_date();
+
+		// Fire payment received hook
+		$payment_data = array(
+			'amount' => \DCMM_Settings\get_dues_amount(),
+			'date' => $today,
+			'context' => $context,
+			'method' => 'subscription'
+		);
+		do_action( 'dcmm_member_payment_received', $cpt_id, $payment_data );
 
 		do_action( 'dcmm_member_subscribed', $cpt_id, $context );
 
@@ -1209,5 +1236,50 @@ class DCMM_Member extends WP_User {
 		);
 
 		update_post_meta( $this->get_member_id(), 'dcmm_log', $logs );
+	}
+	
+	/**
+	 * Get member's email address
+	 * 
+	 * @return string Email address
+	 */
+	public function get_email() {
+		return $this->get( 'email' );
+	}
+	
+	/**
+	 * Get member's first name
+	 * 
+	 * @return string First name
+	 */
+	public function get_first_name() {
+		return $this->get( 'first_name' );
+	}
+	
+	/**
+	 * Get member's last name
+	 * 
+	 * @return string Last name
+	 */
+	public function get_last_name() {
+		return $this->get( 'last_name' );
+	}
+	
+	/**
+	 * Get member's status
+	 * 
+	 * @return string Membership status
+	 */
+	public function get_status() {
+		return $this->get( 'status' );
+	}
+	
+	/**
+	 * Get member's CPT ID
+	 * 
+	 * @return int Member CPT ID
+	 */
+	public function get_id() {
+		return $this->get_member_id();
 	}
 }

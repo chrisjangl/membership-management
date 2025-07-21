@@ -383,6 +383,9 @@ function handle_import() {
         if ( isset( $membership_status ) ) {
             $member->save( 'status', $membership_status );
         }
+        
+        // Fire member created hook
+        do_action( 'dcmm_member_created', $post_id );
     }
 
     // redirect back to the importer page

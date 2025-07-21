@@ -51,3 +51,20 @@ include_once( 'class-notification-logger.php' );
  * Expiration Scheduler
  */
 include_once( 'class-expiration-scheduler.php' );
+
+/**
+ * MailChimp API
+ */
+include_once( 'premium/integrations/mailchimp/class-mailchimp-api.php' );
+
+/**
+ * Premium Features System
+ */
+include_once( 'premium/interface-premium-feature.php' );
+include_once( 'premium/class-premium-manager.php' );
+
+// Initialize premium manager early
+add_action( 'plugins_loaded', function() {
+    // Instantiate the premium manager to ensure it's initialized
+    \DCMM\Premium\Premium_Manager::get_instance();
+}, 5 );

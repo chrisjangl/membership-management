@@ -45,7 +45,8 @@ function settings_page_callback() {
     $tabs = array(
         'general' => __('General', 'dcmm-membership'),
         'payments' => __('Payment Gateways', 'dcmm-membership'),
-        'emails' => __('Email & Notifications', 'dcmm-membership')
+        'emails' => __('Email & Notifications', 'dcmm-membership'),
+        'premium' => __('Premium Features', 'dcmm-membership')
     );
     ?>
     <div class="wrap">
@@ -73,6 +74,9 @@ function settings_page_callback() {
                     break;
                 case 'emails':
                     render_emails_tab();
+                    break;
+                case 'premium':
+                    render_premium_tab();
                     break;
                 default:
                     render_general_tab();
@@ -207,6 +211,271 @@ function render_payments_tab() {
 }
 
 /**
+ * Render Premium Features tab content
+ */
+function render_premium_tab() {
+    // Get premium manager instance
+    $premium_manager = \DCMM\Premium\Premium_Manager::get_instance();
+    
+    // Force load features if not already loaded
+    $premium_manager->load_features();
+    
+    $features_data = $premium_manager->get_features_settings_data();
+    
+    ?>
+    <div class="dcmm-premium-features">
+        <h2><?php esc_html_e('Premium Features', 'dcmm-membership'); ?></h2>
+        <p><?php esc_html_e('Enable and configure premium features for your membership plugin.', 'dcmm-membership'); ?></p>
+        
+        <!-- MailChimp API Configuration -->
+        <div class="dcmm-mailchimp-config" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 20px; margin-bottom: 20px;">
+            <h3><?php esc_html_e('MailChimp Configuration', 'dcmm-membership'); ?></h3>
+            <p><?php esc_html_e('Configure your MailChimp API connection to enable email list integrations.', 'dcmm-membership'); ?></p>
+            
+            <form id="dcmm-mailchimp-api-form" style="margin-top: 15px;">
+                <?php wp_nonce_field('dcmm_mailchimp_api', 'dcmm_mailchimp_nonce'); ?>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="dcmm_mailchimp_api_key"><?php esc_html_e('MailChimp API Key', 'dcmm-membership'); ?></label>
+                        </th>
+                        <td>
+                            <input type="text" id="dcmm_mailchimp_api_key" name="dcmm_mailchimp_api_key" 
+                                   value="<?php echo esc_attr(get_option('dcmm_mailchimp_api_key', '')); ?>" 
+                                   class="regular-text" placeholder="your-api-key-here-us1" />
+                            <button type="button" id="dcmm-test-connection" class="button" style="margin-left: 10px;">
+                                <?php esc_html_e('Test Connection', 'dcmm-membership'); ?>
+                            </button>
+                            <div id="dcmm-connection-status" style="margin-top: 5px;"></div>
+                            <p class="description">
+                                <?php esc_html_e('Your MailChimp API key from your MailChimp account.', 'dcmm-membership'); ?><br>
+                                <strong><?php esc_html_e('How to find your API key:', 'dcmm-membership'); ?></strong>
+                                <?php esc_html_e('Log in to MailChimp → Account → Extras → API keys → Create A Key', 'dcmm-membership'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                <p class="submit">
+                    <input type="submit" class="button-primary" value="<?php esc_attr_e('Save MailChimp Settings', 'dcmm-membership'); ?>" />
+                </p>
+            </form>
+        </div>
+        
+        <?php if (empty($features_data)): ?>
+            <div class="notice notice-info">
+                <p><?php esc_html_e('No premium features are currently available.', 'dcmm-membership'); ?></p>
+            </div>
+        <?php else: ?>
+            
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('dcmm_premium_settings', 'dcmm_premium_nonce'); ?>
+                <input type="hidden" name="action" value="dcmm_save_premium_settings" />
+                
+                <?php foreach ($features_data as $feature_id => $feature): ?>
+                    <div class="dcmm-premium-feature" style="border: 1px solid #ddd; margin-bottom: 20px; padding: 20px; background: #fff;">
+                        <div class="dcmm-feature-header" style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <h3 style="margin: 0; font-size: 18px;"><?php echo esc_html($feature['name']); ?></h3>
+                                <p style="margin: 5px 0 0 0; color: #666;"><?php echo esc_html($feature['description']); ?></p>
+                            </div>
+                            <div style="flex: 0 0 auto;">
+                                <label class="dcmm-toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 34px;">
+                                    <input type="checkbox" name="features[<?php echo esc_attr($feature_id); ?>][enabled]" 
+                                           value="1" <?php checked($feature['enabled']); ?>
+                                           <?php echo !$feature['dependencies_met'] ? 'disabled' : ''; ?>
+                                           style="opacity: 0; width: 0; height: 0;">
+                                    <span class="dcmm-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <?php if (!$feature['dependencies_met'] && !empty($feature['dependency_errors'])): ?>
+                            <div class="notice notice-error" style="margin: 10px 0;">
+                                <p><strong><?php esc_html_e('Dependencies not met:', 'dcmm-membership'); ?></strong></p>
+                                <ul style="margin: 5px 0;">
+                                    <?php foreach ($feature['dependency_errors'] as $error): ?>
+                                        <li><?php echo esc_html($error); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($feature['settings_fields'])): ?>
+                            <div class="dcmm-feature-settings" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                                <h4><?php esc_html_e('Settings', 'dcmm-membership'); ?></h4>
+                                <table class="form-table">
+                                    <?php foreach ($feature['settings_fields'] as $field_id => $field): ?>
+                                        <tr>
+                                            <th scope="row">
+                                                <label for="<?php echo esc_attr($field_id); ?>">
+                                                    <?php echo esc_html($field['title']); ?>
+                                                </label>
+                                            </th>
+                                            <td>
+                                                <?php 
+                                                $field_name = "features[{$feature_id}][settings][{$field_id}]";
+                                                $field_value = get_option($field_id, $field['default'] ?? '');
+                                                
+                                                switch ($field['type']) {
+                                                    case 'select':
+                                                        echo '<select id="' . esc_attr($field_id) . '" name="' . esc_attr($field_name) . '">';
+                                                        foreach ($field['options'] as $value => $label) {
+                                                            echo '<option value="' . esc_attr($value) . '" ' . selected($field_value, $value, false) . '>';
+                                                            echo esc_html($label);
+                                                            echo '</option>';
+                                                        }
+                                                        echo '</select>';
+                                                        break;
+                                                        
+                                                    case 'checkbox':
+                                                        echo '<input type="checkbox" id="' . esc_attr($field_id) . '" name="' . esc_attr($field_name) . '" value="1" ' . checked($field_value, true, false) . ' />';
+                                                        break;
+                                                        
+                                                    default:
+                                                        echo '<input type="text" id="' . esc_attr($field_id) . '" name="' . esc_attr($field_name) . '" value="' . esc_attr($field_value) . '" class="regular-text" />';
+                                                        break;
+                                                }
+                                                ?>
+                                                <?php if (!empty($field['description'])): ?>
+                                                    <p class="description"><?php echo esc_html($field['description']); ?></p>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+                
+                <p class="submit">
+                    <input type="submit" name="submit" class="button-primary" value="<?php esc_attr_e('Save Premium Settings', 'dcmm-membership'); ?>" />
+                </p>
+            </form>
+            
+        <?php endif; ?>
+    </div>
+    
+    <style>
+    .dcmm-toggle-switch input:checked + .dcmm-slider {
+        background-color: #2196F3;
+    }
+    
+    .dcmm-toggle-switch input:focus + .dcmm-slider {
+        box-shadow: 0 0 1px #2196F3;
+    }
+    
+    .dcmm-toggle-switch input:checked + .dcmm-slider:before {
+        transform: translateX(26px);
+    }
+    
+    .dcmm-slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    .dcmm-premium-feature {
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .dcmm-premium-feature:hover {
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    #dcmm-connection-status.success {
+        color: #46b450;
+        font-weight: bold;
+    }
+    
+    #dcmm-connection-status.error {
+        color: #dc3232;
+        font-weight: bold;
+    }
+    
+    #dcmm-connection-status.testing {
+        color: #0073aa;
+    }
+    </style>
+    
+    <script type="text/javascript">
+    jQuery(document).ready(function($) {
+        // Handle MailChimp API form submission
+        $('#dcmm-mailchimp-api-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            var apiKey = $('#dcmm_mailchimp_api_key').val();
+            var nonce = $('#dcmm_mailchimp_nonce').val();
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'dcmm_save_mailchimp_api_key',
+                    api_key: apiKey,
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#dcmm-connection-status').html('<span class="success">✓ ' + response.data.message + '</span>');
+                    } else {
+                        $('#dcmm-connection-status').html('<span class="error">✗ ' + response.data.message + '</span>');
+                    }
+                },
+                error: function() {
+                    $('#dcmm-connection-status').html('<span class="error">✗ Failed to save API key</span>');
+                }
+            });
+        });
+        
+        // Handle connection test
+        $('#dcmm-test-connection').on('click', function() {
+            var apiKey = $('#dcmm_mailchimp_api_key').val();
+            var nonce = $('#dcmm_mailchimp_nonce').val();
+            
+            if (!apiKey) {
+                $('#dcmm-connection-status').html('<span class="error">✗ Please enter an API key first</span>');
+                return;
+            }
+            
+            $('#dcmm-connection-status').html('<span class="testing">Testing connection...</span>');
+            $(this).prop('disabled', true);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'dcmm_test_mailchimp_connection',
+                    api_key: apiKey,
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#dcmm-connection-status').html('<span class="success">✓ ' + response.data.message + '</span>');
+                    } else {
+                        $('#dcmm-connection-status').html('<span class="error">✗ ' + response.data.message + '</span>');
+                    }
+                },
+                error: function() {
+                    $('#dcmm-connection-status').html('<span class="error">✗ Connection test failed</span>');
+                },
+                complete: function() {
+                    $('#dcmm-test-connection').prop('disabled', false);
+                }
+            });
+        });
+    });
+    </script>
+    <?php
+}
+
+/**
  * Render Email & Notifications tab content
  */
 function render_emails_tab() {
@@ -292,6 +561,126 @@ function render_emails_tab() {
     </form>
     <?php
 }
+
+/**
+ * Handle premium settings form submission
+ */
+function handle_premium_settings_save() {
+    // Check nonce and permissions
+    if (!wp_verify_nonce($_POST['dcmm_premium_nonce'], 'dcmm_premium_settings') || !current_user_can('manage_options')) {
+        wp_die(__('Security check failed.', 'dcmm-membership'));
+    }
+    
+    $premium_manager = \DCMM\Premium\Premium_Manager::get_instance();
+    
+    // Make sure features are loaded
+    $premium_manager->load_features();
+    
+    $features_data = $_POST['features'] ?? array();
+    
+    // Debug: Log what we're receiving
+    error_log('DCMM: Premium settings save - Features data: ' . print_r($features_data, true));
+    
+    // Process each feature
+    foreach ($features_data as $feature_id => $feature_data) {
+        $feature = $premium_manager->get_feature($feature_id);
+        if (!$feature) {
+            continue;
+        }
+        
+        // Handle enable/disable
+        $enabled = isset($feature_data['enabled']) && $feature_data['enabled'];
+        
+        if ($enabled && !$premium_manager->is_feature_enabled($feature_id)) {
+            $premium_manager->enable_feature($feature_id);
+        } elseif (!$enabled && $premium_manager->is_feature_enabled($feature_id)) {
+            $premium_manager->disable_feature($feature_id);
+        }
+        
+        // Handle feature settings
+        if (isset($feature_data['settings'])) {
+            $validated_settings = $feature->validate_settings($feature_data['settings']);
+            foreach ($validated_settings as $setting_key => $setting_value) {
+                update_option($setting_key, $setting_value);
+            }
+        }
+    }
+    
+    // Redirect back to premium tab with success message
+    $redirect_url = add_query_arg(array(
+        'page' => 'dcmm_settings',
+        'tab' => 'premium',
+        'settings-updated' => 'true'
+    ), admin_url('edit.php?post_type=dcmm-member'));
+    
+    wp_redirect($redirect_url);
+    exit;
+}
+add_action('admin_post_dcmm_save_premium_settings', __NAMESPACE__ . '\handle_premium_settings_save');
+
+/**
+ * Handle MailChimp API key saving via AJAX
+ */
+function handle_mailchimp_api_save() {
+    // Check nonce and permissions
+    if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => __('Security check failed.', 'dcmm-membership')));
+        return;
+    }
+    
+    $api_key = sanitize_text_field($_POST['api_key']);
+    
+    if (empty($api_key)) {
+        wp_send_json_error(array('message' => __('API key cannot be empty.', 'dcmm-membership')));
+        return;
+    }
+
+    require_once( DCMM_PATH . 'includes/premium/integrations/mailchimp/class-mailchimp-api.php' );
+    
+    // Save the API key
+    update_option('dcmm_mailchimp_api_key', $api_key);
+    
+    // Clear any cached lists
+    \DCMM\MailChimp\MailChimp_API::clear_lists_cache();
+    
+    wp_send_json_success(array('message' => __('MailChimp API key saved successfully!', 'dcmm-membership')));
+}
+add_action('wp_ajax_dcmm_save_mailchimp_api_key', __NAMESPACE__ . '\handle_mailchimp_api_save');
+
+/**
+ * Handle MailChimp connection test via AJAX
+ */
+function handle_mailchimp_connection_test() {
+    // Check nonce and permissions
+    if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => __('Security check failed.', 'dcmm-membership')));
+        return;
+    }
+    
+    $api_key = sanitize_text_field($_POST['api_key']);
+    
+    if (empty($api_key)) {
+        wp_send_json_error(array('message' => __('API key cannot be empty.', 'dcmm-membership')));
+        return;
+    }
+    
+    try {
+        // Include the MailChimp API class
+        require_once DCMM_PATH . '/includes/premium/integrations/mailchimp/class-mailchimp-api.php';
+        
+        $mailchimp_api = new \DCMM\MailChimp\MailChimp_API($api_key);
+        $result = $mailchimp_api->test_connection();
+        
+        if ($result['success']) {
+            wp_send_json_success(array('message' => $result['message']));
+        } else {
+            wp_send_json_error(array('message' => $result['message']));
+        }
+    } catch (Exception $e) {
+        wp_send_json_error(array('message' => __('Connection test failed: ', 'dcmm-membership') . $e->getMessage()));
+    }
+}
+add_action('wp_ajax_dcmm_test_mailchimp_connection', __NAMESPACE__ . '\handle_mailchimp_connection_test');
 
 /**
  * Register settings for the Membership Management plugin.
