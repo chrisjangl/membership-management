@@ -4,8 +4,8 @@
   "scripts": {
     "css": "sass assets/src/scss/main.scss:assets/css/member-admin.css --style=compressed",
     "watch": "npm run css -- --watch",
-    "dist": "tar -czf ../dc-membership.tar.gz --exclude='./assets/src/' --exclude='./.git/' --exclude='./node_modules' --exclude='.gitignore' --exclude='package.json' --exclude='package-lock.json' ./",
-    "zip": "zip -r ../dc-membership.zip ./ -x './assets/src/*' './.git/*' './node_modules/*' '.gitignore' 'package.json' 'package-lock.json'"
+    "dist": "tar -czf ../dc-membership.tar.gz --exclude='./assets/src/' --exclude='.claude/' --exclude='./.git/' --exclude='./node_modules/' --exclude='.gitignore' --exclude='.nvmrc' --exclude='CLAUDE.md' --exclude='package.json' --exclude='package-lock.json' --exclude='ROADMAP.md' --exclude='test-*'  ./",
+    "zip": "zip -r ../dc-membership.zip ./ -x './assets/src/*' '.claude/*' './.git/*' './node_modules/*' '.gitignore' '.nvmrc' 'CLAUDE.md' 'package.json' 'package-lock.json' 'ROADMAP.md' 'test-*' "
   },
   "dependencies": {
     "sass": "^1.77.0"
