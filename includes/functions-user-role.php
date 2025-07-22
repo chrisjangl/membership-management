@@ -198,7 +198,7 @@ function get_member( $user_ID = false ) {
     $member = new \DCMM_Member( $cpt_id );
 
     // if the member post object is valid, return it
-    if ( $member instanceof( 'DCMM_Member' ) ) {
+    if ( $member instanceof DCMM_Member ) {
         return $member;
     } else {
         return false; // no valid member post object found
