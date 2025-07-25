@@ -102,14 +102,23 @@ class DCMM_metaboxes {
 
         if ( ! $member->has_wp_user() ) {
             echo '<p>This member does not have a WordPress user account.</p>';
-            echo '<p><a href="#" class="button button-secondary" data-action="create_wp_user">Create WP User Account</a></p>';
+            echo '<p><a href="#" class="button button-secondary" id="create-wp-user-btn" data-action="create_wp_user">Create WP User Account</a></p>';
 
             // when clicked, use AJAX to run DCMM_Member::create_wp_user_account()
             ?>
             <script>
             jQuery(document).ready(function($) {
-                $('.button-secondary').on('click', function(e) {
+                $('#create-wp-user-btn').on('click', function(e) {
                     e.preventDefault();
+                    
+                    var $button = $(this);
+                    var originalText = $button.text();
+                    
+                    // Show loading state
+                    $button.prop('disabled', true)
+                           .addClass('dcmm-loading')
+                           .html('<span class="spinner is-active" style="float: none; margin: 0 5px 0 0;"></span>Creating User...');
+                    
                     var data = {
                         'action': 'dcmm_create_wp_user_account',
                         'cpt_id': <?php echo get_the_id(); ?>,
@@ -128,19 +137,47 @@ class DCMM_metaboxes {
                             console.log('AJAX Success:', response);
 
                             if ( response.success ) {
-                                alert('Success: ' + response.data.message);
-                                location.reload();
+                                // Show success state briefly before reload
+                                $button.removeClass('dcmm-loading')
+                                       .addClass('dcmm-success')
+                                       .html('<span class="dashicons dashicons-yes" style="margin-right: 5px;"></span>Success!');
+                                
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 1000);
                             } else {
                                 alert('Error: ' + response.data.message);
+                                // Reset button on error
+                                $button.prop('disabled', false)
+                                       .removeClass('dcmm-loading')
+                                       .text(originalText);
                             }
                         },
                         error: function(xhr, status, error) {
                             console.error('Error:', error);
+                            alert('An error occurred. Please try again.');
+                            
+                            // Reset button on error
+                            $button.prop('disabled', false)
+                                   .removeClass('dcmm-loading')
+                                   .text(originalText);
                         }
                     })
                 });
             });
             </script>
+            
+            <style>
+            .dcmm-loading {
+                opacity: 0.7;
+                cursor: not-allowed !important;
+            }
+            .dcmm-success {
+                background-color: #00a32a !important;
+                border-color: #00a32a !important;
+                color: #fff !important;
+            }
+            </style>
 
             <?php
             return;

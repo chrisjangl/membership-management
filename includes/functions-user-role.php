@@ -64,6 +64,8 @@ add_action( 'edit_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
 /**
  * Creates a WP User with the role of 'Organizational Member'
  * 
+ * TODO: Need to handle the case where the email is already registered to another member
+ * 
  * @param string $email The email address of the user to create
  * @param int $cpt_id The post ID of the Member (cpt) to associate with the WP User
  * 
@@ -81,7 +83,7 @@ function create_member_as_user( $email, $cpt_id ) {
     if ( $user ) {
 
         // if so, check if WP user has role of "Member"
-        if ( !is_organizational_member( $user->get( 'id' ) ) ) {
+        if ( !is_organizational_member( $user->get( 'ID' ) ) ) {
 
             // if not, set the role to "Member"
             $user->set_role( 'member' );
