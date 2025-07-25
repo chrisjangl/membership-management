@@ -203,14 +203,14 @@ class MailChimp_Integration implements Premium_Feature_Interface {
             return;
         }
         
-        // Add to list when becoming active/paid
-        if ( in_array( $new_status, array( 'active', 'paid' ) ) && ! in_array( $old_status, array( 'active', 'paid' ) ) ) {
+        // Add to list when becoming active
+        if ( $new_status === 'active' && $old_status !== 'active' ) {
             $this->add_member_to_list( $member, $list_id );
         }
         
-        // Remove from list when lapsing/cancelling (if setting enabled)
+        // Remove from list when becoming inactive (if setting enabled)
         if ( get_option( 'dcmm_mailchimp_remove_on_lapse', true ) ) {
-            if ( in_array( $new_status, array( 'lapsed', 'cancelled', 'inactive' ) ) && in_array( $old_status, array( 'active', 'paid' ) ) ) {
+            if ( $new_status === 'inactive' && $old_status === 'active' ) {
                 $this->remove_member_from_list( $member, $list_id );
             }
         }
@@ -255,9 +255,9 @@ class MailChimp_Integration implements Premium_Feature_Interface {
             return;
         }
         
-        // Only add if member is immediately active/paid
+        // Only add if member is active
         $status = $member->get_status();
-        if ( ! in_array( $status, array( 'active', 'paid' ) ) ) {
+        if ( $status !== 'active' ) {
             return;
         }
         

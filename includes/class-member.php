@@ -939,6 +939,11 @@ class DCMM_Member extends WP_User {
 		$stored_hash = $this->get( 'settings_hash' );
 		$current_hash = $this->get_settings_hash();
 		
+		// Don't recalculate expiration for inactive members - they have no future expiration
+		if ( $this->get( 'status' ) === 'inactive' ) {
+			return $stored_date; // Return empty string or existing stored date
+		}
+		
 		// If no stored date or settings have changed, recalculate
 		if ( ! $stored_date || $stored_hash !== $current_hash ) {
 			$calculated_date = $this->calculate_expiration_date();
@@ -1054,9 +1059,12 @@ class DCMM_Member extends WP_User {
 	/**
 	 * Calculate anchored full term expiration
 	 * 
+	 * For renewals, advances the current expiration by the full membership duration.
+	 * For initial signups, calculates the next anchor occurrence from signup date.
+	 * 
 	 * @param int $start_timestamp Start date timestamp
 	 * @param string $term_length Term length (yearly, monthly, seasonal)
-	 * @param string $anchor_date Anchor date setting
+	 * @param string $anchor_date Anchor date setting (MM-DD for yearly/seasonal, DD for monthly)
 	 * @return string Expiration date in Y-m-d format
 	 */
 	private function calculate_anchored_expiration( $start_timestamp, $term_length, $anchor_date ) {
@@ -1065,15 +1073,202 @@ class DCMM_Member extends WP_User {
 			return $this->calculate_fixed_term_expiration( $start_timestamp, $term_length );
 		}
 		
-		$current_year = date( 'Y' );
-		$anchor_this_year = $current_year . '-' . date( 'm-d', strtotime( $anchor_date ) );
-		
-		// If we're past this year's anchor date, use next year's
-		if ( time() > strtotime( $anchor_this_year ) ) {
-			return ( $current_year + 1 ) . '-' . date( 'm-d', strtotime( $anchor_date ) );
+		// Check if this is a renewal (existing expiration date exists)
+		$current_expiration = $this->get( 'expiration_date' );
+		if ( $current_expiration && $current_expiration !== '' ) {
+			// This is a renewal - advance the current expiration by the membership duration
+			return $this->advance_expiration_by_duration( $current_expiration, $term_length );
 		}
 		
-		return $anchor_this_year;
+		// This is initial signup - calculate next anchor occurrence
+		return $this->calculate_next_anchor_occurrence( $start_timestamp, $term_length, $anchor_date );
+	}
+
+	/**
+	 * Advance an expiration date by the membership duration
+	 * 
+	 * @param string $current_expiration Current expiration date (Y-m-d format)
+	 * @param string $term_length Term length (yearly, monthly, seasonal)
+	 * @return string New expiration date in Y-m-d format
+	 */
+	private function advance_expiration_by_duration( $current_expiration, $term_length ) {
+		$expiration_timestamp = strtotime( $current_expiration );
+		
+		switch ( $term_length ) {
+			case 'yearly':
+				return date( 'Y-m-d', strtotime( '+1 year', $expiration_timestamp ) );
+				
+			case 'seasonal':
+				return date( 'Y-m-d', strtotime( '+6 months', $expiration_timestamp ) );
+				
+			case 'monthly':
+				return date( 'Y-m-d', strtotime( '+1 month', $expiration_timestamp ) );
+				
+			default:
+				return date( 'Y-m-d', strtotime( '+1 month', $expiration_timestamp ) );
+		}
+	}
+	
+	/**
+	 * Calculate next anchor occurrence from signup date
+	 * 
+	 * @param int $start_timestamp Start date timestamp
+	 * @param string $term_length Term length (yearly, monthly, seasonal)
+	 * @param string $anchor_date Anchor date setting
+	 * @return string Expiration date in Y-m-d format
+	 */
+	private function calculate_next_anchor_occurrence( $start_timestamp, $term_length, $anchor_date ) {
+		$start_date = date( 'Y-m-d', $start_timestamp );
+		
+		switch ( $term_length ) {
+			case 'yearly':
+			case 'seasonal':
+				return $this->calculate_next_yearly_anchor( $start_date, $anchor_date, $term_length );
+				
+			case 'monthly':
+				return $this->calculate_next_monthly_anchor( $start_date, $anchor_date );
+				
+			default:
+				return $this->calculate_next_monthly_anchor( $start_date, $anchor_date );
+		}
+	}
+	
+	/**
+	 * Calculate next yearly/seasonal anchor occurrence
+	 * 
+	 * @param string $start_date Start date (Y-m-d format)
+	 * @param string $anchor_date Anchor date (MM-DD format or full date for backward compatibility)
+	 * @param string $term_length Term length for calculating multiple periods if needed
+	 * @return string Expiration date in Y-m-d format
+	 */
+	private function calculate_next_yearly_anchor( $start_date, $anchor_date, $term_length ) {
+		// Handle backward compatibility with full dates (YYYY-MM-DD)
+		if ( strlen( $anchor_date ) === 10 && strpos( $anchor_date, '-' ) !== false ) {
+			// Extract MM-DD from full date
+			$anchor_date = date( 'm-d', strtotime( $anchor_date ) );
+		}
+		
+		// Ensure MM-DD format
+		if ( ! preg_match( '/^\d{2}-\d{2}$/', $anchor_date ) ) {
+			// Invalid format, fallback to fixed term
+			return $this->calculate_fixed_term_expiration( strtotime( $start_date ), $term_length );
+		}
+		
+		$start_year = date( 'Y', strtotime( $start_date ) );
+		$anchor_this_year = $start_year . '-' . $anchor_date;
+		
+		// If signup is before this year's anchor date, use this year's anchor
+		if ( strtotime( $start_date ) <= strtotime( $anchor_this_year ) ) {
+			return $anchor_this_year;
+		}
+		
+		// Otherwise, use next year's anchor
+		return ( $start_year + 1 ) . '-' . $anchor_date;
+	}
+	
+	/**
+	 * Calculate next monthly anchor occurrence
+	 * 
+	 * @param string $start_date Start date (Y-m-d format)
+	 * @param string $anchor_date Anchor day (DD format or MM-DD for backward compatibility)
+	 * @return string Expiration date in Y-m-d format
+	 */
+	private function calculate_next_monthly_anchor( $start_date, $anchor_date ) {
+		// Handle backward compatibility - extract day from MM-DD or YYYY-MM-DD
+		if ( strpos( $anchor_date, '-' ) !== false ) {
+			$parts = explode( '-', $anchor_date );
+			$anchor_day = end( $parts ); // Get the last part (day)
+		} else {
+			$anchor_day = $anchor_date;
+		}
+		
+		// Validate day format
+		if ( ! is_numeric( $anchor_day ) || $anchor_day < 1 || $anchor_day > 31 ) {
+			// Invalid day, fallback to fixed term
+			return $this->calculate_fixed_term_expiration( strtotime( $start_date ), 'monthly' );
+		}
+		
+		$start_year = date( 'Y', strtotime( $start_date ) );
+		$start_month = date( 'm', strtotime( $start_date ) );
+		$start_day = date( 'd', strtotime( $start_date ) );
+		
+		// Try this month's anchor day first
+		$days_in_month = date( 't', mktime( 0, 0, 0, $start_month, 1, $start_year ) );
+		$effective_day = min( $anchor_day, $days_in_month ); // Handle months with fewer days
+		
+		$anchor_this_month = sprintf( '%04d-%02d-%02d', $start_year, $start_month, $effective_day );
+		
+		// If signup is before this month's anchor day, use this month
+		if ( $start_day <= $effective_day ) {
+			return $anchor_this_month;
+		}
+		
+		// Otherwise, use next month's anchor day
+		$next_month_timestamp = mktime( 0, 0, 0, $start_month + 1, 1, $start_year );
+		$next_year = date( 'Y', $next_month_timestamp );
+		$next_month = date( 'm', $next_month_timestamp );
+		$days_in_next_month = date( 't', $next_month_timestamp );
+		$effective_next_day = min( $anchor_day, $days_in_next_month );
+		
+		return sprintf( '%04d-%02d-%02d', $next_year, $next_month, $effective_next_day );
+	}
+	
+	/**
+	 * Get valid membership statuses
+	 * 
+	 * @return array Valid status values
+	 */
+	public static function get_valid_statuses() {
+		return apply_filters( 'dcmm_valid_statuses', [ 'active', 'inactive' ] );
+	}
+	
+	/**
+	 * Validate membership status
+	 * 
+	 * @param string $status Status to validate
+	 * @return string Valid status (defaults to 'active' if invalid)
+	 */
+	public static function validate_status( $status ) {
+		$valid_statuses = static::get_valid_statuses();
+		return in_array( $status, $valid_statuses, true ) ? $status : 'active';
+	}
+	
+	/**
+	 * Set member status with validation
+	 * 
+	 * @param string $status New status value
+	 * @return mixed Result of save operation
+	 */
+	public function set_status( $status ) {
+		$old_status = $this->get( 'status' );
+		$validated_status = static::validate_status( $status );
+		
+		$result = $this->save( 'status', $validated_status );
+		
+		// Fire status change hook if status actually changed
+		if ( $old_status !== $validated_status ) {
+			do_action( 'dcmm_member_status_changed', $this->get_member_id(), $old_status, $validated_status );
+		}
+		
+		return $result;
+	}
+	
+	/**
+	 * Check if member is active
+	 * 
+	 * @return bool True if member status is active
+	 */
+	public function is_active() {
+		return $this->get( 'status' ) === 'active';
+	}
+	
+	/**
+	 * Check if member is inactive
+	 * 
+	 * @return bool True if member status is inactive
+	 */
+	public function is_inactive() {
+		return $this->get( 'status' ) === 'inactive';
 	}
 
 	/**

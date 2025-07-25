@@ -1608,9 +1608,25 @@ function register_settings() {
                     }
                 }
 
+                // Function to update anchor date field based on membership term length
+                function updateAnchorDateField() {
+                    var termLength = $('#dcmm_membership_term_length').val();
+                    var anchorInput = $('#dcmm_anchor_date');
+                    var description = $('#dcmm-anchor-date-description');
+                    
+                    if (termLength === 'monthly') {
+                        anchorInput.attr('placeholder', '15');
+                        description.html('<?php esc_html_e( "Enter the day of the month (1-31) when memberships expire. Example: \"15\" for the 15th of each month.", "dcmm-membership" ); ?>');
+                    } else {
+                        anchorInput.attr('placeholder', '08-15');
+                        description.html('<?php esc_html_e( "Enter the month and day (MM-DD format) when memberships expire. Example: \"08-15\" for August 15th each year.", "dcmm-membership" ); ?>');
+                    }
+                }
+
                 // Initial check
                 toggleDuesAmountField();
                 toggleSpecificDateField();
+                updateAnchorDateField();
 
                 // Bind change event
                 $('#dcmm_enable_dues').change(function() {
@@ -1619,6 +1635,10 @@ function register_settings() {
 
                 $('#dcmm_join_policy').change(function() {
                     toggleSpecificDateField();
+                });
+
+                $('#dcmm_membership_term_length').change(function() {
+                    updateAnchorDateField();
                 });
 
                 // Handle merge tag button clicks
@@ -1719,9 +1739,21 @@ function register_settings() {
         function() {
             $options = get_option( 'dcmm_settings' );
             $anchor_date = isset( $options['dcmm_anchor_date'] ) ? esc_attr( $options['dcmm_anchor_date'] ) : '';
+            $term_length = isset( $options['dcmm_membership_term_length'] ) ? esc_attr( $options['dcmm_membership_term_length'] ) : 'monthly';
             ?>
-            <input type="date" id="dcmm_anchor_date" name="dcmm_settings[dcmm_anchor_date]" value="<?php echo esc_attr( $anchor_date ); ?>" />
-            <label for="dcmm_anchor_date"><?php esc_html_e( 'Set a specific date for the membership period', 'dcmm-membership' ); ?></label>
+            <div class="dcmm-anchor-date-field">
+                <input type="text" id="dcmm_anchor_date" name="dcmm_settings[dcmm_anchor_date]" value="<?php echo esc_attr( $anchor_date ); ?>" placeholder="<?php echo $term_length === 'monthly' ? '15' : '08-15'; ?>" />
+                <div class="description">
+                    <p id="dcmm-anchor-date-description">
+                        <?php if ( $term_length === 'monthly' ): ?>
+                            <?php esc_html_e( 'Enter the day of the month (1-31) when memberships expire. Example: "15" for the 15th of each month.', 'dcmm-membership' ); ?>
+                        <?php else: ?>
+                            <?php esc_html_e( 'Enter the month and day (MM-DD format) when memberships expire. Example: "08-15" for August 15th each year.', 'dcmm-membership' ); ?>
+                        <?php endif; ?>
+                    </p>
+                    <p><strong><?php esc_html_e( 'Note:', 'dcmm-membership' ); ?></strong> <?php esc_html_e( 'When members renew, their expiration will be extended by the full membership duration from their current expiration date.', 'dcmm-membership' ); ?></p>
+                </div>
+            </div>
             <?php
         },
         'dcmm_settings_group',

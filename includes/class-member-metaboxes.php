@@ -232,9 +232,14 @@ class DCMM_metaboxes {
         <p>
             <label for="dcmm_status">Membership status:</label>
             <select name="dcmm_status" id="dcmm_status">
-                <option value="--" <?php selected( $membership_status, '' ); ?>>--</option>
-                <option value="active" <?php selected( $membership_status, 'active' ); ?>>Active</option>
-                <option value="expired" <?php selected( $membership_status, 'expired' ); ?>>Expired</option>
+                <?php 
+                $valid_statuses = DCMM_Member::get_valid_statuses();
+                foreach ( $valid_statuses as $status_value ) {
+                    $status_label = ucfirst( $status_value );
+                    $selected = selected( $membership_status, $status_value, false );
+                    echo "<option value=\"{$status_value}\" {$selected}>{$status_label}</option>";
+                }
+                ?>
             </select>
         </p>
 

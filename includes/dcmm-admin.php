@@ -67,8 +67,9 @@ function dcmm_handle_manual_cancel() {
 	}
 
 	$member = new DCMM_Member( (int) $_GET['member_id'] );
-	$member->save( 'status', 'cancelled' );
+	$member->set_status( 'inactive' ); // Use new simplified status system
 	$member->save( 'end_date', current_time( 'Y-m-d' ) );
+	$member->save( 'expiration_date', '' ); // Clear expiration date - canceled memberships don't expire
 
 	// Log the cancellation
 	$member->log( 'cancel_membership', 'manual' );

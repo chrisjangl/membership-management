@@ -182,11 +182,12 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 						echo '<br><span class="dcmm-renewal-indicator dcmm-grace" title="In grace period">🟠 Grace</span>';
 						break;
 				}
-			} elseif ($status === 'expired') {
+			} elseif ($status === 'inactive') {
+				// For inactive members, still show renewal status if available
 				if ($renewal_status === 'grace') {
 					echo '<br><span class="dcmm-renewal-indicator dcmm-grace" title="Grace period - can still renew">🟠 Grace</span>';
 				} elseif ($renewal_status === 'suspended') {
-					echo '<br><span class="dcmm-renewal-indicator dcmm-suspended" title="Grace period expired">🔴 Suspended</span>';
+					echo '<br><span class="dcmm-renewal-indicator dcmm-suspended" title="Membership suspended">🔴 Suspended</span>';
 				}
 			}
 			break;

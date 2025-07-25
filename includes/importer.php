@@ -91,7 +91,7 @@ function membership_importer_page() {
     </style>
     <div class="wrap">
         <h1><?php _e( 'Import Members', 'dc-membership' ); ?></h1>
-        <p>You'll need to format your .csv with the headings shown below. <b>Membership Status</b> should be either "Active" or "Expired".</p>
+        <p>You'll need to format your .csv with the headings shown below. <b>Membership Status</b> should be either "Active" or "Inactive".</p>
         <p><b>NOTE:</b> At present, this will only <i>import</i> members. It will not update existing members.</p>
         <table class="borders">
             <tbody>
@@ -112,7 +112,7 @@ function membership_importer_page() {
                     <td></td>
                     <td></td>
                     <td>###-###-####</td>
-                    <td><em>[active | expired]</em></td>
+                    <td><em>[active | inactive]</em></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -379,9 +379,14 @@ function handle_import() {
             $member->save( 'address', $address );
         }
 
-        // Set the membership status
+        // Set the membership status (with backward compatibility)
         if ( isset( $membership_status ) ) {
-            $member->save( 'status', $membership_status );
+            // Convert old "Expired" status to new "Inactive" for backward compatibility
+            if ( strtolower( $membership_status ) === 'expired' ) {
+                $membership_status = 'inactive';
+            }
+            // Validate and set status using the new validation system
+            $member->set_status( strtolower( $membership_status ) );
         }
         
         // Fire member created hook
