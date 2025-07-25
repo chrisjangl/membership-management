@@ -200,6 +200,7 @@ function dcmm_render_dashboard() {
         $renewal_status = $member->get_renewal_status();
         $days_until_window = $member->get_days_until_renewal_window();
         
+        // Member is is active, and up for renewal
         if ($member->is_in_renewal_window()): ?>
             <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 15px; margin: 15px 0;">
                 <?php if ($renewal_status === 'available'): ?>
@@ -211,21 +212,34 @@ function dcmm_render_dashboard() {
                 <?php endif; ?>
                 <button id="dcmm-renew-button" class="button button-primary">Renew Membership</button>
             </div>
-        <?php elseif ($renewal_status === 'too_early'): ?>
-            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin: 15px 0;">
-                <h4 style="color: #495057; margin-top: 0;">🗓️ Renewal Coming Soon</h4>
-                <p>Your membership renewal will be available in <strong><?php echo abs($days_until_window); ?> days</strong>. We'll notify you when it's time to renew.</p>
-            </div>
-        <?php elseif ($renewal_status === 'suspended'): ?>
+        <?php 
+        // Renewal status is suspended, can't renew
+        // TODO: why would this case be hit?
+        elseif ($renewal_status === 'suspended'): ?>
             <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin: 15px 0;">
                 <h4 style="color: #721c24; margin-top: 0;">❌ Renewal Unavailable</h4>
                 <p style="color: #721c24;">Your membership has been suspended. Please contact support to restore your membership.</p>
             </div>
-        <?php elseif ($renewal_status === 'no_expiration'): ?>
-            <div style="background: #cce5ff; border: 1px solid #99ccff; border-radius: 4px; padding: 15px; margin: 15px 0;">
-                <h4 style="color: #0056b3; margin-top: 0;">ℹ️ No Expiration Set</h4>
-                <p>Your membership does not have an expiration date configured.</p>
-            </div>
+        <?php
+        // Member doesn't have an expiration date set (most likely inactive)
+        elseif ($renewal_status === 'no_expiration'): 
+            
+            // if status is 'inactive', allow member to renew
+            if ( 'inactive' === $status ) : ?>
+                <div style="background: #f8d7da; border: 1px solid #c3e6cb; border-radius: 4px; padding: 15px; margin: 15px 0;">
+                    <h4 style="color: #721c24; margin-top: 0;">❌ Membership Inactive</h4>
+                    <p style="color: #721c24;"><strong>Your membership has expired.</strong> Renew today to avoid any interruption in your membership benefits.</p>
+                    <button id="dcmm-renew-button" class="button button-primary">Renew Membership</button>
+                </div>
+            <?php
+            // something else is going on, so don't allow renewal. 
+            // TODO: add link to contact support
+            else: ?>
+                <div style="background: #cce5ff; border: 1px solid #99ccff; border-radius: 4px; padding: 15px; margin: 15px 0;">
+                    <h4 style="color: #0056b3; margin-top: 0;">ℹ️ No Expiration Set</h4>
+                    <p>Your membership does not have an expiration date configured.</p>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php 
