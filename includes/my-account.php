@@ -12,7 +12,7 @@ use \DCMM_Users\is_organizational_member;
 function dcmm_enqueue_member_dashboard_styles_scripts() {
 
     // Member dashboard JS
-    $dashboard_js_file = 'assets/js/member-dashboard.js';
+    $dashboard_js_file = 'js/member-dashboard.js';
     $dashboard_js_path = DCMM_PATH . $dashboard_js_file;
     $dashboard_js_ver = filemtime( $dashboard_js_path );
     $dashboard_js_src = DCMM_URL . $dashboard_js_file;
@@ -20,7 +20,7 @@ function dcmm_enqueue_member_dashboard_styles_scripts() {
 
     // TODO: 
     // Member dashboard CSS
-    // $dashboard_css_file = 'assets/css/member-dashboard.css';
+    // $dashboard_css_file = 'css/member-dashboard.css';
     // $dashboard_css_path = DCMM_PATH . $dashboard_css_file;
     // $dashboard_css_ver = filemtime( $dashboard_css_path );
     // $dashboard_css_src = DCMM_URL . $dashboard_css_file;
