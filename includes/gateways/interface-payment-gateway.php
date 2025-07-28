@@ -39,4 +39,31 @@ interface Payment_Gateway_Interface {
      */
     public function handle_notification( $data );
 
+    /**
+     * Create a recurring subscription for a member.
+     *
+     * @param int   $member_id The member's CPT ID.
+     * @param float $amount    The recurring amount to charge.
+     * @param string $interval The billing interval (monthly, yearly, etc).
+     * @return array|WP_Error Array with subscription data on success, WP_Error on failure.
+     */
+    public function create_subscription( $member_id, $amount, $interval );
+
+    /**
+     * Cancel a recurring subscription.
+     *
+     * @param int    $member_id       The member's CPT ID.
+     * @param string $subscription_id The gateway's subscription ID.
+     * @return bool|WP_Error True on success, WP_Error on failure.
+     */
+    public function cancel_subscription( $member_id, $subscription_id );
+
+    /**
+     * Get subscription status from the gateway.
+     *
+     * @param string $subscription_id The gateway's subscription ID.
+     * @return array|WP_Error Subscription status data on success, WP_Error on failure.
+     */
+    public function get_subscription_status( $subscription_id );
+
 }

@@ -29,7 +29,8 @@ function dcmm_enqueue_member_dashboard_styles_scripts() {
     wp_enqueue_script( 'dcmm-member-dashboard', $dashboard_js_src, $dashboard_js_dependencies, $dashboard_js_ver, true );
     wp_localize_script( 'dcmm-member-dashboard', 'dcmm', [
         'ajax_url' => admin_url( 'admin-ajax.php' ),
-        'nonce'    => wp_create_nonce( 'dcmm_renew_nonce' )
+        'nonce'    => wp_create_nonce( 'dcmm_renew_nonce' ),
+        'cancel_nonce' => wp_create_nonce( 'dcmm_cancel_subscription_nonce' )
     ] );
 
 }
@@ -42,6 +43,8 @@ add_action( 'wp_ajax_dcms_update_own_info', 'dcmm_update_user_data' );
 // renew membership
 require_once('class-member.php');
 add_action( 'wp_ajax_dcmm_renew_membership', 'ajax_renew_membership' );
+// cancel subscription
+add_action( 'wp_ajax_dcmm_cancel_subscription', 'ajax_cancel_subscription' );
 
 
 /** 
@@ -200,8 +203,95 @@ function dcmm_render_dashboard() {
         $renewal_status = $member->get_renewal_status();
         $days_until_window = $member->get_days_until_renewal_window();
         
-        // Member is is active, and up for renewal
-        if ($member->is_in_renewal_window()): ?>
+        // Get subscription status info if member has an active subscription
+        $subscription_info = $member->get_subscription_status_info();
+        
+        // Display subscription status if member has one
+        if ($subscription_info && !empty($subscription_info['id'])): ?>
+            <div style="background: #e7f3ff; border: 1px solid #bee5eb; border-radius: 4px; padding: 15px; margin: 15px 0;">
+                <h4 style="color: #0c5460; margin-top: 0;">
+                    🔄 Automatic Renewal Subscription
+                    <?php if ($subscription_info['status'] === 'active'): ?>
+                        <span style="background: #28a745; color: white; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin-left: 10px;">ACTIVE</span>
+                    <?php else: ?>
+                        <span style="background: #dc3545; color: white; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin-left: 10px;"><?php echo esc_html(strtoupper($subscription_info['status'])); ?></span>
+                    <?php endif; ?>
+                </h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+                    <div>
+                        <p style="margin: 5px 0;"><strong>Billing Frequency:</strong><br>
+                        <span style="color: #0c5460;"><?php echo esc_html(ucfirst($subscription_info['interval'] ?? 'monthly')); ?></span></p>
+                        
+                        <p style="margin: 5px 0;"><strong>Payment Method:</strong><br>
+                        <span style="color: #0c5460;"><?php echo esc_html(ucfirst($subscription_info['gateway'])); ?></span></p>
+                    </div>
+                    
+                    <div>
+                        <?php if (!empty($subscription_info['next_billing'])): ?>
+                            <p style="margin: 5px 0;"><strong>Next Billing:</strong><br>
+                            <span style="color: #0c5460;"><?php echo esc_html(date('F j, Y', strtotime($subscription_info['next_billing']))); ?></span></p>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($subscription_info['last_payment_amount'])): ?>
+                            <p style="margin: 5px 0;"><strong>Amount:</strong><br>
+                            <span style="color: #0c5460;">$<?php echo esc_html(number_format($subscription_info['last_payment_amount'], 2)); ?></span></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php if ($subscription_info['status'] === 'active'): ?>
+                    <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 10px; margin: 10px 0;">
+                        <p style="margin: 0; color: #155724;">
+                            ✅ <strong>You're all set!</strong> Your membership will automatically renew 
+                            <?php if (!empty($subscription_info['next_billing'])): ?>
+                                on <?php echo esc_html(date('F j, Y', strtotime($subscription_info['next_billing']))); ?>.
+                            <?php else: ?>
+                                according to your billing schedule.
+                            <?php endif; ?>
+                            No action needed from you.
+                        </p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button id="dcmm-cancel-subscription" class="button" data-subscription-id="<?php echo esc_attr($subscription_info['id']); ?>" style="background: #dc3545; color: white; border-color: #dc3545;">
+                            Cancel Automatic Renewal
+                        </button>
+                        <p style="font-size: 12px; color: #666; margin: 5px 0;">
+                            Your membership will remain active until the current billing period ends.
+                        </p>
+                    </div>
+                <?php else: ?>
+                    <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 10px; margin: 10px 0;">
+                        <p style="margin: 0; color: #721c24;">
+                            ⚠️ <strong>Subscription Issue:</strong> Your automatic renewal is currently 
+                            <?php echo esc_html($subscription_info['status']); ?>. 
+                            <?php if ($subscription_info['status'] === 'cancelled'): ?>
+                                You may need to set up a new subscription or renew manually.
+                            <?php else: ?>
+                                Please contact support if you need assistance.
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                <?php endif; ?>
+                
+                <details style="margin-top: 15px;">
+                    <summary style="cursor: pointer; color: #0c5460; font-weight: bold;">Subscription Details</summary>
+                    <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                        <p><strong>Subscription ID:</strong> <?php echo esc_html($subscription_info['id']); ?></p>
+                        <?php if (!empty($subscription_info['created'])): ?>
+                            <p><strong>Created:</strong> <?php echo esc_html(date('F j, Y g:i A', strtotime($subscription_info['created']))); ?></p>
+                        <?php endif; ?>
+                        <p><strong>Status:</strong> <?php echo esc_html($subscription_info['status']); ?></p>
+                    </div>
+                </details>
+            </div>
+        <?php endif; ?>
+        
+        <?php 
+        // Member is active and up for renewal - but hide if they have active subscription
+        $has_active_subscription = $subscription_info && $subscription_info['status'] === 'active';
+        if ($member->is_in_renewal_window() && !$has_active_subscription): ?>
             <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 15px; margin: 15px 0;">
                 <?php if ($renewal_status === 'available'): ?>
                     <h4 style="color: #155724; margin-top: 0;">✓ Renewal Available</h4>
@@ -210,6 +300,27 @@ function dcmm_render_dashboard() {
                     <h4 style="color: #721c24; margin-top: 0;">⚠️ Grace Period</h4>
                     <p style="color: #721c24;"><strong>Your membership has expired.</strong> You can still renew during the grace period to restore your benefits.</p>
                 <?php endif; ?>
+                
+                <?php 
+                // Get renewal options to show subscription choices
+                $renewal_options = $member->get_renewal_options();
+                if (!empty($renewal_options['subscription_available'])): ?>
+                    <div id="dcmm-renewal-options">
+                        <h5 style="margin: 15px 0 10px 0;">Choose Renewal Type:</h5>
+                        <div style="margin: 10px 0;">
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="radio" name="renewal_type" value="one_time" checked style="margin-right: 8px;">
+                                One-time payment (<?php echo esc_html($renewal_options['currency'] . number_format($renewal_options['amount'], 2)); ?>)
+                            </label>
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="radio" name="renewal_type" value="subscription" style="margin-right: 8px;">
+                                Recurring subscription (<?php echo esc_html($renewal_options['currency'] . number_format($renewal_options['amount'], 2) . ' ' . $renewal_options['subscription_interval']); ?>)
+                                <small style="color: #666; display: block; margin-left: 24px;">Automatically renews your membership</small>
+                            </label>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                
                 <button id="dcmm-renew-button" class="button button-primary">Renew Membership</button>
             </div>
         <?php 
@@ -224,11 +335,32 @@ function dcmm_render_dashboard() {
         // Member doesn't have an expiration date set (most likely inactive)
         elseif ($renewal_status === 'no_expiration'): 
             
-            // if status is 'inactive', allow member to renew
-            if ( 'inactive' === $status ) : ?>
+            // if status is 'inactive', allow member to renew (but hide if they have active subscription)
+            if ( 'inactive' === $status && !$has_active_subscription ) : ?>
                 <div style="background: #f8d7da; border: 1px solid #c3e6cb; border-radius: 4px; padding: 15px; margin: 15px 0;">
                     <h4 style="color: #721c24; margin-top: 0;">❌ Membership Inactive</h4>
                     <p style="color: #721c24;"><strong>Your membership has expired.</strong> Renew today to avoid any interruption in your membership benefits.</p>
+                    
+                    <?php 
+                    // Get renewal options for inactive members
+                    $renewal_options = $member->get_renewal_options();
+                    if (!empty($renewal_options['subscription_available'])): ?>
+                        <div id="dcmm-renewal-options">
+                            <h5 style="margin: 15px 0 10px 0; color: #721c24;">Choose Renewal Type:</h5>
+                            <div style="margin: 10px 0;">
+                                <label style="display: block; margin-bottom: 8px;">
+                                    <input type="radio" name="renewal_type" value="one_time" checked style="margin-right: 8px;">
+                                    One-time payment (<?php echo esc_html($renewal_options['currency'] . number_format($renewal_options['amount'], 2)); ?>)
+                                </label>
+                                <label style="display: block; margin-bottom: 8px;">
+                                    <input type="radio" name="renewal_type" value="subscription" style="margin-right: 8px;">
+                                    Recurring subscription (<?php echo esc_html($renewal_options['currency'] . number_format($renewal_options['amount'], 2) . ' ' . $renewal_options['subscription_interval']); ?>)
+                                    <small style="color: #666; display: block; margin-left: 24px;">Automatically renews your membership</small>
+                                </label>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    
                     <button id="dcmm-renew-button" class="button button-primary">Renew Membership</button>
                 </div>
             <?php
@@ -416,18 +548,34 @@ function ajax_renew_membership() {
 
     // get the DCMM_Member object for the current user
     $member  = DCMM_Users\get_member( $wp_user_id );
-
-    $result = $member->maybe_charge_for_renewal( 'self-renewal' );
+    
+    // Get renewal type from POST data
+    $renewal_type = isset($_POST['renewal_type']) ? sanitize_text_field($_POST['renewal_type']) : 'one_time';
+    
+    // Get the billing interval for subscriptions
+    $billing_interval = null;
+    if ( $renewal_type === 'subscription' ) {
+        $renewal_options = $member->get_renewal_options();
+        $billing_interval = $renewal_options['subscription_interval'] ?? 'monthly';
+    }
+    
+    $result = $member->maybe_charge_for_renewal( $renewal_type, $billing_interval );
 
     if ( is_wp_error( $result ) ) {
         wp_send_json_error( [ 'message' => $result->get_error_message() ] );
     }
 
-    // Check if result contains PayPal redirect data
-    if ( is_array( $result ) && isset( $result['type'] ) && $result['type'] === 'paypal_redirect' ) {
+    // Check if result contains PayPal redirect data (one-time or subscription)
+    if ( is_array( $result ) && isset( $result['type'] ) && 
+         ( $result['type'] === 'paypal_redirect' || $result['type'] === 'paypal_subscription' ) ) {
+        
+        $message = $result['type'] === 'paypal_subscription' 
+            ? 'Redirecting to PayPal to set up your subscription...'
+            : 'Redirecting to PayPal for payment...';
+        
         wp_send_json_success( [
-            'message' => 'Redirecting to PayPal for payment...',
-            'redirect_url' => $result['redirect_url'],
+            'message' => $message,
+            'redirect_url' => $result['redirect_url'] ?? $result['approval_url'],
             'requires_redirect' => true
         ] );
     }
@@ -436,5 +584,51 @@ function ajax_renew_membership() {
     wp_send_json_success( [
         'message'     => 'Membership renewed successfully.',
         'last_payment' => get_user_meta( $wp_user_id, 'last_dues_payment', true )
+    ] );
+}
+
+/**
+ * AJAX handler to cancel a Member's subscription
+ * 
+ * Linked to the 'dcmm_cancel_subscription' AJAX action
+ * 
+ * @return void
+ */
+function ajax_cancel_subscription() {
+    
+    // Check nonce
+    check_ajax_referer( 'dcmm_cancel_subscription_nonce', 'nonce' );
+    
+    // Require login
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( [ 'message' => 'User not logged in' ] );
+    }
+    
+    $wp_user_id = get_current_user_id();
+    
+    include_once( 'functions-user-role.php' );
+    // check if the user is an organizational member
+    if ( ! DCMM_Users\is_organizational_member( $wp_user_id ) ) {
+        wp_send_json_error( [ 'message' => 'User is not a member' ] );
+    }
+    
+    // get the DCMM_Member object for the current user
+    $member = DCMM_Users\get_member( $wp_user_id );
+    
+    // Get subscription ID from POST data
+    $subscription_id = isset($_POST['subscription_id']) ? sanitize_text_field($_POST['subscription_id']) : '';
+    
+    if (empty($subscription_id)) {
+        wp_send_json_error( [ 'message' => 'No subscription ID provided' ] );
+    }
+    
+    $result = $member->cancel_subscription();
+    
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+    }
+    
+    wp_send_json_success( [
+        'message' => 'Subscription cancelled successfully. Your membership will remain active until the current billing period ends.'
     ] );
 }

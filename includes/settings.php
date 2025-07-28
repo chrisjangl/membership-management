@@ -110,10 +110,10 @@ function render_general_tab() {
         <?php
         settings_fields( 'dcmm_settings_group' );
         
-        // Preserve offline payment settings as hidden fields
+        // Preserve payment gateway settings as hidden fields
         $current_settings = get_option( 'dcmm_settings', array() );
-        $offline_fields = array( 'dcmm_enable_offline_payments', 'dcmm_offline_payment_methods', 'dcmm_offline_require_reference' );
-        foreach ( $offline_fields as $field ) {
+        $payment_fields = array( 'dcmm_enable_offline_payments', 'dcmm_offline_payment_methods', 'dcmm_offline_require_reference', 'dcmm_paypal_client_id', 'dcmm_paypal_client_secret', 'dcmm_paypal_environment', 'dcmm_paypal_webhook_id' );
+        foreach ( $payment_fields as $field ) {
             if ( isset( $current_settings[$field] ) ) {
                 if ( is_array( $current_settings[$field] ) ) {
                     foreach ( $current_settings[$field] as $key => $value ) {
@@ -148,7 +148,7 @@ function render_payments_tab() {
         
         // Preserve general membership settings as hidden fields
         $current_settings = get_option( 'dcmm_settings', array() );
-        $general_fields = array( 'dcmm_enable_dues', 'dcmm_dues_amount', 'dcmm_membership_term_length', 'dcmm_join_policy', 'dcmm_anchor_date', 'dcmm_my_account_page', 'renewal_window_days', 'grace_period_days', 'renewal_notice_days' );
+        $general_fields = array( 'dcmm_enable_dues', 'dcmm_dues_amount', 'dcmm_membership_term_length', 'dcmm_join_policy', 'dcmm_anchor_date', 'dcmm_my_account_page', 'renewal_window_days', 'grace_period_days', 'renewal_notice_days', 'dcmm_paypal_client_id', 'dcmm_paypal_client_secret', 'dcmm_paypal_environment' );
         foreach ( $general_fields as $field ) {
             if ( isset( $current_settings[$field] ) ) {
                 echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . ']" value="' . esc_attr($current_settings[$field]) . '">';

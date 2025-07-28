@@ -56,6 +56,13 @@ class DCMM_Member extends WP_User {
 		'city' => 'dcmm_' . 'city',
 		'state' => 'dcmm_' . 'state',
 		'zip' => 'dcmm_' . 'zip',
+		// Recurring subscription fields
+		'subscription_id' => 'dcmm_' . 'subscription_id',
+		'subscription_status' => 'dcmm_' . 'subscription_status',
+		'subscription_interval' => 'dcmm_' . 'subscription_interval',
+		'subscription_gateway' => 'dcmm_' . 'subscription_gateway',
+		'subscription_created' => 'dcmm_' . 'subscription_created',
+		'subscription_cancelled' => 'dcmm_' . 'subscription_cancelled',
 		
 	);
 
@@ -833,9 +840,11 @@ class DCMM_Member extends WP_User {
 	 * If dues are enabled, this will start the payment flow.
 	 * If dues are not enabled, it will renew the membership without charging.
 	 * 
+	 * @param string $payment_type Optional payment type: 'one_time' or 'subscription'
+	 * @param string $interval Optional billing interval for subscriptions: 'monthly', 'yearly', 'seasonal'
 	 * @return mixed Returns a payment object or a WP_Error if dues are enabled but no amount is set.
 	 */
-	public function maybe_charge_for_renewal() {
+	public function maybe_charge_for_renewal( $payment_type = 'one_time', $interval = null ) {
 		
 		// check if dues are enabled
 		if ( ! \DCMM_Settings\are_dues_enabled() ) {
@@ -845,16 +854,221 @@ class DCMM_Member extends WP_User {
 		// If dues are enabled, get the amount
 		$amount = \DCMM_Settings\get_dues_amount();
 		if ( ! $amount || ! is_numeric( $amount) ) {
-
 			return new \WP_Error( 'invalid_dues_amount', 'Dues are enabled, but no valid amount is set.' );
 		}
 
 		// Load active gateway
 		$gateway = Gateway_Manager::get_default_gateway();
 
-		// start the payment flow
-		return $gateway->start_payment( $this, floatval( $amount) );
+		// Handle subscription vs one-time payment
+		if ( $payment_type === 'subscription' ) {
+			return $this->start_subscription_renewal( $gateway, floatval( $amount ), $interval );
+		} else {
+			return $this->start_one_time_renewal( $gateway, floatval( $amount ) );
+		}
+	}
 
+	/**
+	 * Start one-time payment renewal process
+	 * 
+	 * @param object $gateway Payment gateway instance
+	 * @param float $amount Payment amount
+	 * @return mixed Payment result or WP_Error
+	 */
+	private function start_one_time_renewal( $gateway, $amount ) {
+		// Standard one-time payment flow
+		return $gateway->start_payment( $this, $amount );
+	}
+
+	/**
+	 * Start subscription renewal process
+	 * 
+	 * @param object $gateway Payment gateway instance
+	 * @param float $amount Subscription amount
+	 * @param string $interval Billing interval
+	 * @return mixed Subscription result or WP_Error
+	 */
+	private function start_subscription_renewal( $gateway, $amount, $interval ) {
+		// Check if gateway supports subscriptions
+		if ( ! $gateway->supports_subscriptions() ) {
+			return new \WP_Error( 
+				'subscription_not_supported', 
+				'The selected payment gateway does not support recurring subscriptions.' 
+			);
+		}
+
+		// Check if member already has an active subscription
+		if ( $this->has_active_subscription() ) {
+			return new \WP_Error( 
+				'existing_subscription', 
+				'You already have an active subscription. Please cancel your current subscription before creating a new one.' 
+			);
+		}
+
+		// If no interval provided, get it from membership term length
+		if ( is_null( $interval ) ) {
+			$term_length = \DCMM_Settings\get_settings( 'dcmm_membership_term_length' );
+			$interval = $this->map_term_to_subscription_interval( $term_length );
+		}
+
+		// Create the subscription
+		return $gateway->create_subscription( $this->get_member_id(), $amount, $interval );
+	}
+	
+	/**
+	 * Map membership term length to subscription billing interval
+	 * 
+	 * @param string $term_length Membership term length
+	 * @return string Subscription interval
+	 */
+	private function map_term_to_subscription_interval( $term_length ) {
+		switch ( $term_length ) {
+			case 'yearly':
+				return 'yearly';
+			case 'monthly':
+				return 'monthly';
+			case 'seasonal':
+				return 'semi_annually'; // 6 months
+			default:
+				return 'monthly'; // Default fallback
+		}
+	}
+
+	/**
+	 * Get available renewal options for this member
+	 * 
+	 * @return array Available renewal options
+	 */
+	public function get_renewal_options() {
+		$options = [];
+		
+		// Always include one-time payment option
+		$amount = \DCMM_Settings\get_dues_amount();
+		$options['one_time'] = [
+			'type' => 'one_time',
+			'label' => 'One-time Payment',
+			'description' => 'Pay $' . number_format( $amount, 2 ) . ' for membership renewal',
+			'amount' => $amount,
+			'available' => true,
+		];
+
+		// Add subscription options if gateway supports them
+		$gateway = Gateway_Manager::get_default_gateway();
+		if ( $gateway && $gateway->supports_subscriptions() ) {
+			
+			// Check if member already has active subscription
+			$has_active_subscription = $this->has_active_subscription();
+			
+			// Get the actual membership term length from settings
+			$term_length = \DCMM_Settings\get_settings( 'dcmm_membership_term_length' );
+			if ( ! $term_length ) {
+				$term_length = 'monthly'; // Default fallback
+			}
+			
+			// Create subscription option that matches membership term
+			$subscription_option = $this->create_subscription_option( $term_length, $amount, $has_active_subscription );
+			if ( $subscription_option ) {
+				$options['subscription'] = $subscription_option;
+			}
+
+			$options['subscription_available'] = true;
+			$options['subscription_interval'] = $term_length; // Use actual term for UI display
+		} else {
+			$options['subscription_available'] = false;
+		}
+
+		// Add common data for the UI
+		$options['amount'] = $amount;
+		$options['currency'] = '$'; // TODO: make this configurable
+
+		return apply_filters( 'dcmm_member_renewal_options', $options, $this );
+	}
+	
+	/**
+	 * Create subscription option based on membership term length
+	 * 
+	 * @param string $term_length Membership term length
+	 * @param float $amount Base amount
+	 * @param bool $has_active_subscription Whether member has active subscription
+	 * @return array|null Subscription option array or null if term not supported
+	 */
+	private function create_subscription_option( $term_length, $amount, $has_active_subscription ) {
+		switch ( $term_length ) {
+			case 'yearly':
+				return [
+					'type' => 'subscription',
+					'interval' => 'yearly',
+					'label' => 'Yearly Subscription',
+					'description' => 'Automatically pay $' . number_format( $amount, 2 ) . ' every year',
+					'amount' => $amount,
+					'available' => !$has_active_subscription,
+					'disabled_reason' => $has_active_subscription ? 'You already have an active subscription' : null,
+				];
+				
+			case 'monthly':
+				return [
+					'type' => 'subscription',
+					'interval' => 'monthly',
+					'label' => 'Monthly Subscription',
+					'description' => 'Automatically pay $' . number_format( $amount, 2 ) . ' every month',
+					'amount' => $amount,
+					'available' => !$has_active_subscription,
+					'disabled_reason' => $has_active_subscription ? 'You already have an active subscription' : null,
+				];
+				
+			case 'seasonal':
+				// Map seasonal to 6-month billing for subscription purposes
+				$seasonal_amount = $amount; // Keep same amount but bill twice per year
+				return [
+					'type' => 'subscription',
+					'interval' => 'semi_annually', // 6 months
+					'label' => 'Seasonal Subscription',
+					'description' => 'Automatically pay $' . number_format( $seasonal_amount, 2 ) . ' every 6 months',
+					'amount' => $seasonal_amount,
+					'available' => !$has_active_subscription,
+					'disabled_reason' => $has_active_subscription ? 'You already have an active subscription' : null,
+				];
+				
+			default:
+				// Unsupported term length for subscriptions
+				return null;
+		}
+	}
+
+	/**
+	 * Get member's current subscription status for display
+	 * 
+	 * @return array|false Subscription status info or false if no subscription
+	 */
+	public function get_subscription_status_info() {
+		if ( ! $this->has_active_subscription() ) {
+			return false;
+		}
+
+		$subscription_data = $this->get_subscription_data();
+		if ( ! $subscription_data ) {
+			return false;
+		}
+
+		// Get real-time status from gateway if possible
+		$gateway = Gateway_Manager::get_gateway( $subscription_data['gateway'] );
+		if ( $gateway && $gateway->supports_subscriptions() ) {
+			$gateway_status = $gateway->get_subscription_status( $subscription_data['id'] );
+			if ( ! is_wp_error( $gateway_status ) ) {
+				$subscription_data = array_merge( $subscription_data, $gateway_status );
+			}
+		}
+
+		return [
+			'id' => $subscription_data['id'],
+			'status' => $subscription_data['status'],
+			'interval' => $subscription_data['interval'],
+			'gateway' => $subscription_data['gateway'],
+			'next_billing' => $subscription_data['next_billing_time'] ?? null,
+			'last_payment_amount' => $subscription_data['last_payment_amount'] ?? null,
+			'created' => $subscription_data['created'],
+			'can_cancel' => in_array( $subscription_data['status'], ['active', 'trialing'] ),
+		];
 	}
 
 	/**
@@ -1476,5 +1690,139 @@ class DCMM_Member extends WP_User {
 	 */
 	public function get_id() {
 		return $this->get_member_id();
+	}
+
+	/**
+	 * Check if member has an active recurring subscription
+	 * 
+	 * @return bool True if member has active subscription
+	 */
+	public function has_active_subscription() {
+		$subscription_status = $this->get( 'subscription_status' );
+		return in_array( $subscription_status, [ 'active', 'trialing' ] );
+	}
+
+	/**
+	 * Get member's subscription data
+	 * 
+	 * @return array|false Subscription data or false if no subscription
+	 */
+	public function get_subscription_data() {
+		$subscription_id = $this->get( 'subscription_id' );
+		if ( ! $subscription_id ) {
+			return false;
+		}
+
+		return [
+			'id' => $subscription_id,
+			'status' => $this->get( 'subscription_status' ),
+			'interval' => $this->get( 'subscription_interval' ),
+			'gateway' => $this->get( 'subscription_gateway' ),
+			'created' => $this->get( 'subscription_created' ),
+			'cancelled' => $this->get( 'subscription_cancelled' ),
+		];
+	}
+
+	/**
+	 * Create a recurring subscription for this member
+	 * 
+	 * @param string $interval Billing interval (monthly, yearly, etc)
+	 * @param float  $amount   Optional amount override
+	 * @return array|WP_Error Subscription data on success, WP_Error on failure
+	 */
+	public function create_subscription( $interval = 'monthly', $amount = null ) {
+		// Check if member already has active subscription
+		if ( $this->has_active_subscription() ) {
+			return new \WP_Error( 'existing_subscription', 'Member already has an active subscription' );
+		}
+
+		// Get amount from settings if not provided
+		if ( is_null( $amount ) ) {
+			$amount = \DCMM_Settings\get_dues_amount();
+			if ( ! $amount || ! is_numeric( $amount ) ) {
+				return new \WP_Error( 'invalid_amount', 'No valid dues amount configured' );
+			}
+		}
+
+		// Get the default gateway
+		$gateway = Gateway_Manager::get_default_gateway();
+		if ( ! $gateway ) {
+			return new \WP_Error( 'no_gateway', 'No payment gateway configured' );
+		}
+
+		// Create subscription through gateway
+		$result = $gateway->create_subscription( $this->get_member_id(), floatval( $amount ), $interval );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		// Store subscription data
+		$this->save( 'subscription_id', $result['subscription_id'] );
+		$this->save( 'subscription_status', $result['status'] );
+		$this->save( 'subscription_interval', $interval );
+		$this->save( 'subscription_gateway', $gateway->get_name() );
+		$this->save( 'subscription_created', current_time( 'mysql' ) );
+
+		// Log the subscription creation
+		$this->log( 'subscription_created', 'recurring', "Subscription ID: {$result['subscription_id']}" );
+
+		return $result;
+	}
+
+	/**
+	 * Cancel the member's recurring subscription
+	 * 
+	 * @return bool|WP_Error True on success, WP_Error on failure
+	 */
+	public function cancel_subscription() {
+		$subscription_data = $this->get_subscription_data();
+		if ( ! $subscription_data ) {
+			return new \WP_Error( 'no_subscription', 'Member has no subscription to cancel' );
+		}
+
+		// Get the gateway that created the subscription
+		$gateway = Gateway_Manager::get_gateway( $subscription_data['gateway'] );
+		if ( ! $gateway ) {
+			return new \WP_Error( 'gateway_not_found', 'Original payment gateway not available' );
+		}
+
+		// Cancel through gateway
+		$result = $gateway->cancel_subscription( $this->get_member_id(), $subscription_data['id'] );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		// Update subscription status
+		$this->save( 'subscription_status', 'cancelled' );
+		$this->save( 'subscription_cancelled', current_time( 'mysql' ) );
+
+		// Log the cancellation
+		$this->log( 'subscription_cancelled', 'recurring', "Subscription ID: {$subscription_data['id']}" );
+
+		return true;
+	}
+
+	/**
+	 * Handle a successful recurring payment
+	 * 
+	 * @param array $payment_data Payment data from gateway
+	 * @return bool Success status
+	 */
+	public function process_recurring_payment( $payment_data ) {
+		// Renew the membership
+		$result = $this->renew_membership( 'recurring' );
+
+		// Fire recurring payment hook
+		$payment_data['member_id'] = $this->get_member_id();
+		$payment_data['context'] = 'recurring';
+		do_action( 'dcmm_recurring_payment_received', $this->get_member_id(), $payment_data );
+
+		// Log the payment
+		$amount = isset( $payment_data['amount'] ) ? $payment_data['amount'] : 'unknown';
+		$this->log( 'recurring_payment', 'automatic', "Amount: $amount" );
+
+		return $result;
 	}
 }

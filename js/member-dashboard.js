@@ -9,9 +9,13 @@ jQuery( document ).ready( function() {
         const button = jQuery(this);
         button.prop('disabled', true).text('Renewing...');
 
+        // Get selected renewal type if subscription options are available
+        const renewalType = jQuery('input[name="renewal_type"]:checked').val() || 'one_time';
+
         jQuery.post(dcmm.ajax_url, {
             action: 'dcmm_renew_membership',
-            nonce: dcmm.nonce
+            nonce: dcmm.nonce,
+            renewal_type: renewalType
         })
         .done(function (response) {
             if (response.success) {
@@ -41,6 +45,42 @@ jQuery( document ).ready( function() {
             } else {
                 button.prop('disabled', false).text('Renew Membership');
             }
+        });
+    });
+    
+    // Handle subscription cancellation
+    jQuery('#dcmm-cancel-subscription').on('click', function (e) {
+        e.preventDefault();
+        
+        if (!confirm('Are you sure you want to cancel your subscription? Your membership will remain active until the current billing period ends.')) {
+            return;
+        }
+        
+        const button = jQuery(this);
+        const subscriptionId = button.data('subscription-id');
+        
+        button.prop('disabled', true).text('Cancelling...');
+        
+        jQuery.post(dcmm.ajax_url, {
+            action: 'dcmm_cancel_subscription',
+            nonce: dcmm.cancel_nonce,
+            subscription_id: subscriptionId
+        })
+        .done(function (response) {
+            if (response.success) {
+                jQuery('#dcmm-renew-response').html('<div class="notice notice-success"><p>' + response.data.message + '</p></div>');
+                // Optionally refresh the page to update subscription status display
+                setTimeout(function() {
+                    location.reload();
+                }, 2000);
+            } else {
+                jQuery('#dcmm-renew-response').html('<div class="notice notice-error"><p>' + response.data.message + '</p></div>');
+                button.prop('disabled', false).text('Cancel Subscription');
+            }
+        })
+        .fail(function () {
+            jQuery('#dcmm-renew-response').html('<div class="notice notice-error"><p>AJAX request failed.</p></div>');
+            button.prop('disabled', false).text('Cancel Subscription');
         });
     });
     

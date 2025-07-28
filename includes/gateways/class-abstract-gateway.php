@@ -68,4 +68,68 @@ abstract class Abstract_Gateway implements Payment_Gateway_Interface {
 		$raw = DCMM_Settings\get_dues_amount();
 		return is_numeric( $raw ) ? floatval( $raw ) : 0.0;
 	}
+
+	/**
+	 * Default implementation for creating subscriptions.
+	 * Subclasses should override this if they support recurring payments.
+	 *
+	 * @param int    $member_id The member's CPT ID.
+	 * @param float  $amount    The recurring amount to charge.
+	 * @param string $interval  The billing interval.
+	 * @return WP_Error Always returns error for base implementation.
+	 */
+	public function create_subscription( $member_id, $amount, $interval ) {
+		return new \WP_Error( 
+			'subscription_not_supported', 
+			sprintf( 'Recurring subscriptions are not supported by the %s gateway.', $this->get_name() )
+		);
+	}
+
+	/**
+	 * Default implementation for canceling subscriptions.
+	 * Subclasses should override this if they support recurring payments.
+	 *
+	 * @param int    $member_id       The member's CPT ID.
+	 * @param string $subscription_id The gateway's subscription ID.
+	 * @return WP_Error Always returns error for base implementation.
+	 */
+	public function cancel_subscription( $member_id, $subscription_id ) {
+		return new \WP_Error( 
+			'subscription_not_supported', 
+			sprintf( 'Subscription cancellation is not supported by the %s gateway.', $this->get_name() )
+		);
+	}
+
+	/**
+	 * Default implementation for getting subscription status.
+	 * Subclasses should override this if they support recurring payments.
+	 *
+	 * @param string $subscription_id The gateway's subscription ID.
+	 * @return WP_Error Always returns error for base implementation.
+	 */
+	public function get_subscription_status( $subscription_id ) {
+		return new \WP_Error( 
+			'subscription_not_supported', 
+			sprintf( 'Subscription status checking is not supported by the %s gateway.', $this->get_name() )
+		);
+	}
+
+	/**
+	 * Check if this gateway supports recurring payments.
+	 *
+	 * @return bool True if gateway supports subscriptions.
+	 */
+	public function supports_subscriptions() {
+		return false; // Override in subclasses that support subscriptions
+	}
+
+	/**
+	 * Log a subscription event.
+	 *
+	 * @param int    $member_id The member's CPT ID.
+	 * @param string $message   A log entry for the subscription.
+	 */
+	protected function log_subscription_event( $member_id, $message ) {
+		$this->log_payment_event( $member_id, '[Subscription] ' . $message );
+	}
 }

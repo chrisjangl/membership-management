@@ -37,6 +37,20 @@ function dcmm_register_paypal_endpoints() {
         'callback' => 'dcmm_handle_paypal_webhook',
         'permission_callback' => '__return_true', // Public endpoint
     ] );
+
+    // PayPal subscription return URL (after successful subscription approval)
+    register_rest_route( 'dcmm/v1', '/paypal-subscription-return', [
+        'methods' => 'GET',
+        'callback' => 'dcmm_handle_paypal_subscription_return',
+        'permission_callback' => '__return_true', // Public endpoint
+    ] );
+
+    // PayPal subscription cancel URL (user cancelled subscription)
+    register_rest_route( 'dcmm/v1', '/paypal-subscription-cancel', [
+        'methods' => 'GET',
+        'callback' => 'dcmm_handle_paypal_subscription_cancel',
+        'permission_callback' => '__return_true', // Public endpoint
+    ] );
 }
 add_action( 'rest_api_init', 'dcmm_register_paypal_endpoints' );
 
@@ -244,6 +258,143 @@ function dcmm_redirect_with_success( $message ) {
     return new WP_REST_Response( '', 302, [
         'Location' => $redirect_url
     ] );
+}
+
+/**
+ * Handle PayPal subscription return (successful subscription approval).
+ *
+ * @param WP_REST_Request $request The REST request.
+ * @return WP_REST_Response The response.
+ */
+function dcmm_handle_paypal_subscription_return( $request ) {
+    
+    $subscription_id = $request->get_param( 'subscription_id' );
+    $ba_token = $request->get_param( 'ba_token' );
+
+    // Log the return parameters for debugging
+    error_log( 'PayPal subscription return - Subscription ID: ' . $subscription_id );
+    error_log( 'PayPal subscription return - BA Token: ' . $ba_token );
+
+    if ( empty( $subscription_id ) ) {
+        return dcmm_redirect_with_error( 'Missing PayPal subscription ID' );
+    }
+
+    // Find member by subscription session
+    $member_id = dcmm_find_member_by_paypal_subscription( $subscription_id );
+    if ( ! $member_id ) {
+        return dcmm_redirect_with_error( 'Subscription session not found for ID: ' . $subscription_id );
+    }
+
+    // Activate the subscription in our system
+    $member = new DCMM_Member( $member_id );
+    
+    // Store subscription details
+    $member->save( 'subscription_id', $subscription_id );
+    $member->save( 'subscription_status', 'active' );
+    $member->save( 'subscription_gateway', 'paypal' );
+    $member->save( 'subscription_created', current_time( 'mysql' ) );
+    
+    // Get subscription details from PayPal to determine interval
+    $gateway = new \DCMM\Gateways\Gateway_PayPal();
+    $subscription_details = $gateway->get_subscription_status( $subscription_id );
+    
+    if ( ! is_wp_error( $subscription_details ) ) {
+        // Extract billing interval from the subscription
+        $renewal_options = $member->get_renewal_options();
+        $interval = $renewal_options['subscription_interval'] ?? 'monthly';
+        $member->save( 'subscription_interval', $interval );
+    }
+
+    // Log subscription activation
+    $logs = get_post_meta( $member_id, 'dcmm_payment_log', true );
+    if ( ! is_array( $logs ) ) {
+        $logs = [];
+    }
+
+    $logs[] = [
+        'time'    => current_time( 'mysql' ),
+        'user_id' => get_current_user_id(),
+        'message' => 'PayPal subscription activated: ' . $subscription_id,
+    ];
+
+    update_post_meta( $member_id, 'dcmm_payment_log', $logs );
+
+    // Activate membership if not already active
+    if ( ! $member->is_active() ) {
+        $member->renew_membership( 'paypal_subscription_activated' );
+    }
+
+    // Redirect to success page
+    return dcmm_redirect_with_success( 'Subscription activated successfully! Your membership will now renew automatically.' );
+}
+
+/**
+ * Handle PayPal subscription cancel (user cancelled subscription setup).
+ *
+ * @param WP_REST_Request $request The REST request.
+ * @return WP_REST_Response The response.
+ */
+function dcmm_handle_paypal_subscription_cancel( $request ) {
+    
+    $subscription_id = $request->get_param( 'subscription_id' );
+
+    if ( ! empty( $subscription_id ) ) {
+        // Find member and log cancellation
+        $member_id = dcmm_find_member_by_paypal_subscription( $subscription_id );
+        if ( $member_id ) {
+            // Log the cancellation
+            $logs = get_post_meta( $member_id, 'dcmm_payment_log', true );
+            if ( ! is_array( $logs ) ) {
+                $logs = [];
+            }
+
+            $logs[] = [
+                'time'    => current_time( 'mysql' ),
+                'user_id' => get_current_user_id(),
+                'message' => 'PayPal subscription setup cancelled by user: ' . $subscription_id,
+            ];
+
+            update_post_meta( $member_id, 'dcmm_payment_log', $logs );
+        }
+    }
+
+    // Redirect to cancellation page
+    return dcmm_redirect_with_error( 'Subscription setup was cancelled.' );
+}
+
+/**
+ * Find member ID by PayPal subscription ID.
+ *
+ * @param string $subscription_id PayPal subscription ID.
+ * @return int|false Member ID or false if not found.
+ */
+function dcmm_find_member_by_paypal_subscription( $subscription_id ) {
+    
+    global $wpdb;
+    
+    // Search for subscription session data
+    $all_sessions = $wpdb->get_results(
+        "SELECT post_id, meta_value FROM {$wpdb->postmeta} 
+        WHERE meta_key = 'dcmm_paypal_subscription_session'"
+    );
+    
+    // Search through subscription sessions
+    foreach ( $all_sessions as $session ) {
+        $session_data = maybe_unserialize( $session->meta_value );
+        if ( is_array( $session_data ) && isset( $session_data['subscription_id'] ) && $session_data['subscription_id'] === $subscription_id ) {
+            return (int) $session->post_id;
+        }
+    }
+    
+    // Also check active subscriptions
+    $member_id = $wpdb->get_var( $wpdb->prepare(
+        "SELECT post_id FROM {$wpdb->postmeta} 
+        WHERE meta_key = 'dcmm_subscription_id' 
+        AND meta_value = %s",
+        $subscription_id
+    ) );
+
+    return $member_id ? (int) $member_id : false;
 }
 
 /**
