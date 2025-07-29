@@ -388,6 +388,9 @@ class DCMM_metaboxes {
             $('.dcmm-submit-payment').on('click', function(e) {
                 e.preventDefault();
                 
+                var $button = $(this);
+                var originalText = $button.text();
+                
                 // Validate required fields
                 var amount = $('#payment_amount').val();
                 var method = $('#payment_method').val();
@@ -421,6 +424,9 @@ class DCMM_metaboxes {
                 }
                 <?php endif; ?>
                 
+                // Set loading state
+                $button.prop('disabled', true).text('Processing...');
+                
                 // Collect form data
                 var formData = new FormData();
                 formData.append('action', $('#dcmm_action').val());
@@ -443,9 +449,11 @@ class DCMM_metaboxes {
                     success: function(response) {
                         // If we get here, submission was successful
                         if (response.success && response.data.redirect_url) {
+                            $button.text('Success! Redirecting...');
                             window.location.href = response.data.redirect_url;
                         } else {
                             alert('Payment processed but unable to redirect');
+                            $button.prop('disabled', false).text(originalText);
                         }
                     },
                     error: function(xhr, status, error) {
@@ -453,12 +461,15 @@ class DCMM_metaboxes {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             if (response.data && response.data.redirect_url) {
+                                $button.text('Success! Redirecting...');
                                 window.location.href = response.data.redirect_url;
                             } else {
                                 alert('Error submitting payment: ' + (response.data.message || error));
+                                $button.prop('disabled', false).text(originalText);
                             }
                         } catch (e) {
                             alert('Error submitting payment: ' + error);
+                            $button.prop('disabled', false).text(originalText);
                         }
                     }
                 });
