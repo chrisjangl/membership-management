@@ -1825,4 +1825,45 @@ class DCMM_Member extends WP_User {
 
 		return $result;
 	}
+
+	/**
+	 * Initialize member-related hooks
+	 * 
+	 * @since 1.1.1
+	 */
+	public static function init_hook() {
+		// Disable author pages for member users
+		add_action( 'template_redirect', array( __CLASS__, 'disable_member_author_pages' ) );
+	}
+
+	/**
+	 * Disable author pages for users associated with member CPTs
+	 * 
+	 * @since 1.1.1
+	 */
+	public static function disable_member_author_pages() {
+		if ( is_author() ) {
+			$author_id = get_queried_object_id();
+			
+			// Check if this user is associated with a member CPT
+			$member_posts = get_posts( array(
+				'post_type' => self::$our_post_type,
+				'meta_key' => self::$meta_keys['wp_user_id'],
+				'meta_value' => $author_id,
+				'posts_per_page' => 1
+			) );
+			
+			if ( ! empty( $member_posts ) ) {
+				// This is a member user, show 404
+				global $wp_query;
+				$wp_query->set_404();
+				status_header( 404 );
+				get_template_part( 404 );
+				exit;
+			}
+		}
+	}
 }
+
+// Initialize the class hooks
+DCMM_Member::init_hook();
