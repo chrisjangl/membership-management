@@ -135,15 +135,54 @@ class ReleaseOrchestrator {
             console.log('⚠️  Main plugin file not found, skipping header update');
             return;
         }
-        
+
         let content = fs.readFileSync(mainFile, 'utf8');
+
+        // Update version
         content = content.replace(
             /Version:\s*.+/,
             `Version: ${this.newVersion}`
         );
-        
+
+        // Ensure all required headers are present
+        content = this.ensurePluginHeaders(content);
+
         await fs.writeFile(mainFile, content);
         console.log(`✅ Updated ${mainFile} header`);
+    }
+
+    ensurePluginHeaders(content) {
+        const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
+        // Define required headers with defaults
+        const requiredHeaders = {
+            'Plugin URI': packageJson.homepage || 'https://github.com/chrisjangl/membership-management',
+            'Text Domain': 'dcmm-membership',
+            'Requires at least': '5.0',
+            'Tested up to': '6.5',
+            'Requires PHP': '7.4'
+        };
+
+        // Extract existing header block
+        const headerMatch = content.match(/(/\*\*[\s\S]*?\*\/)/);
+        if (!headerMatch) return content;
+
+        let headerBlock = headerMatch[1];
+
+        // Add missing headers
+        for (const [headerName, defaultValue] of Object.entries(requiredHeaders)) {
+            const pattern = new RegExp(`\\*\\s*${headerName}:\\s*.+`, 'i');
+            if (!pattern.test(headerBlock)) {
+                // Find where to insert (before closing */)
+                headerBlock = headerBlock.replace(
+                    /(\s*\*\/)/,
+                    ` * ${headerName}: ${defaultValue}\n$1`
+                );
+                console.log(`✅ Added missing header: ${headerName}`);
+            }
+        }
+
+        return content.replace(headerMatch[1], headerBlock);
     }
     
     async updatePluginConstant() {
@@ -166,18 +205,177 @@ class ReleaseOrchestrator {
     
     async updateReadmeTxt() {
         if (!fs.existsSync('readme.txt')) {
-            console.log('⚠️  readme.txt not found, skipping update');
+            console.log('📝 Creating readme.txt...');
+            await this.createReadmeTxt();
             return;
         }
-        
+
+        console.log('📝 Updating readme.txt...');
         let content = fs.readFileSync('readme.txt', 'utf8');
+
+        // Update stable tag
         content = content.replace(
             /Stable tag:\s*.+/,
             `Stable tag: ${this.newVersion}`
         );
-        
+
+        // Ensure "Requires at least" is present
+        if (!/Requires at least:/i.test(content)) {
+            content = content.replace(
+                /(Tags:.*?\n)/,
+                '$1Requires at least: 5.0\n'
+            );
+        }
+
+        // Ensure required sections exist
+        content = await this.ensureReadmeSections(content);
+
         await fs.writeFile('readme.txt', content);
-        console.log('✅ Updated readme.txt stable tag');
+        console.log('✅ Updated readme.txt');
+    }
+
+    async createReadmeTxt() {
+        const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
+        const template = `=== Membership Management ===
+Contributors: digitally-cultured
+Tags: membership management, CRM
+Requires at least: 5.0
+Tested up to: 6.5
+Stable tag: ${this.newVersion}
+License: GPLv3
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
+
+${packageJson.description || 'Empower your organization with our Membership Management Plugin for WordPress.'}
+
+== Description ==
+
+Unlock the full potential of your organization with our Membership Management Plugin. Designed for professional organizations and non-profits, this feature-rich tool allows you to easily manage and organize your membership list. Keep track of member status, contact information, and more, all within the familiar WordPress environment.
+
+== Installation ==
+
+1. Upload the plugin files to the \`/wp-content/plugins/membership-management\` directory, or install the plugin through the WordPress plugins screen directly.
+2. Activate the plugin through the 'Plugins' screen in WordPress.
+3. Use the Members menu in your WordPress admin to start managing your membership.
+4. Configure settings under Members > Settings to customize the plugin for your organization.
+
+== FAQ ==
+
+= How does the plugin track membership status? =
+The plugin provides a user-friendly interface within the WordPress dashboard to mark members as active or inactive based on your organization's criteria.
+
+= Can members update their own information? =
+The plugin includes member dashboard functionality where members can view and update their information.
+
+= Does the plugin integrate with PayPal? =
+Yes, the plugin includes PayPal integration for membership dues collection and renewal payments.
+
+== Changelog ==
+
+${await this.generateChangelog()}
+`;
+
+        await fs.writeFile('readme.txt', template);
+        console.log('✅ Created readme.txt');
+    }
+
+    async ensureReadmeSections(content) {
+        const requiredSections = ['Installation', 'Changelog'];
+
+        for (const section of requiredSections) {
+            const sectionPattern = new RegExp(`== ${section} ==`, 'i');
+            if (!sectionPattern.test(content)) {
+                content += await this.generateSection(section);
+                console.log(`✅ Added missing section: ${section}`);
+            }
+        }
+
+        // Update changelog if it exists
+        if (/== Changelog ==/i.test(content)) {
+            const newChangelog = await this.generateChangelog();
+            content = content.replace(
+                /(== Changelog ==[\s\S]*?)(?=== |$)/i,
+                `== Changelog ==\n\n${newChangelog}\n\n`
+            );
+            console.log('✅ Updated changelog');
+        }
+
+        return content;
+    }
+
+    async generateSection(sectionName) {
+        switch (sectionName.toLowerCase()) {
+            case 'installation':
+                return `\n== Installation ==\n\n1. Upload the plugin files to the \`/wp-content/plugins/membership-management\` directory, or install the plugin through the WordPress plugins screen directly.\n2. Activate the plugin through the 'Plugins' screen in WordPress.\n3. Use the Members menu in your WordPress admin to start managing your membership.\n4. Configure settings under Members > Settings to customize the plugin for your organization.\n\n`;
+            case 'changelog':
+                return `\n== Changelog ==\n\n${await this.generateChangelog()}\n\n`;
+            default:
+                return '';
+        }
+    }
+
+    async generateChangelog() {
+        try {
+            // Get commits since last tag
+            const lastTag = this.getLastTag();
+            const gitRange = lastTag ? `${lastTag}..HEAD` : 'HEAD';
+
+            const commits = execSync(`git log ${gitRange} --pretty=format:"%h|%s|%an|%ad" --date=short`, { encoding: 'utf8' })
+                .split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    const [hash, subject, author, date] = line.split('|');
+                    return { hash, subject, author, date };
+                });
+
+            if (commits.length === 0) {
+                return `= ${this.newVersion} =\n* Minor updates and improvements`;
+            }
+
+            // Group commits by type
+            const features = commits.filter(c => c.subject.match(/^feat/i));
+            const fixes = commits.filter(c => c.subject.match(/^fix|bugfix/i));
+            const others = commits.filter(c => !c.subject.match(/^(feat|fix|bugfix)/i));
+
+            let changelog = `= ${this.newVersion} =\n`;
+
+            if (features.length > 0) {
+                features.forEach(commit => {
+                    const cleanSubject = commit.subject.replace(/^feat[^:]*:\s*/i, '');
+                    changelog += `* ${cleanSubject}\n`;
+                });
+            }
+
+            if (fixes.length > 0) {
+                fixes.forEach(commit => {
+                    const cleanSubject = commit.subject.replace(/^(fix|bugfix)[^:]*:\s*/i, '');
+                    changelog += `* Fix: ${cleanSubject}\n`;
+                });
+            }
+
+            if (others.length > 0) {
+                others.forEach(commit => {
+                    let cleanSubject = commit.subject.replace(/^[^:]*:\s*/, '');
+                    cleanSubject = cleanSubject.charAt(0).toUpperCase() + cleanSubject.slice(1);
+                    changelog += `* ${cleanSubject}\n`;
+                });
+            }
+
+            return changelog;
+
+        } catch (error) {
+            console.log('⚠️  Could not generate changelog from git history');
+            return `= ${this.newVersion} =\n* Updates and improvements`;
+        }
+    }
+
+    getLastTag() {
+        try {
+            const result = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' });
+            return result.trim();
+        } catch (error) {
+            return null;
+        }
     }
     
     async runValidation() {
