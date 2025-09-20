@@ -1177,6 +1177,7 @@ class DCMM_Member extends WP_User {
 	 * Calculate expiration date based on membership settings and start date
 	 * 
 	 * TODO: Fix anchor date being considered when join policy is 'rolling'
+	 * TODO: Need to consider the renewal window
 	 * 
 	 * @return string|null Expiration date in Y-m-d format or null if no expiration
 	 */
@@ -1370,9 +1371,15 @@ class DCMM_Member extends WP_User {
 		
 		$start_year = date( 'Y', strtotime( $start_date ) );
 		$anchor_this_year = $start_year . '-' . $anchor_date;
+
+		// calculate the renewal window by including the grace period
+		$grace_period_days = DCMM_Settings\get_settings( 'grace_period_days' );
+		$renewal_window_end_timestamp = strtotime( '+' . $grace_period_days . ' days', strtotime( $anchor_this_year ) );
+		$renewal_window_end = date( 'Y-m-d', $renewal_window_end_timestamp );
 		
 		// If signup is before this year's anchor date, use this year's anchor
-		if ( strtotime( $start_date ) <= strtotime( $anchor_this_year ) ) {
+		// making sure to consider the grace period
+		if ( strtotime( $start_date ) <= strtotime( $renewal_window_end ) ) {
 			return $anchor_this_year;
 		}
 		
