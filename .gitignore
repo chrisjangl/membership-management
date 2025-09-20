@@ -1,2 +1,22 @@
-**/.DS_Store
+# WordPress.org repository - keep clean
+
+# System files
+.DS_Store
+Thumbs.db
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+.idea/
+
+# Never include these in wp-repo
 node_modules/
+package*.json
+src/
+scripts/
+tests/
+*.config.js
