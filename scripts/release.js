@@ -164,7 +164,7 @@ class ReleaseOrchestrator {
         };
 
         // Extract existing header block
-        const headerMatch = content.match(/(/\*\*[\s\S]*?\*\/)/);
+        const headerMatch = content.match(/(\/\*\*[\s\S]*?\*\/)/);
         if (!headerMatch) return content;
 
         let headerBlock = headerMatch[1];
