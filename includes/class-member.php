@@ -801,6 +801,14 @@ class DCMM_Member extends WP_User {
 			do_action( 'dcmm_member_status_changed', $this->cpt_id, $old_status, $new_status );
 		}
 
+		// Trigger auto-sync to WordPress user if enabled and relevant field changed
+		if ( $this->is_personal_info_sync_enabled() ) {
+			$sync_fields = array( 'first_name', 'last_name', 'email' );
+			if ( in_array( $key, $sync_fields ) && $value !== $current_value ) {
+				$this->sync_to_wp_user();
+			}
+		}
+
 		return true;
 	}
 
@@ -1869,6 +1877,122 @@ class DCMM_Member extends WP_User {
 				exit;
 			}
 		}
+	}
+
+	/**
+	 * Check if auto-sync to WordPress users is enabled
+	 *
+	 * @return bool True if auto-sync is enabled
+	 */
+	private function is_personal_info_sync_enabled() {
+		$settings = get_option( 'dcmm_settings', array() );
+		return isset( $settings['auto_sync_wp_users'] ) ? (bool) $settings['auto_sync_wp_users'] : true; // Default: enabled
+	}
+
+	/**
+	 * Sync member data to associated WordPress user
+	 *
+	 * Updates WP user's first_name, last_name, user_email, and display_name
+	 * based on member CPT data.
+	 *
+	 * @return bool|WP_Error True on success, WP_Error on failure
+	 */
+	private function sync_to_wp_user() {
+		if ( ! $this->has_wp_user() ) {
+			return false; // No WP user to sync to
+		}
+
+		$wp_user_id = $this->get_wp_user_id();
+		if ( ! $wp_user_id ) {
+			return false;
+		}
+
+		// Prepare sync data
+		$first_name = $this->get( 'first_name' ) ?: '';
+		$last_name = $this->get( 'last_name' ) ?: '';
+		$email = $this->get( 'email' ) ?: '';
+
+		// Create display name from first and last name
+		$display_name = trim( $first_name . ' ' . $last_name );
+		if ( empty( $display_name ) && ! empty( $email ) ) {
+			// Fallback to email if no name available
+			$display_name = $email;
+		}
+
+		$sync_data = array(
+			'ID' => $wp_user_id,
+			'first_name' => $first_name,
+			'last_name' => $last_name,
+			'user_email' => $email,
+			'display_name' => $display_name
+		);
+
+		// Remove empty email to avoid WP validation errors
+		if ( empty( $email ) ) {
+			unset( $sync_data['user_email'] );
+		}
+
+		// Update WP user data
+		$result = wp_update_user( $sync_data );
+
+		if ( is_wp_error( $result ) ) {
+			error_log( 'DCMM: Failed to sync member ' . $this->get_member_id() . ' to WP user ' . $wp_user_id . ': ' . $result->get_error_message() );
+			return $result;
+		}
+
+		// Log successful sync
+		$this->log( 'sync_to_wp_user', 'auto', 'Synced to WP user ID: ' . $wp_user_id );
+
+		return true;
+	}
+
+	/**
+	 * Sync WordPress user data back to member
+	 *
+	 * Only fills in empty member fields - doesn't overwrite existing data.
+	 * Called when WP user is edited directly.
+	 *
+	 * @param int $wp_user_id WordPress user ID
+	 * @return bool True on success, false on failure
+	 */
+	public function sync_from_wp_user( $wp_user_id ) {
+		if ( $this->get_wp_user_id() !== $wp_user_id ) {
+			return false; // Not our user
+		}
+
+		if ( ! $this->is_personal_info_sync_enabled() ) {
+			return false; // Auto-sync disabled
+		}
+
+		$wp_user = get_userdata( $wp_user_id );
+		if ( ! $wp_user ) {
+			return false;
+		}
+
+		$synced_fields = array();
+
+		// Only sync if CPT data is empty (don't overwrite existing data)
+		if ( empty( $this->get( 'first_name' ) ) && ! empty( $wp_user->first_name ) ) {
+			$this->save( 'first_name', $wp_user->first_name );
+			$synced_fields[] = 'first_name';
+		}
+
+		if ( empty( $this->get( 'last_name' ) ) && ! empty( $wp_user->last_name ) ) {
+			$this->save( 'last_name', $wp_user->last_name );
+			$synced_fields[] = 'last_name';
+		}
+
+		if ( empty( $this->get( 'email' ) ) && ! empty( $wp_user->user_email ) ) {
+			$this->save( 'email', $wp_user->user_email );
+			$synced_fields[] = 'email';
+		}
+
+		// Log sync if any fields were updated
+		if ( ! empty( $synced_fields ) ) {
+			$this->log( 'sync_from_wp_user', 'auto', 'Synced fields: ' . implode( ', ', $synced_fields ) );
+		}
+
+		return true;
 	}
 }
 

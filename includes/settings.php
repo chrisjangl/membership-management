@@ -148,7 +148,7 @@ function render_payments_tab() {
         
         // Preserve general membership settings as hidden fields
         $current_settings = get_option( 'dcmm_settings', array() );
-        $general_fields = array( 'dcmm_enable_dues', 'dcmm_dues_amount', 'dcmm_membership_term_length', 'dcmm_join_policy', 'dcmm_anchor_date', 'dcmm_my_account_page', 'renewal_window_days', 'grace_period_days', 'renewal_notice_days', 'dcmm_paypal_client_id', 'dcmm_paypal_client_secret', 'dcmm_paypal_environment' );
+        $general_fields = array( 'dcmm_enable_dues', 'dcmm_dues_amount', 'dcmm_membership_term_length', 'dcmm_join_policy', 'dcmm_anchor_date', 'dcmm_my_account_page', 'renewal_window_days', 'grace_period_days', 'renewal_notice_days', 'auto_sync_wp_users', 'dcmm_paypal_client_id', 'dcmm_paypal_client_secret', 'dcmm_paypal_environment' );
         foreach ( $general_fields as $field ) {
             if ( isset( $current_settings[$field] ) ) {
                 echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . ']" value="' . esc_attr($current_settings[$field]) . '">';
@@ -871,6 +871,47 @@ function register_settings() {
             'default' => 7,
         ]
     );
+
+    // Register the auto-sync setting
+    register_setting(
+        'dcmm_settings_group',
+        'dcmm_settings',
+        [
+            'type' => 'array',
+            'sanitize_callback' => function( $value ) {
+                // Ensure auto_sync_wp_users is properly handled as boolean
+                if ( isset( $value['auto_sync_wp_users'] ) ) {
+                    $value['auto_sync_wp_users'] = (bool) $value['auto_sync_wp_users'];
+                } else {
+                    // If checkbox is unchecked, it won't be in $_POST, so set to false
+                    $value['auto_sync_wp_users'] = false;
+                }
+                return $value;
+            }
+        ]
+    );
+
+    // Auto-sync to WordPress Users
+    add_settings_field(
+        'auto_sync_wp_users',
+        __( 'Auto-sync to WordPress Users', 'dcmm-membership' ),
+        function() {
+            $options = get_option( 'dcmm_settings', array() );
+            $auto_sync_enabled = isset( $options['auto_sync_wp_users'] ) ? (bool) $options['auto_sync_wp_users'] : true;
+            ?>
+            <label for="auto_sync_wp_users">
+                <input type="checkbox" id="auto_sync_wp_users" name="dcmm_settings[auto_sync_wp_users]" value="1" <?php checked( $auto_sync_enabled, true ); ?> />
+                <?php esc_html_e( 'Automatically sync member name and email changes to WordPress user accounts', 'dcmm-membership' ); ?>
+            </label>
+            <p class="description">
+                <?php esc_html_e( 'When enabled, changes to member first name, last name, and email will automatically update the associated WordPress user account.', 'dcmm-membership' ); ?>
+            </p>
+            <?php
+        },
+        'dcmm_settings_group',
+        'dcmm_membership_settings'
+    );
+
 
     // Offline Payment Settings Section
     add_settings_section(

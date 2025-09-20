@@ -234,7 +234,18 @@ function get_member( $user_ID = false ) {
  */
 function save_user_fields( $user_id ) {
     if ( !current_user_can('edit_user', $user_id) ) return false;
-	
+
+    // Get associated member CPT ID
+    $cpt_id_meta_key = get_user_meta_key();
+    $cpt_id = \get_user_meta( $user_id, $cpt_id_meta_key, true );
+
+    if ( $cpt_id ) {
+        // Sync WP user changes back to member
+        $member = new \DCMM_Member( $cpt_id );
+        if ( $member->exists() ) {
+            $member->sync_from_wp_user( $user_id );
+        }
+    }
 }
 add_action( 'personal_options_update', __NAMESPACE__ . '\\save_user_fields' );
 add_action( 'edit_user_profile_update', __NAMESPACE__ . '\\save_user_fields' );
