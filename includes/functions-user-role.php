@@ -154,7 +154,7 @@ function is_organizational_member( $user_ID ) {
     $user = \get_userdata( $user_ID );
 
     // check whether user is a Organizational Member
-    if ( \in_array( 'member', $user->roles ) ) {
+    if ( \is_array( $user->roles ) && \in_array( 'member', $user->roles ) ) {
         return true;
     } else {
         return false;
