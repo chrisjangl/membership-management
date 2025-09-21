@@ -86,6 +86,24 @@ function dcmm_register_post_type() {
 		'menu_icon'		=> 'dashicons-money', 
 		'supports'      => array( 'title', 'custom_fields' ),
 		'has_archive'   => false,
+		'capability_type' => 'dcmm_member',
+		'capabilities' => array(
+			'edit_post'          => 'edit_dcmm_member',
+			'read_post'          => 'read_dcmm_member',
+			'delete_post'        => 'delete_dcmm_member',
+			'edit_posts'         => 'edit_dcmm_members',
+			'edit_others_posts'  => 'edit_others_dcmm_members',
+			'publish_posts'      => 'publish_dcmm_members',
+			'read_private_posts' => 'read_private_dcmm_members',
+			'delete_posts'       => 'delete_dcmm_members',
+			'delete_private_posts' => 'delete_private_dcmm_members',
+			'delete_published_posts' => 'delete_published_dcmm_members',
+			'delete_others_posts' => 'delete_others_dcmm_members',
+			'edit_private_posts' => 'edit_private_dcmm_members',
+			'edit_published_posts' => 'edit_published_dcmm_members',
+			'create_posts'       => 'create_dcmm_members',
+		),
+		'map_meta_cap' => true,
 	);
 	
 	\register_post_type( get_post_type(), $args ); 
