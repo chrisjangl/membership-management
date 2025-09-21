@@ -49,7 +49,7 @@ function membership_importer_menu() {
         $membership_menu_page_slug,
         __( 'Import Members', 'dcmm-membership' ),
         __( 'Import Members', 'dcmm-membership' ),
-        'manage_options',
+        'import_dcmm_members',
         $importer_page_slug,
         __NAMESPACE__ . '\membership_importer_page'
     );
@@ -205,7 +205,7 @@ function handle_import() {
     }
 
     // Check user capabilities
-    if ( ! current_user_can( 'upload_files' ) ) {
+    if ( ! current_user_can( 'import_dcmm_members' ) ) {
         wp_die( __( 'Sorry, you do not have the required permissions to upload files.' ) );
     }
 

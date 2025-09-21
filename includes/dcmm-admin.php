@@ -25,7 +25,7 @@ add_action( 'admin_post_dcmm_offline_payment', 'dcmm_handle_offline_payment' );
  */
 function dcmm_handle_manual_renew() {
 	if (
-		! current_user_can( 'edit_posts' ) ||
+		! current_user_can( 'edit_dcmm_members' ) ||
 		! isset( $_GET['member_id'] ) ||
 		! wp_verify_nonce( $_GET['_wpnonce'], 'dcmm_manual_renew_' . $_GET['member_id'] )
 	) {
@@ -59,7 +59,7 @@ function dcmm_handle_manual_renew() {
  */
 function dcmm_handle_manual_cancel() {
 	if (
-		! current_user_can( 'edit_posts' ) ||
+		! current_user_can( 'edit_dcmm_members' ) ||
 		! isset( $_GET['member_id'] ) ||
 		! wp_verify_nonce( $_GET['_wpnonce'], 'dcmm_manual_cancel_' . $_GET['member_id'] )
 	) {
@@ -89,7 +89,7 @@ function dcmm_handle_manual_cancel() {
 function dcmm_handle_offline_payment() {
 	
 	// Check user capabilities
-	if ( ! current_user_can( 'edit_posts' ) ) {
+	if ( ! current_user_can( 'record_dcmm_payments' ) ) {
 		error_log( 'DCMM: User capability check failed' );
 		wp_die( 'Unauthorized' );
 	}

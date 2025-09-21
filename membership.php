@@ -23,6 +23,10 @@ define( 'DCMM_URL', plugin_dir_url( __FILE__ ) );
 function dcmm_activate_plugin() {
     require_once( DCMM_PATH . 'includes/class-notification-logger.php' );
     DCMM_Notification_Logger::create_table();
+    
+    // Create membership management roles and capabilities
+    require_once( DCMM_PATH . 'includes/functions-user-role.php' );
+    \DCMM_Users\create_membership_management_roles();
 }
 register_activation_hook( __FILE__, 'dcmm_activate_plugin' );
 
@@ -32,6 +36,10 @@ register_activation_hook( __FILE__, 'dcmm_activate_plugin' );
 function dcmm_deactivate_plugin() {
     require_once( DCMM_PATH . 'includes/class-expiration-scheduler.php' );
     DCMM_Expiration_Scheduler::unschedule_cron_job();
+    
+    // Remove membership management roles and capabilities
+    require_once( DCMM_PATH . 'includes/functions-user-role.php' );
+    \DCMM_Users\remove_membership_management_roles();
 }
 register_deactivation_hook( __FILE__, 'dcmm_deactivate_plugin' );
 
