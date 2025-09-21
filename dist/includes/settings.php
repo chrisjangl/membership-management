@@ -25,7 +25,7 @@ function add_settings_page( ) {
         'edit.php?post_type=dcmm-member', // Parent slug
         __( 'Settings', 'dcmm-membership' ), // Page title
         __( 'Settings', 'dcmm-membership' ), // Menu title
-        'manage_options', // Capability
+        'manage_dcmm_settings', // Capability
         'dcmm_settings', // Menu slug
         __NAMESPACE__ . '\settings_page_callback' // Callback function
     );
@@ -567,7 +567,7 @@ function render_emails_tab() {
  */
 function handle_premium_settings_save() {
     // Check nonce and permissions
-    if (!wp_verify_nonce($_POST['dcmm_premium_nonce'], 'dcmm_premium_settings') || !current_user_can('manage_options')) {
+    if (!wp_verify_nonce($_POST['dcmm_premium_nonce'], 'dcmm_premium_settings') || !current_user_can('manage_dcmm_settings')) {
         wp_die(__('Security check failed.', 'dcmm-membership'));
     }
     
@@ -623,7 +623,7 @@ add_action('admin_post_dcmm_save_premium_settings', __NAMESPACE__ . '\handle_pre
  */
 function handle_mailchimp_api_save() {
     // Check nonce and permissions
-    if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_options')) {
+    if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_dcmm_settings')) {
         wp_send_json_error(array('message' => __('Security check failed.', 'dcmm-membership')));
         return;
     }
@@ -652,7 +652,7 @@ add_action('wp_ajax_dcmm_save_mailchimp_api_key', __NAMESPACE__ . '\handle_mailc
  */
 function handle_mailchimp_connection_test() {
     // Check nonce and permissions
-    if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_options')) {
+    if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_dcmm_settings')) {
         wp_send_json_error(array('message' => __('Security check failed.', 'dcmm-membership')));
         return;
     }
@@ -688,7 +688,9 @@ add_action('wp_ajax_dcmm_test_mailchimp_connection', __NAMESPACE__ . '\handle_ma
  * @since 1.1.0
  */
 function register_settings() {
-    register_setting( 'dcmm_settings_group', 'dcmm_settings' );
+    register_setting( 'dcmm_settings_group', 'dcmm_settings', array(
+        'capability' => 'manage_dcmm_settings'
+    ) );
 
     add_settings_section(
         'dcmm_membership_settings',
@@ -733,10 +735,11 @@ function register_settings() {
     register_setting(
         'dcmm_settings_group',
         'dcmm_dues_amount',
-        [
+        array(
+            'capability' => 'manage_dcmm_settings',
             'type' => 'string',
             'default' => '',
-        ]
+        )
     );
 
     // Membership term length
@@ -810,6 +813,7 @@ function register_settings() {
         'dcmm_settings_group',
         'dcmm_membership_term_length',
         [
+            'capability' => 'manage_dcmm_settings',
             'type' => 'string',
             'default' => 'monthly',
         ]
@@ -839,8 +843,9 @@ function register_settings() {
         'dcmm_settings_group',
         'dcmm_join_policy',
         [
+            'capability' => 'manage_dcmm_settings',
             'type' => 'string',
-            'default' => 'fixed_term',
+            'default' => 'rolling',
         ]
     );
 
@@ -849,6 +854,7 @@ function register_settings() {
         'dcmm_settings_group',
         'dcmm_renewal_window_days',
         [
+            'capability' => 'manage_dcmm_settings',
             'type' => 'integer',
             'default' => 30,
         ]
@@ -858,6 +864,7 @@ function register_settings() {
         'dcmm_settings_group',
         'dcmm_grace_period_days',
         [
+            'capability' => 'manage_dcmm_settings',
             'type' => 'integer',
             'default' => 30,
         ]
@@ -867,6 +874,7 @@ function register_settings() {
         'dcmm_settings_group',
         'dcmm_renewal_notice_days',
         [
+            'capability' => 'manage_dcmm_settings',
             'type' => 'integer',
             'default' => 7,
         ]
@@ -1061,14 +1069,9 @@ function register_settings() {
         'dcmm_paypal_settings'
     );
 
-    register_setting(
-        'dcmm_settings_group',
-        'dcmm_paypal_environment',
-        [
-            'type' => 'string',
+    register_setting('dcmm_settings_group', 'dcmm_paypal_environment', ['capability' => 'manage_dcmm_settings', 'type' => 'string',
             'default' => 'sandbox',
-        ]
-    );
+        ]);
 
     // PayPal Client ID
     add_settings_field(
@@ -1091,14 +1094,9 @@ function register_settings() {
         'dcmm_paypal_settings'
     );
 
-    register_setting(
-        'dcmm_settings_group',
-        'dcmm_paypal_client_id',
-        [
-            'type' => 'string',
+    register_setting('dcmm_settings_group', 'dcmm_paypal_client_id', ['capability' => 'manage_dcmm_settings', 'type' => 'string',
             'default' => '',
-        ]
-    );
+        ]);
 
     // PayPal Client Secret
     add_settings_field(
@@ -1121,14 +1119,9 @@ function register_settings() {
         'dcmm_paypal_settings'
     );
 
-    register_setting(
-        'dcmm_settings_group',
-        'dcmm_paypal_client_secret',
-        [
-            'type' => 'string',
+    register_setting('dcmm_settings_group', 'dcmm_paypal_client_secret', ['capability' => 'manage_dcmm_settings', 'type' => 'string',
             'default' => '',
-        ]
-    );
+        ]);
 
     // PayPal Webhook ID
     add_settings_field(
@@ -1156,14 +1149,9 @@ function register_settings() {
         'dcmm_paypal_settings'
     );
 
-    register_setting(
-        'dcmm_settings_group',
-        'dcmm_paypal_webhook_id',
-        [
-            'type' => 'string',
+    register_setting('dcmm_settings_group', 'dcmm_paypal_webhook_id', ['capability' => 'manage_dcmm_settings', 'type' => 'string',
             'default' => '',
-        ]
-    );
+        ]);
 
     // Email Settings Section
     add_settings_section(
@@ -1371,7 +1359,9 @@ function register_settings() {
     );
 
     // Register email settings
-    register_setting( 'dcmm_settings_group', 'dcmm_email_settings' );
+    register_setting( 'dcmm_settings_group', 'dcmm_email_settings', array(
+        'capability' => 'manage_dcmm_settings'
+    ) );
 
     // Expiration Notification Settings Section
     add_settings_section(
@@ -1589,7 +1579,9 @@ function register_settings() {
 
 
     // Register expiration notification settings
-    register_setting( 'dcmm_settings_group', 'dcmm_expiration_notification_settings' );
+    register_setting( 'dcmm_settings_group', 'dcmm_expiration_notification_settings', array(
+        'capability' => 'manage_dcmm_settings'
+    ) );
 
     // My Account Page setting
     add_settings_field(
@@ -1801,16 +1793,25 @@ function register_settings() {
         'dcmm_membership_settings'
     );
 
-    register_setting(
-        'dcmm_settings_group',
-        'dcmm_anchor_date',
-        [
-            'type' => 'string',
+    register_setting('dcmm_settings_group', 'dcmm_anchor_date', ['capability' => 'manage_dcmm_settings', 'type' => 'string',
             'default' => '',
-        ]
-    );    
+        ]);    
 }
 add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
+
+/**
+ * Allow users with manage_dcmm_settings capability to save plugin settings
+ * 
+ * This filter is required because WordPress Settings API defaults to 'manage_options'
+ * capability when processing form submissions to options.php
+ * 
+ * @return string The custom capability for this plugin's settings
+ * @since 1.1.1
+ */
+function allow_custom_capability_for_settings() {
+    return 'manage_dcmm_settings';
+}
+add_filter( 'option_page_capability_dcmm_settings_group', __NAMESPACE__ . '\allow_custom_capability_for_settings' );
 
 /**
  * Get the settings option.
