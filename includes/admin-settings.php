@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
  */
 function dcmm_add_membership_menu() {
    
-    add_menu_page( "Membership", 'Membership', 'administrator', 'membership', "\DCMM_Users\create_membership_menu_page", '', 20 );
+    add_menu_page( "Membership", 'Membership', 'manage_dcmm_members', 'membership', "\DCMM_Users\create_membership_menu_page", '', 20 );
    
 }
 // add_action( 'admin_menu', '\DCMM_Users\dcmm_add_membership_menu');
