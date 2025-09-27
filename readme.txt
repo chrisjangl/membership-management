@@ -2,7 +2,7 @@
 Contributors: digitally-cultured
 Tags: membership management, CRM
 Requires at least: 5.0
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 Tested up to: 6.8
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -28,10 +28,8 @@ A: While not available in the initial release, future updates will introduce mem
 
 == Changelog ==
 
-= 1.3.1 =
-* Fix: :bug: Ensure user roles are checked for array type before validation
-* Enhance logging and commit process in release script
-* Merge branch 'release/v1.3.0' into stable
-* Bump tested up to version
+= 1.3.2 =
+* add links for password recovery and account creation
+* Delete dist/ from version control
 
 
