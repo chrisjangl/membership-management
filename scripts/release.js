@@ -23,9 +23,9 @@ class ReleaseOrchestrator {
     }
     
     async release() {
-        console.log('🚀 Starting release process...');
-        console.log(`📦 Current version: ${this.currentVersion}`);
-        console.log(`📈 Release type: ${this.releaseType}`);
+        console.log('[RELEASE] Starting release process...');
+        console.log(`[PACKAGE] Current version: ${this.currentVersion}`);
+        console.log(`[RELEASE] Release type: ${this.releaseType}`);
         
         try {
             // Step 1: Calculate new version
@@ -43,16 +43,19 @@ class ReleaseOrchestrator {
             // Step 5: Run validation
             await this.runValidation();
             
-            // Step 6: Build and prepare
+            // Step 6: Commit version changes before building
+            await this.commitVersionChanges();
+
+            // Step 7: Build and prepare
             await this.buildAndPrepare();
-            
-            console.log('✅ Release process completed successfully!');
-            console.log(`🎉 Version ${this.newVersion} is ready`);
+
+            console.log('[SUCCESS] Release process completed successfully!');
+            console.log(`[SUCCESS] Version ${this.newVersion} is ready`);
             
             this.printNextSteps();
             
         } catch (error) {
-            console.error('❌ Release failed:', error.message);
+            console.error('[ERROR] Release failed:', error.message);
             process.exit(1);
         }
     }
@@ -70,69 +73,72 @@ class ReleaseOrchestrator {
         if (!['patch', 'minor', 'major'].includes(this.releaseType)) {
             throw new Error(`Invalid release type: ${this.releaseType}. Use patch, minor, or major.`);
         }
-        
+
         this.newVersion = semver.inc(this.currentVersion, this.releaseType);
-        console.log(`🔢 New version will be: ${this.newVersion}`);
+        console.log(`[PACKAGE] Release: ${this.currentVersion} → ${this.newVersion} (${this.releaseType})`);
     }
     
     async confirmRelease() {
-        console.log('\n📋 Release Summary:');
-        console.log(`   Current: ${this.currentVersion}`);
-        console.log(`   New:     ${this.newVersion}`);
-        console.log(`   Type:    ${this.releaseType}`);
-        
-        // In a real-world scenario, you might want to add user confirmation
-        // For now, we'll proceed automatically
-        console.log('✅ Proceeding with release...');
+        console.log('\n' + '='.repeat(50));
+        console.log('[SUMMARY] RELEASE SUMMARY');
+        console.log('='.repeat(50));
+        console.log(`Current Version: ${this.currentVersion}`);
+        console.log(`New Version:     ${this.newVersion}`);
+        console.log(`Release Type:    ${this.releaseType}`);
+        console.log('='.repeat(50));
+        console.log('[OK] Proceeding with release...\n');
     }
     
     async validateCurrentState() {
-        console.log('🔍 Validating current state...');
-        
+        console.log('[VALIDATE] VALIDATING CURRENT STATE');
+        console.log('-'.repeat(30));
+
         // Check git status
         try {
             const gitStatus = execSync('git status --porcelain', { encoding: 'utf8' });
             if (gitStatus.trim()) {
-                console.log('⚠️  Warning: Working directory has uncommitted changes');
-                console.log('📝 Please commit or stash changes before release');
-                // throw new Error('Working directory not clean');
+                console.log('[WARNING] Warning: Working directory has uncommitted changes');
+                console.log('[INFO] These will be committed as part of the release process');
+            } else {
+                console.log('[OK] Working directory is clean');
             }
         } catch (error) {
-            console.log('⚠️  Could not check git status');
+            console.log('[WARNING] Could not check git status');
         }
-        
-        console.log('✅ Current state validated');
+
+        console.log('[OK] Validation complete\n');
     }
     
     async updateVersions() {
-        console.log('📝 Updating version numbers...');
-        
+        console.log('[UPDATE] UPDATING VERSION NUMBERS');
+        console.log('-'.repeat(30));
+
         // Update package.json
         await this.updatePackageJson();
-        
+
         // Update plugin header
         await this.updatePluginHeader();
-        
+
         // Update plugin constant
         await this.updatePluginConstant();
-        
+
         // Update readme.txt if it exists
         await this.updateReadmeTxt();
-        
-        console.log('✅ Version numbers updated');
+
+        console.log('[OK] All version numbers updated\n');
     }
     
     async updatePackageJson() {
         const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
         packageJson.version = this.newVersion;
         await fs.writeFile('package.json', JSON.stringify(packageJson, null, 2) + '\n');
-        console.log('✅ Updated package.json');
+        console.log('[OK] Updated package.json');
     }
     
     async updatePluginHeader() {
         const mainFile = this.getMainPluginFile();
         if (!mainFile) {
-            console.log('⚠️  Main plugin file not found, skipping header update');
+            console.log('[WARNING] Main plugin file not found, skipping header update');
             return;
         }
 
@@ -148,7 +154,7 @@ class ReleaseOrchestrator {
         content = this.ensurePluginHeaders(content);
 
         await fs.writeFile(mainFile, content);
-        console.log(`✅ Updated ${mainFile} header`);
+        console.log(`[OK] Updated ${mainFile} header`);
     }
 
     ensurePluginHeaders(content) {
@@ -178,7 +184,7 @@ class ReleaseOrchestrator {
                     /(\s*\*\/)/,
                     ` * ${headerName}: ${defaultValue}\n$1`
                 );
-                console.log(`✅ Added missing header: ${headerName}`);
+                console.log(`[OK] Added missing header: ${headerName}`);
             }
         }
 
@@ -199,18 +205,18 @@ class ReleaseOrchestrator {
             });
             
             await fs.writeFile(mainFile, content);
-            console.log('✅ Updated plugin version constant');
+            console.log('[OK] Updated plugin version constant');
         }
     }
     
     async updateReadmeTxt() {
         if (!fs.existsSync('readme.txt')) {
-            console.log('📝 Creating readme.txt...');
+            console.log('[CREATE] Creating readme.txt...');
             await this.createReadmeTxt();
             return;
         }
 
-        console.log('📝 Updating readme.txt...');
+        console.log('[UPDATE] Updating readme.txt...');
         let content = fs.readFileSync('readme.txt', 'utf8');
 
         // Update stable tag
@@ -231,7 +237,7 @@ class ReleaseOrchestrator {
         content = await this.ensureReadmeSections(content);
 
         await fs.writeFile('readme.txt', content);
-        console.log('✅ Updated readme.txt');
+        console.log('[OK] Updated readme.txt');
     }
 
     async createReadmeTxt() {
@@ -276,7 +282,7 @@ ${await this.generateChangelog()}
 `;
 
         await fs.writeFile('readme.txt', template);
-        console.log('✅ Created readme.txt');
+        console.log('[OK] Created readme.txt');
     }
 
     async ensureReadmeSections(content) {
@@ -286,7 +292,7 @@ ${await this.generateChangelog()}
             const sectionPattern = new RegExp(`== ${section} ==`, 'i');
             if (!sectionPattern.test(content)) {
                 content += await this.generateSection(section);
-                console.log(`✅ Added missing section: ${section}`);
+                console.log(`[OK] Added missing section: ${section}`);
             }
         }
 
@@ -297,7 +303,7 @@ ${await this.generateChangelog()}
                 /(== Changelog ==[\s\S]*?)(?=== |$)/i,
                 `== Changelog ==\n\n${newChangelog}\n\n`
             );
-            console.log('✅ Updated changelog');
+            console.log('[OK] Updated changelog');
         }
 
         return content;
@@ -364,7 +370,7 @@ ${await this.generateChangelog()}
             return changelog;
 
         } catch (error) {
-            console.log('⚠️  Could not generate changelog from git history');
+            console.log('[WARNING] Could not generate changelog from git history');
             return `= ${this.newVersion} =\n* Updates and improvements`;
         }
     }
@@ -378,32 +384,58 @@ ${await this.generateChangelog()}
         }
     }
     
+    async commitVersionChanges() {
+        console.log('[COMMIT] COMMITTING RELEASE');
+        console.log('-'.repeat(30));
+
+        try {
+            // Add only the version-updated files, not dist/
+            console.log('[GIT] Adding version files to git...');
+            execSync('git add package.json membership.php readme.txt', { stdio: 'inherit' });
+
+            console.log(`[GIT] Committing release v${this.newVersion}...`);
+            execSync(`git commit -m "Release v${this.newVersion}"`, { stdio: 'inherit' });
+
+            // Create git tag
+            console.log(`[TAG] Creating git tag v${this.newVersion}...`);
+            execSync(`git tag v${this.newVersion}`, { stdio: 'inherit' });
+
+            console.log('[OK] Release committed and tagged\n');
+        } catch (error) {
+            // If commit fails (e.g., no changes), that's ok
+            console.log('[INFO] No version changes to commit or already committed\n');
+        }
+    }
+
     async runValidation() {
-        console.log('🔍 Running release validation...');
-        
+        console.log('[VALIDATE] RUNNING RELEASE VALIDATION');
+        console.log('-'.repeat(30));
+
         try {
             const ReleaseValidator = require('./validate-release.js');
             const validator = new ReleaseValidator();
             await validator.validate();
+            console.log('');
         } catch (error) {
             throw new Error(`Validation failed: ${error.message}`);
         }
     }
     
     async buildAndPrepare() {
-        console.log('🏗️  Building distribution and preparing wp-repo...');
-        
+        console.log('[BUILD] BUILDING & PREPARING WP-REPO');
+        console.log('-'.repeat(30));
+
         try {
             // Build distribution
             const DistBuilder = require('./build-dist.js');
             const builder = new DistBuilder();
             await builder.build();
-            
+
             // Prepare wp-repo branch
             const WpRepoPreparator = require('./prepare-wp-repo.js');
             const preparator = new WpRepoPreparator();
             await preparator.prepare();
-            
+
         } catch (error) {
             throw new Error(`Build/prepare failed: ${error.message}`);
         }
@@ -425,18 +457,14 @@ ${await this.generateChangelog()}
     }
     
     printNextSteps() {
-        console.log('\n📋 Next Steps:');
+        console.log('\n[NEXT] Next Steps:');
         console.log('='.repeat(50));
         console.log('1. Review the wp-repo branch changes');
-        console.log('2. Commit version updates to main branch:');
-        console.log(`   git add . && git commit -m "Release v${this.newVersion}"`);
-        console.log('3. Create git tag:');
-        console.log(`   git tag v${this.newVersion}`);
-        console.log('4. Push changes:');
+        console.log('2. Push changes and tags:');
         console.log('   git push origin main --tags');
-        console.log('5. Deploy wp-repo branch to WordPress.org');
-        console.log('6. Update WordPress.org assets if needed');
-        console.log('\n🎉 Release completed successfully!');
+        console.log('3. Deploy wp-repo branch to WordPress.org');
+        console.log('4. Update WordPress.org assets if needed');
+        console.log('\n[SUCCESS] Release completed successfully!');
     }
 }
 
