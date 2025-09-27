@@ -2,7 +2,7 @@
 Contributors: digitally-cultured
 Tags: membership management, CRM
 Requires at least: 5.0
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 Tested up to: 6.8
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -28,8 +28,10 @@ A: While not available in the initial release, future updates will introduce mem
 
 == Changelog ==
 
-= 1.3.0 =
-* :sparkles: implement membership management roles and capabilities
-* :sparkles: Enhance release process with version updates and README generation
-* Fix: :bug: Correct regex for extracting header block in release script
+= 1.3.1 =
+* Fix: :bug: Ensure user roles are checked for array type before validation
+* Enhance logging and commit process in release script
+* Merge branch 'release/v1.3.0' into stable
+* Bump tested up to version
+
 
