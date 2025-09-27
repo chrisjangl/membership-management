@@ -51,6 +51,8 @@ add_action( 'wp_ajax_dcmm_cancel_subscription', 'ajax_cancel_subscription' );
  * Membership login form
  * 
  * Used with shortcode
+ * 
+ * TODO: get Login & Dashboard URLs from settings
  */
 function dcmm_render_login_form() {
 
@@ -74,6 +76,7 @@ function dcmm_render_login_form() {
         echo '<div class="dcmm-error">Invalid username or password.</div>';
     }
 
+    // TODO: get Login & Dashboard URLs from settings
     // Preserve the original destination URL if provided
     $redirect_to = isset($_GET['redirect_to']) ? urldecode($_GET['redirect_to']) : home_url( '/member-dashboard/' );
 
@@ -89,6 +92,20 @@ function dcmm_render_login_form() {
     ];
 
     wp_login_form( $args );
+
+    // Add forgot password and create account links
+    echo '<div class="dcmm-login-links" style="margin-top: 15px; text-align: center;">';
+    echo '<p>';
+    echo '<a href="' . esc_url( wp_lostpassword_url() ) . '" style="color: #0073aa; text-decoration: none;">Forgot your password?</a>';
+
+    // if site allows user registration, show the "Create an account" link
+    if ( get_option( 'users_can_register' ) ) {
+
+        echo ' | ';
+        echo '<a href="' . esc_url( wp_registration_url() ) . '" style="color: #0073aa; text-decoration: none;">Create an account</a>';
+    }
+    echo '</p>';
+    echo '</div>';
 
     return ob_get_clean();
 }
