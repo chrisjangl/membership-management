@@ -90,6 +90,15 @@ function dcmm_render_login_form() {
 
     wp_login_form( $args );
 
+        // Add forgot password and create account links
+    echo '<div class="dcmm-login-links" style="margin-top: 15px; text-align: center;">';
+    echo '<p>';
+    echo '<a href="' . esc_url( wp_lostpassword_url() ) . '" style="color: #0073aa; text-decoration: none;">Forgot your password?</a>';
+    echo ' | ';
+    echo '<a href="' . esc_url( wp_registration_url() ) . '" style="color: #0073aa; text-decoration: none;">Create an account</a>';
+    echo '</p>';
+    echo '</div>';
+
     return ob_get_clean();
 }
 add_shortcode( 'member_login', 'dcmm_render_login_form' );
