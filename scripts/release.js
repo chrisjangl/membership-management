@@ -49,9 +49,12 @@ class ReleaseOrchestrator {
             // Step 7: Build and prepare
             await this.buildAndPrepare();
 
+            // Step 8: Create GitHub release
+            await this.createGitHubRelease();
+
             console.log('[SUCCESS] Release process completed successfully!');
             console.log(`[SUCCESS] Version ${this.newVersion} is ready`);
-            
+
             this.printNextSteps();
             
         } catch (error) {
@@ -440,7 +443,107 @@ ${await this.generateChangelog()}
             throw new Error(`Build/prepare failed: ${error.message}`);
         }
     }
-    
+
+    async createGitHubRelease() {
+        console.log('[GITHUB] CREATING GITHUB RELEASE');
+        console.log('-'.repeat(30));
+
+        try {
+            // Get current branch to return to it
+            const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+
+            // Switch to wp-repo branch
+            console.log('[GIT] Switching to wp-repo branch...');
+            execSync('git checkout wp-repo', { stdio: 'inherit' });
+
+            // Create distribution zip
+            const zipName = `membership-management-${this.newVersion}.zip`;
+            console.log(`[ZIP] Creating ${zipName}...`);
+
+            // Remove old zip if it exists
+            if (fs.existsSync(zipName)) {
+                fs.removeSync(zipName);
+            }
+
+            // Get exclude patterns - use same patterns as wp-repo .gitignore
+            const excludePatterns = this.getZipExcludePatterns();
+
+            // Create zip with exclusions
+            execSync(`zip -r ${zipName} . ${excludePatterns}`, { stdio: 'inherit' });
+
+            // Generate release notes from changelog
+            const releaseNotes = await this.generateReleaseNotes();
+
+            // Create GitHub release
+            console.log('[GITHUB] Creating release...');
+            execSync(
+                `gh release create v${this.newVersion} ${zipName} --title "Version ${this.newVersion}" --notes "${releaseNotes}"`,
+                { stdio: 'inherit' }
+            );
+
+            // Clean up zip file
+            fs.removeSync(zipName);
+
+            // Return to original branch
+            console.log(`[GIT] Returning to ${currentBranch} branch...`);
+            execSync(`git checkout ${currentBranch}`, { stdio: 'inherit' });
+
+            console.log('[OK] GitHub release created successfully\n');
+
+        } catch (error) {
+            console.log('[WARNING] Could not create GitHub release:', error.message);
+            console.log('[INFO] You can create it manually later with:');
+            console.log(`[INFO]   gh release create v${this.newVersion} membership-management-${this.newVersion}.zip`);
+
+            // Try to return to original branch
+            try {
+                const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+                if (currentBranch === 'wp-repo') {
+                    execSync('git checkout stable', { stdio: 'inherit' });
+                }
+            } catch (restoreError) {
+                // Ignore restoration errors
+            }
+        }
+    }
+
+    getZipExcludePatterns() {
+        // These should match what we don't want in WordPress.org releases
+        // This is what should be in wp-repo branch after prepare-wp-repo.js runs
+        const excludes = [
+            '*.git*',           // Git files
+            'node_modules/*',   // Dependencies
+            '.DS_Store',        // macOS files
+            'Thumbs.db',        // Windows files
+            '*.log',            // Log files
+            '.vscode/*',        // IDE files
+            '.idea/*',          // IDE files
+            'package*.json',    // npm files (shouldn't be in wp-repo anyway)
+            'src/*',            // Source files (shouldn't be in wp-repo anyway)
+            'scripts/*',        // Build scripts (shouldn't be in wp-repo anyway)
+            'tests/*',          // Tests (shouldn't be in wp-repo anyway)
+            '*.config.js',      // Config files (shouldn't be in wp-repo anyway)
+        ];
+
+        // Convert to zip -x format
+        return excludes.map(pattern => `-x "${pattern}"`).join(' ');
+    }
+
+    async generateReleaseNotes() {
+        try {
+            const changelog = await this.generateChangelog();
+
+            // Format for GitHub release
+            const notes = changelog
+                .replace(/^= .+ =$/, '') // Remove version header
+                .trim();
+
+            return notes || 'Updates and improvements';
+        } catch (error) {
+            return 'See readme.txt for changelog details.';
+        }
+    }
+
     getMainPluginFile() {
         const candidates = ['membership.php', 'dc-membership.php', 'plugin.php'];
         
