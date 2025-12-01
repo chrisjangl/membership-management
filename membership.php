@@ -6,24 +6,25 @@
  * Author URI: https://digitallycultured.com/
  * Version: 1.3.2
  * License: GPLv3
- * License URI: http://www.gnu.org/licenses/gpl-3.0.html * Plugin URI: https://github.com/chrisjangl/membership-management * Text Domain: dcmm-membership * Requires at least: 5.0 * Tested up to: 6.5 * Requires PHP: 7.4
-
-
-
-
-
+ * License URI: http://www.gnu.org/licenses/gpl-3.0.html 
+ * Plugin URI: https://github.com/chrisjangl/membership-management 
+ * Text Domain: dcmm-membership 
+ * Requires at least: 5.0 
+ * Tested up to: 6.5 
+ * Requires PHP: 7.4
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly    
 
 define( 'DCMM_PLUGIN_NAME', 'Membership Management' );
+define( 'DCMM_PLUGIN_SLUG', 'membership-management' );
 define( 'DCMM_VERSION', '1.3.2' );
 
 define( 'DCMM_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DCMM_URL', plugin_dir_url( __FILE__ ) );
 
 /**
- * Plugin activation hook
+* Plugin activation hook
  */
 function dcmm_activate_plugin() {
     require_once( DCMM_PATH . 'includes/class-notification-logger.php' );

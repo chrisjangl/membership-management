@@ -68,18 +68,18 @@ class MailChimp_API {
             if ( $this->mailchimp->success() ) {
                 return array(
                     'success' => true,
-                    'message' => __( 'Successfully connected to MailChimp!', 'dcmm' )
+                    'message' => __( 'Successfully connected to MailChimp!', DCMM_PLUGIN_SLUG )
                 );
             } else {
                 return array(
                     'success' => false,
-                    'message' => __( 'Failed to connect: ', 'dcmm' ) . $this->mailchimp->getLastError()
+                    'message' => __( 'Failed to connect: ', DCMM_PLUGIN_SLUG ) . $this->mailchimp->getLastError()
                 );
             }
         } catch ( \Exception $e ) {
             return array(
                 'success' => false,
-                'message' => __( 'Connection error: ', 'dcmm' ) . $e->getMessage()
+                'message' => __( 'Connection error: ', DCMM_PLUGIN_SLUG ) . $e->getMessage()
             );
         }
     }

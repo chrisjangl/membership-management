@@ -23,8 +23,8 @@ function add_settings_page( ) {
 
     add_submenu_page(
         'edit.php?post_type=dcmm-member', // Parent slug
-        __( 'Settings', 'dcmm-membership' ), // Page title
-        __( 'Settings', 'dcmm-membership' ), // Menu title
+        __( 'Settings', DCMM_PLUGIN_SLUG ), // Page title
+        __( 'Settings', DCMM_PLUGIN_SLUG ), // Menu title
         'manage_dcmm_settings', // Capability
         'dcmm_settings', // Menu slug
         __NAMESPACE__ . '\settings_page_callback' // Callback function
@@ -43,14 +43,14 @@ function settings_page_callback() {
     
     // Define tabs
     $tabs = array(
-        'general' => __('General', 'dcmm-membership'),
-        'payments' => __('Payment Gateways', 'dcmm-membership'),
-        'emails' => __('Email & Notifications', 'dcmm-membership'),
-        'premium' => __('Premium Features', 'dcmm-membership')
+        'general' => __('General', DCMM_PLUGIN_SLUG ),
+        'payments' => __('Payment Gateways', DCMM_PLUGIN_SLUG ),
+        'emails' => __('Email & Notifications', DCMM_PLUGIN_SLUG ),
+        'premium' => __('Premium Features', DCMM_PLUGIN_SLUG )
     );
     ?>
     <div class="wrap">
-        <h1><?php esc_html_e( 'Membership Management Settings', 'dcmm-membership' ); ?></h1>
+        <h1><?php esc_html_e( 'Membership Management Settings', DCMM_PLUGIN_SLUG ); ?></h1>
         
         <!-- Tab Navigation -->
         <nav class="nav-tab-wrapper">
@@ -126,7 +126,7 @@ function render_general_tab() {
         }
         
         // Render only membership settings section
-        echo '<h2>' . __('Membership Settings', 'dcmm-membership') . '</h2>';
+        echo '<h2>' . __('Membership Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
         echo '<table class="form-table" role="presentation">';
         do_settings_fields( 'dcmm_settings_group', 'dcmm_membership_settings' );
         echo '</table>';
@@ -156,44 +156,44 @@ function render_payments_tab() {
         }
         
         // Render Offline Payment settings section
-        echo '<h2>' . __('Offline Payment Settings', 'dcmm-membership') . '</h2>';
+        echo '<h2>' . __('Offline Payment Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
         echo '<table class="form-table" role="presentation">';
         do_settings_fields( 'dcmm_settings_group', 'dcmm_offline_payment_settings' );
         echo '</table>';
         
         // Render PayPal settings section
-        echo '<h2>' . __('PayPal Settings', 'dcmm-membership') . '</h2>';
+        echo '<h2>' . __('PayPal Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
         
         // Show the section description
         $paypal_section_callback = function() {
             ?>
             <section class="dcmm-paypal-settings-section">
-                <p><?php esc_html_e( 'Configure PayPal payment processing for membership dues.', 'dcmm-membership' ); ?></p>
+                <p><?php esc_html_e( 'Configure PayPal payment processing for membership dues.', DCMM_PLUGIN_SLUG ); ?></p>
                 <div class="dcmm-paypal-setup-instructions" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
-                    <h4><?php esc_html_e( 'PayPal Setup Instructions:', 'dcmm-membership' ); ?></h4>
+                    <h4><?php esc_html_e( 'PayPal Setup Instructions:', DCMM_PLUGIN_SLUG ); ?></h4>
                     <ol>
                         <li>
-                            <strong><?php esc_html_e( 'Create a PayPal Developer Account:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Visit', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/" target="_blank">https://developer.paypal.com/</a> <?php esc_html_e( 'and sign in with your PayPal account.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Create a PayPal Developer Account:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Visit', DCMM_PLUGIN_SLUG ); ?> <a href="https://developer.paypal.com/" target="_blank">https://developer.paypal.com/</a> <?php esc_html_e( 'and sign in with your PayPal account.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Create an Application:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Go to', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'My Apps & Credentials', 'dcmm-membership' ); ?></a> <?php esc_html_e( 'and click "Create App".', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Create an Application:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Go to', DCMM_PLUGIN_SLUG ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'My Apps & Credentials', DCMM_PLUGIN_SLUG ); ?></a> <?php esc_html_e( 'and click "Create App".', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Configure Your App:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Choose "Default Application" and select your business account. Make sure to enable "Accept payments" feature.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Configure Your App:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Choose "Default Application" and select your business account. Make sure to enable "Accept payments" feature.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Copy Credentials:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Copy the Client ID and Client Secret from your app details below.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Copy Credentials:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Copy the Client ID and Client Secret from your app details below.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Set Up Webhooks (Optional):', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'For real-time payment notifications, configure webhooks in your PayPal app using the webhook URL shown below.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Set Up Webhooks (Optional):', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'For real-time payment notifications, configure webhooks in your PayPal app using the webhook URL shown below.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                     </ol>
-                    <p><em><?php esc_html_e( 'Start with Sandbox environment for testing, then switch to Live when ready for production.', 'dcmm-membership' ); ?></em></p>
+                    <p><em><?php esc_html_e( 'Start with Sandbox environment for testing, then switch to Live when ready for production.', DCMM_PLUGIN_SLUG ); ?></em></p>
                 </div>
             </section>
             <?php
@@ -485,7 +485,7 @@ function render_emails_tab() {
         settings_fields( 'dcmm_settings_group' );
         
         // Email Settings Section
-        echo '<h2>' . __('Email Settings', 'dcmm-membership') . '</h2>';
+        echo '<h2>' . __('Email Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
         
         // Show the section description with merge tags
         $email_section_callback = function() {
@@ -521,7 +521,7 @@ function render_emails_tab() {
         echo '</table>';
         
         // Expiration Notification Settings Section
-        echo '<h2>' . __('Expiration Notification Settings', 'dcmm-membership') . '</h2>';
+        echo '<h2>' . __('Expiration Notification Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
         
         // Show the expiration section description
         $expiration_section_callback = function() {
@@ -568,7 +568,7 @@ function render_emails_tab() {
 function handle_premium_settings_save() {
     // Check nonce and permissions
     if (!wp_verify_nonce($_POST['dcmm_premium_nonce'], 'dcmm_premium_settings') || !current_user_can('manage_dcmm_settings')) {
-        wp_die(__('Security check failed.', 'dcmm-membership'));
+        wp_die(__('Security check failed.', DCMM_PLUGIN_SLUG ));
     }
     
     $premium_manager = \DCMM\Premium\Premium_Manager::get_instance();
@@ -624,14 +624,14 @@ add_action('admin_post_dcmm_save_premium_settings', __NAMESPACE__ . '\handle_pre
 function handle_mailchimp_api_save() {
     // Check nonce and permissions
     if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_dcmm_settings')) {
-        wp_send_json_error(array('message' => __('Security check failed.', 'dcmm-membership')));
+        wp_send_json_error(array('message' => __('Security check failed.', DCMM_PLUGIN_SLUG )));
         return;
     }
     
     $api_key = sanitize_text_field($_POST['api_key']);
     
     if (empty($api_key)) {
-        wp_send_json_error(array('message' => __('API key cannot be empty.', 'dcmm-membership')));
+        wp_send_json_error(array('message' => __('API key cannot be empty.', DCMM_PLUGIN_SLUG )));
         return;
     }
 
@@ -643,7 +643,7 @@ function handle_mailchimp_api_save() {
     // Clear any cached lists
     \DCMM\MailChimp\MailChimp_API::clear_lists_cache();
     
-    wp_send_json_success(array('message' => __('MailChimp API key saved successfully!', 'dcmm-membership')));
+    wp_send_json_success(array('message' => __('MailChimp API key saved successfully!', DCMM_PLUGIN_SLUG )));
 }
 add_action('wp_ajax_dcmm_save_mailchimp_api_key', __NAMESPACE__ . '\handle_mailchimp_api_save');
 
@@ -653,14 +653,14 @@ add_action('wp_ajax_dcmm_save_mailchimp_api_key', __NAMESPACE__ . '\handle_mailc
 function handle_mailchimp_connection_test() {
     // Check nonce and permissions
     if (!wp_verify_nonce($_POST['nonce'], 'dcmm_mailchimp_api') || !current_user_can('manage_dcmm_settings')) {
-        wp_send_json_error(array('message' => __('Security check failed.', 'dcmm-membership')));
+        wp_send_json_error(array('message' => __('Security check failed.', DCMM_PLUGIN_SLUG )));
         return;
     }
     
     $api_key = sanitize_text_field($_POST['api_key']);
     
     if (empty($api_key)) {
-        wp_send_json_error(array('message' => __('API key cannot be empty.', 'dcmm-membership')));
+        wp_send_json_error(array('message' => __('API key cannot be empty.', DCMM_PLUGIN_SLUG )));
         return;
     }
     
@@ -677,7 +677,7 @@ function handle_mailchimp_connection_test() {
             wp_send_json_error(array('message' => $result['message']));
         }
     } catch (Exception $e) {
-        wp_send_json_error(array('message' => __('Connection test failed: ', 'dcmm-membership') . $e->getMessage()));
+        wp_send_json_error(array('message' => __('Connection test failed: ', DCMM_PLUGIN_SLUG ) . $e->getMessage()));
     }
 }
 add_action('wp_ajax_dcmm_test_mailchimp_connection', __NAMESPACE__ . '\handle_mailchimp_connection_test');
@@ -694,7 +694,7 @@ function register_settings() {
 
     add_settings_section(
         'dcmm_membership_settings',
-        __( 'Membership Settings', 'dcmm-membership' ),
+        __( 'Membership Settings', DCMM_PLUGIN_SLUG ),
         null,
         'dcmm_settings_group'
     );
@@ -702,13 +702,13 @@ function register_settings() {
     // Enable dues
     add_settings_field(
         'dcmm_enable_dues',
-        __( 'Charge Dues', 'dcmm-membership' ),
+        __( 'Charge Dues', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $checked = isset( $options['dcmm_enable_dues'] ) ? (bool) $options['dcmm_enable_dues'] : false;
             ?>
             <input type="checkbox" id="dcmm_enable_dues" name="dcmm_settings[dcmm_enable_dues]" value="1" <?php checked( $checked ); ?> />
-            <label for="dcmm_enable_dues"><?php esc_html_e( 'Is there a charge/fee/cost to being a member?', 'dcmm-membership' ); ?></label>
+            <label for="dcmm_enable_dues"><?php esc_html_e( 'Is there a charge/fee/cost to being a member?', DCMM_PLUGIN_SLUG ); ?></label>
             <?php
         },
         'dcmm_settings_group',
@@ -719,7 +719,7 @@ function register_settings() {
     // Dues amount setting
     add_settings_field(
         'dcmm_dues_amount',
-        __( '', 'dcmm-membership' ),
+        __( '', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $dues_amount = isset( $options['dcmm_dues_amount'] ) ? esc_attr( $options['dcmm_dues_amount'] ) : '';
@@ -745,17 +745,17 @@ function register_settings() {
     // Membership term length
     add_settings_field(
         'dcmm_membership_term_length',
-        __( 'Membership Duration', 'dcmm-membership' ),
+        __( 'Membership Duration', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $membership_period = isset( $options['dcmm_membership_term_length'] ) ? esc_attr( $options['dcmm_membership_term_length'] ) : '';
             ?>
             <select id="dcmm_membership_term_length" name="dcmm_settings[dcmm_membership_term_length]">
-                <option value="yearly" <?php selected( $membership_period, 'yearly' ); ?>><?php esc_html_e( 'Yearly', 'dcmm-membership' ); ?></option>
-                <option value="seasonal" <?php selected( $membership_period, 'seasonal' ); ?>><?php esc_html_e( 'Seasonal', 'dcmm-membership' ); ?></option>
-                <option value="monthly" <?php selected( $membership_period, 'monthly' ); ?>><?php esc_html_e( 'Monthly', 'dcmm-membership' ); ?></option>
+                <option value="yearly" <?php selected( $membership_period, 'yearly' ); ?>><?php esc_html_e( 'Yearly', DCMM_PLUGIN_SLUG ); ?></option>
+                <option value="seasonal" <?php selected( $membership_period, 'seasonal' ); ?>><?php esc_html_e( 'Seasonal', DCMM_PLUGIN_SLUG ); ?></option>
+                <option value="monthly" <?php selected( $membership_period, 'monthly' ); ?>><?php esc_html_e( 'Monthly', DCMM_PLUGIN_SLUG ); ?></option>
             </select>
-            <label for="dcmm_membership_term_length"><?php esc_html_e( 'Select the membership period', 'dcmm-membership' ); ?></label>
+            <label for="dcmm_membership_term_length"><?php esc_html_e( 'Select the membership period', DCMM_PLUGIN_SLUG ); ?></label>
             <?php
         },
         'dcmm_settings_group',
@@ -765,7 +765,7 @@ function register_settings() {
     // Renewal Window Settings
     add_settings_field(
         'dcmm_renewal_window_settings',
-        __( 'Renewal Window Settings', 'dcmm-membership' ),
+        __( 'Renewal Window Settings', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $renewal_window_days = isset( $options['renewal_window_days'] ) ? intval( $options['renewal_window_days'] ) : 30;
@@ -776,29 +776,29 @@ function register_settings() {
                 <table class="form-table">
                     <tr>
                         <th scope="row">
-                            <label for="renewal_window_days"><?php esc_html_e( 'Renewal Window (days)', 'dcmm-membership' ); ?></label>
+                            <label for="renewal_window_days"><?php esc_html_e( 'Renewal Window (days)', DCMM_PLUGIN_SLUG ); ?></label>
                         </th>
                         <td>
                             <input type="number" id="renewal_window_days" name="dcmm_settings[renewal_window_days]" value="<?php echo esc_attr( $renewal_window_days ); ?>" min="1" max="365" />
-                            <p class="description"><?php esc_html_e( 'Number of days before expiration that renewal becomes available. Default: 30 days.', 'dcmm-membership' ); ?></p>
+                            <p class="description"><?php esc_html_e( 'Number of days before expiration that renewal becomes available. Default: 30 days.', DCMM_PLUGIN_SLUG ); ?></p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">
-                            <label for="grace_period_days"><?php esc_html_e( 'Grace Period (days)', 'dcmm-membership' ); ?></label>
+                            <label for="grace_period_days"><?php esc_html_e( 'Grace Period (days)', DCMM_PLUGIN_SLUG ); ?></label>
                         </th>
                         <td>
                             <input type="number" id="grace_period_days" name="dcmm_settings[grace_period_days]" value="<?php echo esc_attr( $grace_period_days ); ?>" min="0" max="365" />
-                            <p class="description"><?php esc_html_e( 'Number of days after expiration that renewal is still allowed. Default: 30 days.', 'dcmm-membership' ); ?></p>
+                            <p class="description"><?php esc_html_e( 'Number of days after expiration that renewal is still allowed. Default: 30 days.', DCMM_PLUGIN_SLUG ); ?></p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">
-                            <label for="renewal_notice_days"><?php esc_html_e( 'Renewal Notice (days)', 'dcmm-membership' ); ?></label>
+                            <label for="renewal_notice_days"><?php esc_html_e( 'Renewal Notice (days)', DCMM_PLUGIN_SLUG ); ?></label>
                         </th>
                         <td>
                             <input type="number" id="renewal_notice_days" name="dcmm_settings[renewal_notice_days]" value="<?php echo esc_attr( $renewal_notice_days ); ?>" min="1" max="365" />
-                            <p class="description"><?php esc_html_e( 'Show renewal notice X days before renewal window opens. Default: 7 days.', 'dcmm-membership' ); ?></p>
+                            <p class="description"><?php esc_html_e( 'Show renewal notice X days before renewal window opens. Default: 7 days.', DCMM_PLUGIN_SLUG ); ?></p>
                         </td>
                     </tr>
                 </table>
@@ -822,17 +822,17 @@ function register_settings() {
     // Does the membership period start/end with the calendar or does it start on a specific date?
     add_settings_field(
         'dcmm_join_policy',
-        __( 'Membership Start Model / Join Policy', 'dcmm-membership' ),
+        __( 'Membership Start Model / Join Policy', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $membership_start_end = isset( $options['dcmm_join_policy'] ) ? esc_attr( $options['dcmm_join_policy'] ) : '';
             ?>
             <select id="dcmm_join_policy" name="dcmm_settings[dcmm_join_policy]">
-                <option value="fixed_term" <?php selected( $membership_start_end, 'fixed_term' ); ?>><?php esc_html_e( 'Fixed Calendar Term', 'dcmm-membership' ); ?></option>
-                <option value="rolling" <?php selected( $membership_start_end, 'rolling' ); ?>><?php esc_html_e( 'Rolling (Anniversary-based)', 'dcmm-membership' ); ?></option>
-                <option value="anchored_full_term" <?php selected( $membership_start_end, 'anchored_full_term' ); ?>><?php esc_html_e( 'Anchored Full-Term', 'dcmm-membership' ); ?></option>
+                <option value="fixed_term" <?php selected( $membership_start_end, 'fixed_term' ); ?>><?php esc_html_e( 'Fixed Calendar Term', DCMM_PLUGIN_SLUG ); ?></option>
+                <option value="rolling" <?php selected( $membership_start_end, 'rolling' ); ?>><?php esc_html_e( 'Rolling (Anniversary-based)', DCMM_PLUGIN_SLUG ); ?></option>
+                <option value="anchored_full_term" <?php selected( $membership_start_end, 'anchored_full_term' ); ?>><?php esc_html_e( 'Anchored Full-Term', DCMM_PLUGIN_SLUG ); ?></option>
             </select>
-            <label for="dcmm_join_policy"><?php esc_html_e( 'This determines when the membership begins and how renewal is calculated.', 'dcmm-membership' ); ?></label>
+            <label for="dcmm_join_policy"><?php esc_html_e( 'This determines when the membership begins and how renewal is calculated.', DCMM_PLUGIN_SLUG ); ?></label>
             <?php
         },
         'dcmm_settings_group',
@@ -902,17 +902,17 @@ function register_settings() {
     // Auto-sync to WordPress Users
     add_settings_field(
         'auto_sync_wp_users',
-        __( 'Auto-sync to WordPress Users', 'dcmm-membership' ),
+        __( 'Auto-sync to WordPress Users', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings', array() );
             $auto_sync_enabled = isset( $options['auto_sync_wp_users'] ) ? (bool) $options['auto_sync_wp_users'] : true;
             ?>
             <label for="auto_sync_wp_users">
                 <input type="checkbox" id="auto_sync_wp_users" name="dcmm_settings[auto_sync_wp_users]" value="1" <?php checked( $auto_sync_enabled, true ); ?> />
-                <?php esc_html_e( 'Automatically sync member name and email changes to WordPress user accounts', 'dcmm-membership' ); ?>
+                <?php esc_html_e( 'Automatically sync member name and email changes to WordPress user accounts', DCMM_PLUGIN_SLUG ); ?>
             </label>
             <p class="description">
-                <?php esc_html_e( 'When enabled, changes to member first name, last name, and email will automatically update the associated WordPress user account.', 'dcmm-membership' ); ?>
+                <?php esc_html_e( 'When enabled, changes to member first name, last name, and email will automatically update the associated WordPress user account.', DCMM_PLUGIN_SLUG ); ?>
             </p>
             <?php
         },
@@ -924,11 +924,11 @@ function register_settings() {
     // Offline Payment Settings Section
     add_settings_section(
         'dcmm_offline_payment_settings',
-        __( 'Offline Payment Settings', 'dcmm-membership' ),
+        __( 'Offline Payment Settings', DCMM_PLUGIN_SLUG ),
         function() {
             ?>
             <section class="dcmm-offline-payment-settings-section">
-                <p><?php esc_html_e( 'Configure offline payment options for manual payment recording by administrators.', 'dcmm-membership' ); ?></p>
+                <p><?php esc_html_e( 'Configure offline payment options for manual payment recording by administrators.', DCMM_PLUGIN_SLUG ); ?></p>
             </section>
             <?php
         },
@@ -938,7 +938,7 @@ function register_settings() {
     // Enable Offline Payments
     add_settings_field(
         'dcmm_enable_offline_payments',
-        __( 'Enable Offline Payments', 'dcmm-membership' ),
+        __( 'Enable Offline Payments', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $enabled = isset( $options['dcmm_enable_offline_payments'] ) ? (bool) $options['dcmm_enable_offline_payments'] : false;
@@ -956,7 +956,7 @@ function register_settings() {
     // Offline Payment Methods
     add_settings_field(
         'dcmm_offline_payment_methods',
-        __( 'Payment Methods', 'dcmm-membership' ),
+        __( 'Payment Methods', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $methods = isset( $options['dcmm_offline_payment_methods'] ) ? $options['dcmm_offline_payment_methods'] : array(
@@ -967,7 +967,7 @@ function register_settings() {
             );
             ?>
             <div class="dcmm-payment-methods">
-                <p><?php esc_html_e( 'Configure available payment methods for offline payments:', 'dcmm-membership' ); ?></p>
+                <p><?php esc_html_e( 'Configure available payment methods for offline payments:', DCMM_PLUGIN_SLUG ); ?></p>
                 <table class="form-table">
                     <?php foreach ( $methods as $key => $label ): ?>
                     <tr>
@@ -991,13 +991,13 @@ function register_settings() {
     // Require Reference Numbers
     add_settings_field(
         'dcmm_offline_require_reference',
-        __( 'Reference Numbers', 'dcmm-membership' ),
+        __( 'Reference Numbers', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $required = isset( $options['dcmm_offline_require_reference'] ) ? (bool) $options['dcmm_offline_require_reference'] : false;
             ?>
             <input type="checkbox" id="dcmm_offline_require_reference" name="dcmm_settings[dcmm_offline_require_reference]" value="1" <?php checked( $required ); ?> />
-            <label for="dcmm_offline_require_reference"><?php esc_html_e( 'Require reference numbers for offline payments', 'dcmm-membership' ); ?></label>
+            <label for="dcmm_offline_require_reference"><?php esc_html_e( 'Require reference numbers for offline payments', DCMM_PLUGIN_SLUG ); ?></label>
             <p class="description"><?php esc_html_e( 'When enabled, administrators must enter a reference number (check number, transaction ID, etc.) for each offline payment.', 'dcmm-membership' ); ?></p>
             <?php
         },
@@ -1009,36 +1009,36 @@ function register_settings() {
     // PayPal Settings Section
     add_settings_section(
         'dcmm_paypal_settings',
-        __( 'PayPal Settings', 'dcmm-membership' ),
+        __( 'PayPal Settings', DCMM_PLUGIN_SLUG ),
         function() {
             ?>
             <section class="dcmm-paypal-settings-section">
-                <p><?php esc_html_e( 'Configure PayPal payment processing for membership dues.', 'dcmm-membership' ); ?></p>
+                <p><?php esc_html_e( 'Configure PayPal payment processing for membership dues.', DCMM_PLUGIN_SLUG ); ?></p>
                 <div class="dcmm-paypal-setup-instructions" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
-                    <h4><?php esc_html_e( 'PayPal Setup Instructions:', 'dcmm-membership' ); ?></h4>
+                    <h4><?php esc_html_e( 'PayPal Setup Instructions:', DCMM_PLUGIN_SLUG ); ?></h4>
                     <ol>
                         <li>
-                            <strong><?php esc_html_e( 'Create a PayPal Developer Account:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Visit', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/" target="_blank">https://developer.paypal.com/</a> <?php esc_html_e( 'and sign in with your PayPal account.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Create a PayPal Developer Account:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Visit', DCMM_PLUGIN_SLUG ); ?> <a href="https://developer.paypal.com/" target="_blank">https://developer.paypal.com/</a> <?php esc_html_e( 'and sign in with your PayPal account.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Create an Application:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Go to', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'My Apps & Credentials', 'dcmm-membership' ); ?></a> <?php esc_html_e( 'and click "Create App".', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Create an Application:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Go to', DCMM_PLUGIN_SLUG ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'My Apps & Credentials', DCMM_PLUGIN_SLUG ); ?></a> <?php esc_html_e( 'and click "Create App".', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Configure Your App:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Choose "Default Application" and select your business account. Make sure to enable "Accept payments" feature.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Configure Your App:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Choose "Default Application" and select your business account. Make sure to enable "Accept payments" feature.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Copy Credentials:', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'Copy the Client ID and Client Secret from your app details below.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Copy Credentials:', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'Copy the Client ID and Client Secret from your app details below.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                         <li>
-                            <strong><?php esc_html_e( 'Set Up Webhooks (Optional):', 'dcmm-membership' ); ?></strong><br>
-                            <?php esc_html_e( 'For real-time payment notifications, configure webhooks in your PayPal app using the webhook URL shown below.', 'dcmm-membership' ); ?>
+                            <strong><?php esc_html_e( 'Set Up Webhooks (Optional):', DCMM_PLUGIN_SLUG ); ?></strong><br>
+                            <?php esc_html_e( 'For real-time payment notifications, configure webhooks in your PayPal app using the webhook URL shown below.', DCMM_PLUGIN_SLUG ); ?>
                         </li>
                     </ol>
-                    <p><em><?php esc_html_e( 'Start with Sandbox environment for testing, then switch to Live when ready for production.', 'dcmm-membership' ); ?></em></p>
+                    <p><em><?php esc_html_e( 'Start with Sandbox environment for testing, then switch to Live when ready for production.', DCMM_PLUGIN_SLUG ); ?></em></p>
                 </div>
             </section>
             <?php
@@ -1049,19 +1049,19 @@ function register_settings() {
     // PayPal Environment (Sandbox vs Live)
     add_settings_field(
         'dcmm_paypal_environment',
-        __( 'PayPal Environment', 'dcmm-membership' ),
+        __( 'PayPal Environment', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $environment = isset( $options['dcmm_paypal_environment'] ) ? esc_attr( $options['dcmm_paypal_environment'] ) : 'sandbox';
             ?>
             <select id="dcmm_paypal_environment" name="dcmm_settings[dcmm_paypal_environment]">
-                <option value="sandbox" <?php selected( $environment, 'sandbox' ); ?>><?php esc_html_e( 'Sandbox (Testing)', 'dcmm-membership' ); ?></option>
-                <option value="live" <?php selected( $environment, 'live' ); ?>><?php esc_html_e( 'Live (Production)', 'dcmm-membership' ); ?></option>
+                <option value="sandbox" <?php selected( $environment, 'sandbox' ); ?>><?php esc_html_e( 'Sandbox (Testing)', DCMM_PLUGIN_SLUG ); ?></option>
+                <option value="live" <?php selected( $environment, 'live' ); ?>><?php esc_html_e( 'Live (Production)', DCMM_PLUGIN_SLUG ); ?></option>
             </select>
             <p class="description">
-                <?php esc_html_e( 'Use Sandbox for testing, Live for production payments.', 'dcmm-membership' ); ?><br>
-                <strong><?php esc_html_e( 'Important:', 'dcmm-membership' ); ?></strong> 
-                <?php esc_html_e( 'Sandbox and Live environments use different credentials. Make sure your Client ID and Secret match the selected environment.', 'dcmm-membership' ); ?>
+                <?php esc_html_e( 'Use Sandbox for testing, Live for production payments.', DCMM_PLUGIN_SLUG ); ?><br>
+                <strong><?php esc_html_e( 'Important:', DCMM_PLUGIN_SLUG ); ?></strong> 
+                <?php esc_html_e( 'Sandbox and Live environments use different credentials. Make sure your Client ID and Secret match the selected environment.', DCMM_PLUGIN_SLUG ); ?>
             </p>
             <?php
         },
@@ -1076,17 +1076,17 @@ function register_settings() {
     // PayPal Client ID
     add_settings_field(
         'dcmm_paypal_client_id',
-        __( 'PayPal Client ID', 'dcmm-membership' ),
+        __( 'PayPal Client ID', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $client_id = isset( $options['dcmm_paypal_client_id'] ) ? esc_attr( $options['dcmm_paypal_client_id'] ) : '';
             ?>
             <input type="text" id="dcmm_paypal_client_id" name="dcmm_settings[dcmm_paypal_client_id]" value="<?php echo esc_attr( $client_id ); ?>" class="regular-text" />
             <p class="description">
-                <?php esc_html_e( 'Your PayPal application Client ID from the PayPal Developer Dashboard.', 'dcmm-membership' ); ?><br>
-                <strong><?php esc_html_e( 'Where to find:', 'dcmm-membership' ); ?></strong> 
-                <?php esc_html_e( 'Log in to', 'dcmm-membership' ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'PayPal Developer Dashboard', 'dcmm-membership' ); ?></a>, 
-                <?php esc_html_e( 'click on your app, and copy the "Client ID" from the app details page.', 'dcmm-membership' ); ?>
+                <?php esc_html_e( 'Your PayPal application Client ID from the PayPal Developer Dashboard.', DCMM_PLUGIN_SLUG ); ?><br>
+                <strong><?php esc_html_e( 'Where to find:', DCMM_PLUGIN_SLUG ); ?></strong> 
+                <?php esc_html_e( 'Log in to', DCMM_PLUGIN_SLUG ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'PayPal Developer Dashboard', DCMM_PLUGIN_SLUG ); ?></a>, 
+                <?php esc_html_e( 'click on your app, and copy the "Client ID" from the app details page.', DCMM_PLUGIN_SLUG ); ?>
             </p>
             <?php
         },
@@ -1101,17 +1101,17 @@ function register_settings() {
     // PayPal Client Secret
     add_settings_field(
         'dcmm_paypal_client_secret',
-        __( 'PayPal Client Secret', 'dcmm-membership' ),
+        __( 'PayPal Client Secret', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $client_secret = isset( $options['dcmm_paypal_client_secret'] ) ? esc_attr( $options['dcmm_paypal_client_secret'] ) : '';
             ?>
             <input type="password" id="dcmm_paypal_client_secret" name="dcmm_settings[dcmm_paypal_client_secret]" value="<?php echo esc_attr( $client_secret ); ?>" class="regular-text" />
             <p class="description">
-                <?php esc_html_e( 'Your PayPal application Client Secret. Keep this secure!', 'dcmm-membership' ); ?><br>
-                <strong><?php esc_html_e( 'Where to find:', 'dcmm-membership' ); ?></strong> 
-                <?php esc_html_e( 'In your PayPal app details page, click "Show" next to "Client Secret" and copy the revealed secret.', 'dcmm-membership' ); ?><br>
-                <em><?php esc_html_e( 'Note: Never share this secret publicly or commit it to version control.', 'dcmm-membership' ); ?></em>
+                <?php esc_html_e( 'Your PayPal application Client Secret. Keep this secure!', DCMM_PLUGIN_SLUG ); ?><br>
+                <strong><?php esc_html_e( 'Where to find:', DCMM_PLUGIN_SLUG ); ?></strong> 
+                <?php esc_html_e( 'In your PayPal app details page, click "Show" next to "Client Secret" and copy the revealed secret.', DCMM_PLUGIN_SLUG ); ?><br>
+                <em><?php esc_html_e( 'Note: Never share this secret publicly or commit it to version control.', DCMM_PLUGIN_SLUG ); ?></em>
             </p>
             <?php
         },
@@ -1126,7 +1126,7 @@ function register_settings() {
     // PayPal Webhook ID
     add_settings_field(
         'dcmm_paypal_webhook_id',
-        __( 'PayPal Webhook ID', 'dcmm-membership' ),
+        __( 'PayPal Webhook ID', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $webhook_id = isset( $options['dcmm_paypal_webhook_id'] ) ? esc_attr( $options['dcmm_paypal_webhook_id'] ) : '';
@@ -1156,14 +1156,14 @@ function register_settings() {
     // Email Settings Section
     add_settings_section(
         'dcmm_email_settings',
-        __( 'Email Settings', 'dcmm-membership' ),
+        __( 'Email Settings', DCMM_PLUGIN_SLUG ),
         function() {
             ?>
             <section class="dcmm-email-settings-section">
-                <p><?php esc_html_e( 'Configure email notifications for member signups and renewals.', 'dcmm-membership' ); ?></p>
+                <p><?php esc_html_e( 'Configure email notifications for member signups and renewals.', DCMM_PLUGIN_SLUG ); ?></p>
                 <div class="dcmm-email-merge-tags" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
-                    <h4><?php esc_html_e( 'Available Merge Tags:', 'dcmm-membership' ); ?></h4>
-                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your email templates:', 'dcmm-membership' ); ?></p>
+                    <h4><?php esc_html_e( 'Available Merge Tags:', DCMM_PLUGIN_SLUG ); ?></h4>
+                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your email templates:', DCMM_PLUGIN_SLUG ); ?></p>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
                         <button type="button" class="button button-small dcmm-merge-tag" data-tag="{first_name}">{first_name}</button>
                         <button type="button" class="button button-small dcmm-merge-tag" data-tag="{last_name}">{last_name}</button>
@@ -1189,7 +1189,7 @@ function register_settings() {
     // Email From Name
     add_settings_field(
         'dcmm_email_from_name',
-        __( 'From Name', 'dcmm-membership' ),
+        __( 'From Name', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $from_name = isset( $options['from_name'] ) ? esc_attr( $options['from_name'] ) : get_bloginfo('name');
@@ -1205,13 +1205,13 @@ function register_settings() {
     // Email From Email
     add_settings_field(
         'dcmm_email_from_email',
-        __( 'From Email', 'dcmm-membership' ),
+        __( 'From Email', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $from_email = isset( $options['from_email'] ) ? esc_attr( $options['from_email'] ) : get_option('admin_email');
             ?>
             <input type="email" id="dcmm_email_from_email" name="dcmm_email_settings[from_email]" value="<?php echo esc_attr( $from_email ); ?>" class="regular-text" />
-            <p class="description"><?php esc_html_e( 'Email address that appears in the "From" field of emails.', 'dcmm-membership' ); ?></p>
+            <p class="description"><?php esc_html_e( 'Email address that appears in the "From" field of emails.', DCMM_PLUGIN_SLUG ); ?></p>
             <?php
         },
         'dcmm_settings_group',
@@ -1221,13 +1221,13 @@ function register_settings() {
     // Enable Welcome Emails
     add_settings_field(
         'dcmm_enable_welcome_emails',
-        __( 'Welcome Emails', 'dcmm-membership' ),
+        __( 'Welcome Emails', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $checked = isset( $options['enable_welcome_emails'] ) ? (bool) $options['enable_welcome_emails'] : true;
             ?>
             <input type="checkbox" id="dcmm_enable_welcome_emails" name="dcmm_email_settings[enable_welcome_emails]" value="1" <?php checked( $checked ); ?> />
-            <label for="dcmm_enable_welcome_emails"><?php esc_html_e( 'Send welcome emails to new members', 'dcmm-membership' ); ?></label>
+            <label for="dcmm_enable_welcome_emails"><?php esc_html_e( 'Send welcome emails to new members', DCMM_PLUGIN_SLUG ); ?></label>
             <?php
         },
         'dcmm_settings_group',
@@ -1237,13 +1237,13 @@ function register_settings() {
     // Welcome Email Subject
     add_settings_field(
         'dcmm_welcome_email_subject',
-        __( 'Welcome Email Subject', 'dcmm-membership' ),
+        __( 'Welcome Email Subject', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $subject = isset( $options['welcome_subject'] ) ? esc_attr( $options['welcome_subject'] ) : 'Welcome to Your Membership!';
             ?>
             <input type="text" id="dcmm_welcome_email_subject" name="dcmm_email_settings[welcome_subject]" value="<?php echo esc_attr( $subject ); ?>" class="regular-text" />
-            <p class="description"><?php esc_html_e( 'Subject line for welcome emails.', 'dcmm-membership' ); ?></p>
+            <p class="description"><?php esc_html_e( 'Subject line for welcome emails.', DCMM_PLUGIN_SLUG ); ?></p>
             <?php
         },
         'dcmm_settings_group',
@@ -1253,7 +1253,7 @@ function register_settings() {
     // Welcome Email Template
     add_settings_field(
         'dcmm_welcome_email_template',
-        __( 'Welcome Email Template', 'dcmm-membership' ),
+        __( 'Welcome Email Template', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $template = isset( $options['welcome_template'] ) ? $options['welcome_template'] : '';
@@ -1291,7 +1291,7 @@ function register_settings() {
     // Enable Renewal Emails
     add_settings_field(
         'dcmm_enable_renewal_emails',
-        __( 'Renewal Emails', 'dcmm-membership' ),
+        __( 'Renewal Emails', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $checked = isset( $options['enable_renewal_emails'] ) ? (bool) $options['enable_renewal_emails'] : true;
@@ -1307,13 +1307,13 @@ function register_settings() {
     // Renewal Email Subject
     add_settings_field(
         'dcmm_renewal_email_subject',
-        __( 'Renewal Email Subject', 'dcmm-membership' ),
+        __( 'Renewal Email Subject', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $subject = isset( $options['renewal_subject'] ) ? esc_attr( $options['renewal_subject'] ) : 'Membership Renewal Confirmation';
             ?>
             <input type="text" id="dcmm_renewal_email_subject" name="dcmm_email_settings[renewal_subject]" value="<?php echo esc_attr( $subject ); ?>" class="regular-text" />
-            <p class="description"><?php esc_html_e( 'Subject line for renewal emails.', 'dcmm-membership' ); ?></p>
+            <p class="description"><?php esc_html_e( 'Subject line for renewal emails.', DCMM_PLUGIN_SLUG ); ?></p>
             <?php
         },
         'dcmm_settings_group',
@@ -1323,7 +1323,7 @@ function register_settings() {
     // Renewal Email Template
     add_settings_field(
         'dcmm_renewal_email_template',
-        __( 'Renewal Email Template', 'dcmm-membership' ),
+        __( 'Renewal Email Template', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_email_settings', array() );
             $template = isset( $options['renewal_template'] ) ? $options['renewal_template'] : '';
@@ -1366,14 +1366,14 @@ function register_settings() {
     // Expiration Notification Settings Section
     add_settings_section(
         'dcmm_expiration_notification_settings',
-        __( 'Expiration Notification Settings', 'dcmm-membership' ),
+        __( 'Expiration Notification Settings', DCMM_PLUGIN_SLUG ),
         function() {
             ?>
             <section class="dcmm-expiration-notification-section">
-                <p><?php esc_html_e( 'Configure automated email notifications for membership expiration reminders.', 'dcmm-membership' ); ?></p>
+                <p><?php esc_html_e( 'Configure automated email notifications for membership expiration reminders.', DCMM_PLUGIN_SLUG ); ?></p>
                 <div class="dcmm-expiration-merge-tags" style="background: #f9f9f9; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
-                    <h4><?php esc_html_e( 'Available Merge Tags for Expiration Emails:', 'dcmm-membership' ); ?></h4>
-                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your expiration email templates:', 'dcmm-membership' ); ?></p>
+                    <h4><?php esc_html_e( 'Available Merge Tags for Expiration Emails:', DCMM_PLUGIN_SLUG ); ?></h4>
+                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your expiration email templates:', DCMM_PLUGIN_SLUG ); ?></p>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
                         <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{first_name}">{first_name}</button>
                         <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{last_name}">{last_name}</button>
@@ -1399,14 +1399,14 @@ function register_settings() {
     // Enable Expiration Notifications
     add_settings_field(
         'dcmm_enable_expiration_notifications',
-        __( 'Enable Expiration Notifications', 'dcmm-membership' ),
+        __( 'Enable Expiration Notifications', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_expiration_notification_settings', array() );
             $enabled = isset( $options['enabled'] ) ? (bool) $options['enabled'] : false;
             ?>
             <input type="checkbox" id="dcmm_enable_expiration_notifications" name="dcmm_expiration_notification_settings[enabled]" value="1" <?php checked( $enabled ); ?> />
-            <label for="dcmm_enable_expiration_notifications"><?php esc_html_e( 'Send automated expiration reminder emails to members', 'dcmm-membership' ); ?></label>
-            <p class="description"><?php esc_html_e( 'When enabled, members will receive automated emails before their membership expires.', 'dcmm-membership' ); ?></p>
+            <label for="dcmm_enable_expiration_notifications"><?php esc_html_e( 'Send automated expiration reminder emails to members', DCMM_PLUGIN_SLUG ); ?></label>
+            <p class="description"><?php esc_html_e( 'When enabled, members will receive automated emails before their membership expires.', DCMM_PLUGIN_SLUG ); ?></p>
             <?php
         },
         'dcmm_settings_group',
@@ -1416,7 +1416,7 @@ function register_settings() {
     // 30 Day Notification
     add_settings_field(
         'dcmm_30_day_notification',
-        __( '30 Day Notification', 'dcmm-membership' ),
+        __( '30 Day Notification', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_expiration_notification_settings', array() );
             $enabled = isset( $options['notifications']['30_days']['enabled'] ) ? (bool) $options['notifications']['30_days']['enabled'] : true;
@@ -1426,12 +1426,12 @@ function register_settings() {
             <div class="dcmm-notification-field">
                 <label>
                     <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][30_days][enabled]" value="1" <?php checked( $enabled ); ?> />
-                    <?php esc_html_e( 'Send 30 days before expiration', 'dcmm-membership' ); ?>
+                    <?php esc_html_e( 'Send 30 days before expiration', DCMM_PLUGIN_SLUG ); ?>
                 </label>
                 <div class="dcmm-notification-details" style="margin-top: 10px;">
-                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Subject:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <input type="text" name="dcmm_expiration_notification_settings[notifications][30_days][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
-                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Email Template:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <div class="dcmm-email-template-editor">
                         <?php
                         wp_editor( $template, 'dcmm_30_day_template', array(
@@ -1457,7 +1457,7 @@ function register_settings() {
     // 7 Day Notification
     add_settings_field(
         'dcmm_7_day_notification',
-        __( '7 Day Notification', 'dcmm-membership' ),
+        __( '7 Day Notification', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_expiration_notification_settings', array() );
             $enabled = isset( $options['notifications']['7_days']['enabled'] ) ? (bool) $options['notifications']['7_days']['enabled'] : true;
@@ -1467,12 +1467,12 @@ function register_settings() {
             <div class="dcmm-notification-field">
                 <label>
                     <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][7_days][enabled]" value="1" <?php checked( $enabled ); ?> />
-                    <?php esc_html_e( 'Send 7 days before expiration', 'dcmm-membership' ); ?>
+                    <?php esc_html_e( 'Send 7 days before expiration', DCMM_PLUGIN_SLUG ); ?>
                 </label>
                 <div class="dcmm-notification-details" style="margin-top: 10px;">
-                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Subject:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <input type="text" name="dcmm_expiration_notification_settings[notifications][7_days][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
-                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Email Template:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <div class="dcmm-email-template-editor">
                         <?php
                         wp_editor( $template, 'dcmm_7_day_template', array(
@@ -1498,7 +1498,7 @@ function register_settings() {
     // 1 Day Notification
     add_settings_field(
         'dcmm_1_day_notification',
-        __( '1 Day Notification', 'dcmm-membership' ),
+        __( '1 Day Notification', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_expiration_notification_settings', array() );
             $enabled = isset( $options['notifications']['1_day']['enabled'] ) ? (bool) $options['notifications']['1_day']['enabled'] : true;
@@ -1508,12 +1508,12 @@ function register_settings() {
             <div class="dcmm-notification-field">
                 <label>
                     <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][1_day][enabled]" value="1" <?php checked( $enabled ); ?> />
-                    <?php esc_html_e( 'Send 1 day before expiration', 'dcmm-membership' ); ?>
+                    <?php esc_html_e( 'Send 1 day before expiration', DCMM_PLUGIN_SLUG ); ?>
                 </label>
                 <div class="dcmm-notification-details" style="margin-top: 10px;">
-                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Subject:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <input type="text" name="dcmm_expiration_notification_settings[notifications][1_day][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
-                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Email Template:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <div class="dcmm-email-template-editor">
                         <?php
                         wp_editor( $template, 'dcmm_1_day_template', array(
@@ -1539,7 +1539,7 @@ function register_settings() {
     // Expired Notification
     add_settings_field(
         'dcmm_expired_notification',
-        __( 'Expired Notification', 'dcmm-membership' ),
+        __( 'Expired Notification', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_expiration_notification_settings', array() );
             $enabled = isset( $options['notifications']['expired']['enabled'] ) ? (bool) $options['notifications']['expired']['enabled'] : true;
@@ -1549,12 +1549,12 @@ function register_settings() {
             <div class="dcmm-notification-field">
                 <label>
                     <input type="checkbox" name="dcmm_expiration_notification_settings[notifications][expired][enabled]" value="1" <?php checked( $enabled ); ?> />
-                    <?php esc_html_e( 'Send on expiration day', 'dcmm-membership' ); ?>
+                    <?php esc_html_e( 'Send on expiration day', DCMM_PLUGIN_SLUG ); ?>
                 </label>
                 <div class="dcmm-notification-details" style="margin-top: 10px;">
-                    <p><strong><?php esc_html_e( 'Subject:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Subject:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <input type="text" name="dcmm_expiration_notification_settings[notifications][expired][subject]" value="<?php echo esc_attr( $subject ); ?>" class="large-text" />
-                    <p><strong><?php esc_html_e( 'Email Template:', 'dcmm-membership' ); ?></strong></p>
+                    <p><strong><?php esc_html_e( 'Email Template:', DCMM_PLUGIN_SLUG ); ?></strong></p>
                     <div class="dcmm-email-template-editor">
                         <?php
                         wp_editor( $template, 'dcmm_expired_template', array(
@@ -1586,7 +1586,7 @@ function register_settings() {
     // My Account Page setting
     add_settings_field(
         'dcmm_my_account_page',
-        __( 'My Account Page', 'dcmm-membership' ),
+        __( 'My Account Page', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $selected_page = isset( $options['dcmm_my_account_page'] ) ? $options['dcmm_my_account_page'] : '';
@@ -1768,7 +1768,7 @@ function register_settings() {
     // the date field will be hidden by default and shown only when the specific date option is selected, dynamically using JavaScript
     add_settings_field(
         'dcmm_anchor_date',
-        __( 'Anchor Date', 'dcmm-membership' ),
+        __( 'Anchor Date', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $anchor_date = isset( $options['dcmm_anchor_date'] ) ? esc_attr( $options['dcmm_anchor_date'] ) : '';

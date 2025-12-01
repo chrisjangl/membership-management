@@ -58,17 +58,17 @@ function register_action_hooks() {
 function dcmm_register_post_type() {
 
 	$labels = array(
-		'name'               => __( 'Members', 'post type general name' ),
-		'singular_name'      => __( 'Member', 'post type singular name' ),
+		'name'               => __( 'Members', DCMM_PLUGIN_SLUG ),
+		'singular_name'      => __( 'Member', DCMM_PLUGIN_SLUG ),
 		'add_new'            =>   ( 'Add New' ),
-		'add_new_item'       => __( 'Add New Member' ),
-		'edit_item'          => __( 'Edit Member' ),
-		'new_item'           => __( 'New Member' ),
-		'all_items'          => __( 'All Members' ),
-		'view_item'          => __( 'View Member' ),
-		'search_items'       => __( 'Search Members' ),
-		'not_found'          => __( 'No Members found' ),
-		'not_found_in_trash' => __( 'No Members found in the Trash' ), 
+		'add_new_item'       => __( 'Add New Member', DCMM_PLUGIN_SLUG ),
+		'edit_item'          => __( 'Edit Member', DCMM_PLUGIN_SLUG ),
+		'new_item'           => __( 'New Member', DCMM_PLUGIN_SLUG ),
+		'all_items'          => __( 'All Members', DCMM_PLUGIN_SLUG ),
+		'view_item'          => __( 'View Member', DCMM_PLUGIN_SLUG ),
+		'search_items'       => __( 'Search Members', DCMM_PLUGIN_SLUG ),
+		'not_found'          => __( 'No Members found', DCMM_PLUGIN_SLUG ),
+		'not_found_in_trash' => __( 'No Members found in the Trash', DCMM_PLUGIN_SLUG) , 
 		'parent_item_colon'  => '',
 		'menu_name'          => 'Members',
 	);
@@ -125,10 +125,10 @@ function dcmm_custom_columns( $default_columns ) {
 	$dcmm_columns = array(
 		'cb' => $default_columns['cb'],
 		'name' => 'Name',
-		'status' => __( 'Membership Status', 'dcmm' ),
-		'email' => __( 'Email', 'dcmm' ),
-		'address' => __( 'Address', 'dcmm' ),
-		'phone' => __( 'Phone', 'dcmm' ),
+		'status' => __( 'Membership Status', DCMM_PLUGIN_SLUG ),
+		'email' => __( 'Email', DCMM_PLUGIN_SLUG ),
+		'address' => __( 'Address', DCMM_PLUGIN_SLUG ),
+		'phone' => __( 'Phone', DCMM_PLUGIN_SLUG ),
 	);
 
 	return $dcmm_columns;
@@ -157,7 +157,7 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 			$address = $member->get('address');
 
 			if ( ! is_array( $address ) || empty( $address ) ) {
-				echo __( '---', 'dcmm' );
+				echo '---';
 				
 			} else {
 
@@ -174,7 +174,7 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 			break;
 		case "phone":
 			if ( ! $member->get( 'phone' ) ) {
-				echo __( '---', 'dcmm' );
+				echo '---';
 			} else {
 				echo $member->get('phone');
 			}

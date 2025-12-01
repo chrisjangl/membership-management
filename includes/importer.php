@@ -47,8 +47,8 @@ function membership_importer_menu() {
 
     add_submenu_page(
         $membership_menu_page_slug,
-        __( 'Import Members', 'dcmm-membership' ),
-        __( 'Import Members', 'dcmm-membership' ),
+        __( 'Import Members', DCMM_PLUGIN_SLUG ),
+        __( 'Import Members', DCMM_PLUGIN_SLUG ),
         'import_dcmm_members',
         $importer_page_slug,
         __NAMESPACE__ . '\membership_importer_page'
@@ -139,7 +139,7 @@ function membership_importer_page() {
                     </tr>
                 </tbody>
             </table>
-            <?php submit_button( __( 'Import', 'default' ) ); ?>
+            <?php submit_button( __( 'Import', DCMM_PLUGIN_SLUG ) ); ?>
         </form>
     </div>
     <?php
@@ -206,7 +206,7 @@ function handle_import() {
 
     // Check user capabilities
     if ( ! current_user_can( 'import_dcmm_members' ) ) {
-        wp_die( __( 'Sorry, you do not have the required permissions to upload files.' ) );
+        wp_die( __( 'Sorry, you do not have the required permissions to upload files.', DCMM_PLUGIN_SLUG ) );
     }
 
     // only run if a file was uploaded

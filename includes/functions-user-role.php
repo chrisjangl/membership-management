@@ -347,10 +347,10 @@ function create_member_as_user( $email, $cpt_id ) {
             // if it does not match, throw an WP error
             \wp_die(
                 sprintf(
-                    __( 'This email address is already associated with a member (CPT ID: %s). Please use a different email address.', 'dc-membership' ),
+                    __( 'This email address is already associated with a member (CPT ID: %s). Please use a different email address.', DCMM_PLUGIN_SLUG ),
                     $existing_cpt_id
                 ),
-                __( 'Email Address Already Registered', 'dc-membership' ),
+                __( 'Email Address Already Registered', DCMM_PLUGIN_SLUG ),
                 array( 'response' => 400 )
             );
         } else if ( ! $existing_cpt_id ) {
