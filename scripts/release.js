@@ -49,7 +49,13 @@ class ReleaseOrchestrator {
             // Step 7: Build and prepare
             await this.buildAndPrepare();
 
-            // Step 8: Create GitHub release
+            // Step 8: Commit wp-repo changes
+            await this.commitWpRepoChanges();
+
+            // Step 9: Push tags to GitHub
+            await this.pushTagsToGitHub();
+
+            // Step 10: Create GitHub release
             await this.createGitHubRelease();
 
             console.log('[SUCCESS] Release process completed successfully!');
@@ -444,6 +450,73 @@ ${await this.generateChangelog()}
         }
     }
 
+    async commitWpRepoChanges() {
+        console.log('[COMMIT] COMMITTING WP-REPO CHANGES');
+        console.log('-'.repeat(30));
+
+        try {
+            // Check if we're on wp-repo branch
+            const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+
+            if (currentBranch !== 'wp-repo') {
+                console.log('[INFO] Not on wp-repo branch, skipping wp-repo commit');
+                return;
+            }
+
+            // Check if there are changes to commit
+            const status = execSync('git status --porcelain', { encoding: 'utf8' });
+
+            if (!status.trim()) {
+                console.log('[OK] No changes to commit on wp-repo branch\n');
+                return;
+            }
+
+            console.log('[GIT] Adding all changes to wp-repo...');
+            execSync('git add .', { stdio: 'inherit' });
+
+            console.log(`[GIT] Committing wp-repo for v${this.newVersion}...`);
+            execSync(`git commit -m "Release v${this.newVersion} for WordPress.org"`, { stdio: 'inherit' });
+
+            console.log('[OK] wp-repo changes committed\n');
+
+        } catch (error) {
+            console.log('[WARNING] Could not commit wp-repo changes:', error.message);
+            console.log('[INFO] You may need to commit wp-repo manually\n');
+        }
+    }
+
+    async pushTagsToGitHub() {
+        console.log('[PUSH] PUSHING TAGS TO GITHUB');
+        console.log('-'.repeat(30));
+
+        try {
+            // Get current branch to return to it
+            const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+
+            // Switch to stable if not already there
+            if (currentBranch !== 'stable') {
+                console.log('[GIT] Switching to stable branch...');
+                execSync('git checkout stable', { stdio: 'inherit' });
+            }
+
+            // Push stable branch and tags
+            console.log('[GIT] Pushing stable branch and tags to GitHub...');
+            execSync('git push github stable --tags', { stdio: 'inherit' });
+
+            console.log('[OK] Tags pushed to GitHub\n');
+
+            // Return to original branch if it was different
+            if (currentBranch !== 'stable') {
+                console.log(`[GIT] Returning to ${currentBranch} branch...`);
+                execSync(`git checkout ${currentBranch}`, { stdio: 'inherit' });
+            }
+
+        } catch (error) {
+            console.log('[WARNING] Could not push tags to GitHub:', error.message);
+            console.log('[INFO] You may need to push manually with: git push github stable --tags\n');
+        }
+    }
+
     async createGitHubRelease() {
         console.log('[GITHUB] CREATING GITHUB RELEASE');
         console.log('-'.repeat(30));
@@ -452,7 +525,7 @@ ${await this.generateChangelog()}
             // Get current branch to return to it
             const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
 
-            // Switch to wp-repo branch
+            // Switch to wp-repo branch to create zip
             console.log('[GIT] Switching to wp-repo branch...');
             execSync('git checkout wp-repo', { stdio: 'inherit' });
 
@@ -484,25 +557,29 @@ ${await this.generateChangelog()}
             // Clean up zip file
             fs.removeSync(zipName);
 
-            // Return to original branch
-            console.log(`[GIT] Returning to ${currentBranch} branch...`);
-            execSync(`git checkout ${currentBranch}`, { stdio: 'inherit' });
+            // Return to original branch (should be stable)
+            if (currentBranch !== 'wp-repo') {
+                console.log(`[GIT] Returning to ${currentBranch} branch...`);
+                execSync(`git checkout ${currentBranch}`, { stdio: 'inherit' });
+            }
 
             console.log('[OK] GitHub release created successfully\n');
 
         } catch (error) {
             console.log('[WARNING] Could not create GitHub release:', error.message);
             console.log('[INFO] You can create it manually later with:');
-            console.log(`[INFO]   gh release create v${this.newVersion} membership-management-${this.newVersion}.zip`);
+            console.log(`[INFO]   cd to wp-repo branch`);
+            console.log(`[INFO]   gh release create v${this.newVersion} membership-management-${this.newVersion}.zip\n`);
 
-            // Try to return to original branch
+            // Try to return to stable branch
             try {
                 const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
                 if (currentBranch === 'wp-repo') {
+                    console.log('[GIT] Returning to stable branch...');
                     execSync('git checkout stable', { stdio: 'inherit' });
                 }
             } catch (restoreError) {
-                // Ignore restoration errors
+                console.log('[WARNING] Could not restore to stable branch');
             }
         }
     }
@@ -562,11 +639,13 @@ ${await this.generateChangelog()}
     printNextSteps() {
         console.log('\n[NEXT] Next Steps:');
         console.log('='.repeat(50));
-        console.log('1. Review the wp-repo branch changes');
-        console.log('2. Push changes and tags:');
-        console.log('   git push origin main --tags');
-        console.log('3. Deploy wp-repo branch to WordPress.org');
-        console.log('4. Update WordPress.org assets if needed');
+        console.log('1. ✅ Version updated and committed');
+        console.log('2. ✅ Tags pushed to GitHub');
+        console.log('3. ✅ GitHub release created with download');
+        console.log('4. ⏳ Push wp-repo branch:');
+        console.log('   git push github wp-repo');
+        console.log('5. ⏳ Deploy to WordPress.org SVN');
+        console.log('6. ⏳ Update WordPress.org assets if needed');
         console.log('\n[SUCCESS] Release completed successfully!');
     }
 }
