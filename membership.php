@@ -10,7 +10,7 @@
  * Plugin URI: https://github.com/chrisjangl/membership-management 
  * Text Domain: dcmm-membership 
  * Requires at least: 5.0 
- * Tested up to: 6.5 
+ * Tested up to: 6.8 
  * Requires PHP: 7.4
  */
 
