@@ -12,7 +12,8 @@
     "version:patch": "npm run release -- patch",
     "version:minor": "npm run release -- minor",
     "version:major": "npm run release -- major",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "deploy:svn": "node scripts/deploy-svn.js"
   },
   "dependencies": {
     "fs-extra": "^11.3.0",
