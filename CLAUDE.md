@@ -13,13 +13,17 @@ This is a WordPress Membership Management Plugin for managing organizational mem
 - `npm run dist` - Create a tar.gz distribution package
 - `npm run zip` - Create a zip distribution package
 
-## Testing Commands
+## Testing
 
-- `npm run test` - Run all automated tests
-- `npm run test:unit` - Run only unit tests  
-- `npm run test:integration` - Run only integration tests
-- `npm run test:coverage` - Run tests with coverage report
-- `php run-tests.php` - Direct test runner (alternative to npm commands)
+Test scripts live in the `tests/` directory. Run them individually by loading them through WordPress (they require ABSPATH to be defined):
+
+- `tests/test-status-system.php` - Status system validation
+- `tests/test-renewal-logic.php` - Renewal logic
+- `tests/test-subscription-flow.php` - Subscription flow
+- `tests/test-notifications.php` - Notification system
+- `tests/test-email-handler.php` - Email handler
+- `tests/test-mailchimp.php` - Mailchimp integration
+- `tests/test-recurring-billing.php` - Recurring billing
 
 ## Core Architecture
 
