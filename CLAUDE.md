@@ -98,6 +98,25 @@ The `DCMM_Member` class supports construction by:
 - Email address (planned feature)
 - Version-aware constructor that handles v0.1 vs v1.0+ data structures
 
+## Git Workflow
+
+### Branch Structure
+- `stable` — release-only. Never commit feature work here directly. The release script manages all merges to this branch.
+- `development` — integration branch. All feature branches for an upcoming version are merged here first.
+- Feature branches — always branch from `development`, named `feat/vX.X.X/short-description`, `fix/vX.X.X/short-description`, or `developer/vX.X.X/short-description`.
+
+### Flow for a New Feature
+1. Branch from `development`: `git checkout -b feat/vX.X.X/your-feature development`
+2. Do your work and commit using Conventional Commits (see below).
+3. Merge back into `development` when complete.
+4. Repeat for each feature targeting the same version.
+5. When all features for the version are merged into `development`, merge `development` → `stable` and run the release script.
+
+### What Not to Do
+- Do not branch from `stable` for feature work.
+- Do not create `release/vX.X.X` branches — these are a legacy pattern and the release script does not use them.
+- Do not push directly to `stable` — the release script (`npm run release`) handles that.
+
 ## Release & Changelog Process
 
 ### Commit Message Strategy
