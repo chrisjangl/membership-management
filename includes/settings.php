@@ -33,71 +33,103 @@ function add_settings_page( ) {
 add_action( 'admin_menu', __NAMESPACE__ . '\add_settings_page' );
 
 /**
+ * Enqueue CSS and JS for the settings page.
+ *
+ * @param string $hook_suffix The current admin page hook suffix.
+ */
+function enqueue_admin_assets( $hook_suffix ) {
+    // Only load on the plugin's own settings page (dcmm-member_page_dcmm_settings).
+    if ( 'dcmm-member_page_dcmm_settings' !== $hook_suffix ) {
+        return;
+    }
+
+    // member-admin.css is already enqueued globally by class-member-metaboxes.php
+    // (handle: dcmm_admin_styles). Only the settings-page JS needs to be loaded here.
+
+    wp_enqueue_script(
+        'dcmm-admin-settings',
+        DCMM_URL . 'js/admin-settings.js',
+        array( 'jquery' ),
+        DCMM_VERSION,
+        true
+    );
+
+    wp_localize_script(
+        'dcmm-admin-settings',
+        'dcmmSettings',
+        array(
+            'anchorDateMonthly' => __( 'Enter the day of the month (1-31) when memberships expire. Example: "15" for the 15th of each month.', 'dcmm-membership' ),
+            'anchorDateYearly'  => __( 'Enter the month and day (MM-DD format) when memberships expire. Example: "08-15" for August 15th each year.', 'dcmm-membership' ),
+        )
+    );
+}
+add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_admin_assets' );
+
+/**
  * Callback function for the settings page.
  * 
  * @since 1.1.0
  */
 function settings_page_callback() {
-    // Get current tab
-    $current_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'general';
-    
-    // Define tabs
+    $current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'general';
+
     $tabs = array(
-        'general' => __('General', DCMM_PLUGIN_SLUG ),
-        'payments' => __('Payment Gateways', DCMM_PLUGIN_SLUG ),
-        'emails' => __('Email & Notifications', DCMM_PLUGIN_SLUG ),
-        'premium' => __('Premium Features', DCMM_PLUGIN_SLUG )
+        'general'  => __( 'General', 'dcmm-membership' ),
+        'payments' => __( 'Payment Gateways', 'dcmm-membership' ),
+        'emails'   => __( 'Email & Notifications', 'dcmm-membership' ),
+        'premium'  => __( 'Premium Features', 'dcmm-membership' ),
     );
+
+    if ( ! array_key_exists( $current_tab, $tabs ) ) {
+        $current_tab = 'general';
+    }
     ?>
     <div class="wrap">
-        <h1><?php esc_html_e( 'Membership Management Settings', DCMM_PLUGIN_SLUG ); ?></h1>
-        
-        <!-- Tab Navigation -->
-        <nav class="nav-tab-wrapper">
-            <?php foreach ($tabs as $tab_key => $tab_label): ?>
-                <a href="<?php echo esc_url(add_query_arg('tab', $tab_key, admin_url('edit.php?post_type=dcmm-member&page=dcmm_settings'))); ?>" 
-                   class="nav-tab <?php echo $current_tab === $tab_key ? 'nav-tab-active' : ''; ?>">
-                    <?php echo esc_html($tab_label); ?>
+        <h1><?php esc_html_e( 'Membership Management Settings', 'dcmm-membership' ); ?></h1>
+        <?php settings_errors(); ?>
+
+        <nav class="nav-tab-wrapper dcmm-settings-nav" aria-label="<?php esc_attr_e( 'Settings tabs', 'dcmm-membership' ); ?>">
+            <?php foreach ( $tabs as $tab_key => $tab_label ) : ?>
+                <a href="<?php echo esc_url( add_query_arg( 'tab', $tab_key, admin_url( 'edit.php?post_type=dcmm-member&page=dcmm_settings' ) ) ); ?>"
+                   class="nav-tab<?php echo $tab_key === $current_tab ? ' nav-tab-active' : ''; ?>"
+                   data-tab="<?php echo esc_attr( $tab_key ); ?>"
+                   aria-selected="<?php echo $tab_key === $current_tab ? 'true' : 'false'; ?>"
+                   aria-controls="dcmm-tab-<?php echo esc_attr( $tab_key ); ?>">
+                    <?php echo esc_html( $tab_label ); ?>
                 </a>
             <?php endforeach; ?>
         </nav>
-        
-        <!-- Tab Content -->
-        <div class="tab-content">
-            <?php
-            switch ($current_tab) {
-                case 'general':
-                    render_general_tab();
-                    break;
-                case 'payments':
-                    render_payments_tab();
-                    break;
-                case 'emails':
-                    render_emails_tab();
-                    break;
-                case 'premium':
-                    render_premium_tab();
-                    break;
-                default:
-                    render_general_tab();
-                    break;
-            }
-            ?>
+
+        <div class="dcmm-tab-content">
+
+            <?php // Tabs 1-3 share a single form so all options are submitted together, ?>
+            <?php // eliminating the hidden-field workarounds and data-loss between tabs. ?>
+            <form method="post" action="options.php" id="dcmm-settings-form">
+                <?php settings_fields( 'dcmm_settings_group' ); ?>
+
+                <div id="dcmm-tab-general" class="dcmm-tab-panel" role="tabpanel" data-tab="general"<?php echo $current_tab !== 'general' ? ' style="display:none"' : ''; ?>>
+                    <?php render_general_tab(); ?>
+                    <?php submit_button( __( 'Save Settings', 'dcmm-membership' ) ); ?>
+                </div>
+
+                <div id="dcmm-tab-payments" class="dcmm-tab-panel" role="tabpanel" data-tab="payments"<?php echo $current_tab !== 'payments' ? ' style="display:none"' : ''; ?>>
+                    <?php render_payments_tab(); ?>
+                    <?php submit_button( __( 'Save Settings', 'dcmm-membership' ) ); ?>
+                </div>
+
+                <div id="dcmm-tab-emails" class="dcmm-tab-panel" role="tabpanel" data-tab="emails"<?php echo $current_tab !== 'emails' ? ' style="display:none"' : ''; ?>>
+                    <?php render_emails_tab(); ?>
+                    <?php submit_button( __( 'Save Settings', 'dcmm-membership' ) ); ?>
+                </div>
+            </form>
+
+            <?php // Premium tab has its own AJAX and admin-post forms and stays independent. ?>
+            <div id="dcmm-tab-premium" class="dcmm-tab-panel" role="tabpanel" data-tab="premium"<?php echo $current_tab !== 'premium' ? ' style="display:none"' : ''; ?>>
+                <?php render_premium_tab(); ?>
+            </div>
+
         </div>
     </div>
-    
-    <style>
-    .tab-content {
-        background: #fff;
-        border: 1px solid #ccd0d4;
-        border-top: none;
-        padding: 20px;
-        margin-top: 0;
-    }
-    .nav-tab-wrapper {
-        margin-bottom: 0;
-    }
-    </style>
     <?php
 }
 
@@ -106,34 +138,10 @@ function settings_page_callback() {
  */
 function render_general_tab() {
     ?>
-    <form method="post" action="options.php">
-        <?php
-        settings_fields( 'dcmm_settings_group' );
-        
-        // Preserve payment gateway settings as hidden fields
-        $current_settings = get_option( 'dcmm_settings', array() );
-        $payment_fields = array( 'dcmm_enable_offline_payments', 'dcmm_offline_payment_methods', 'dcmm_offline_require_reference', 'dcmm_paypal_client_id', 'dcmm_paypal_client_secret', 'dcmm_paypal_environment', 'dcmm_paypal_webhook_id' );
-        foreach ( $payment_fields as $field ) {
-            if ( isset( $current_settings[$field] ) ) {
-                if ( is_array( $current_settings[$field] ) ) {
-                    foreach ( $current_settings[$field] as $key => $value ) {
-                        echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . '][' . esc_attr($key) . ']" value="' . esc_attr($value) . '">';
-                    }
-                } else {
-                    echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . ']" value="' . esc_attr($current_settings[$field]) . '">';
-                }
-            }
-        }
-        
-        // Render only membership settings section
-        echo '<h2>' . __('Membership Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
-        echo '<table class="form-table" role="presentation">';
-        do_settings_fields( 'dcmm_settings_group', 'dcmm_membership_settings' );
-        echo '</table>';
-        
-        submit_button();
-        ?>
-    </form>
+    <h2><?php esc_html_e( 'Membership Settings', 'dcmm-membership' ); ?></h2>
+    <table class="form-table" role="presentation">
+        <?php do_settings_fields( 'dcmm_settings_group', 'dcmm_membership_settings' ); ?>
+    </table>
     <?php
 }
 
@@ -142,71 +150,15 @@ function render_general_tab() {
  */
 function render_payments_tab() {
     ?>
-    <form method="post" action="options.php">
-        <?php
-        settings_fields( 'dcmm_settings_group' );
-        
-        // Preserve general membership settings as hidden fields
-        $current_settings = get_option( 'dcmm_settings', array() );
-        $general_fields = array( 'dcmm_enable_dues', 'dcmm_dues_amount', 'dcmm_membership_term_length', 'dcmm_join_policy', 'dcmm_anchor_date', 'dcmm_my_account_page', 'renewal_window_days', 'grace_period_days', 'renewal_notice_days', 'auto_sync_wp_users', 'dcmm_paypal_client_id', 'dcmm_paypal_client_secret', 'dcmm_paypal_environment' );
-        foreach ( $general_fields as $field ) {
-            if ( isset( $current_settings[$field] ) ) {
-                echo '<input type="hidden" name="dcmm_settings[' . esc_attr($field) . ']" value="' . esc_attr($current_settings[$field]) . '">';
-            }
-        }
-        
-        // Render Offline Payment settings section
-        echo '<h2>' . __('Offline Payment Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
-        echo '<table class="form-table" role="presentation">';
-        do_settings_fields( 'dcmm_settings_group', 'dcmm_offline_payment_settings' );
-        echo '</table>';
-        
-        // Render PayPal settings section
-        echo '<h2>' . __('PayPal Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
-        
-        // Show the section description
-        $paypal_section_callback = function() {
-            ?>
-            <section class="dcmm-paypal-settings-section">
-                <p><?php esc_html_e( 'Configure PayPal payment processing for membership dues.', DCMM_PLUGIN_SLUG ); ?></p>
-                <div class="dcmm-paypal-setup-instructions" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
-                    <h4><?php esc_html_e( 'PayPal Setup Instructions:', DCMM_PLUGIN_SLUG ); ?></h4>
-                    <ol>
-                        <li>
-                            <strong><?php esc_html_e( 'Create a PayPal Developer Account:', DCMM_PLUGIN_SLUG ); ?></strong><br>
-                            <?php esc_html_e( 'Visit', DCMM_PLUGIN_SLUG ); ?> <a href="https://developer.paypal.com/" target="_blank">https://developer.paypal.com/</a> <?php esc_html_e( 'and sign in with your PayPal account.', DCMM_PLUGIN_SLUG ); ?>
-                        </li>
-                        <li>
-                            <strong><?php esc_html_e( 'Create an Application:', DCMM_PLUGIN_SLUG ); ?></strong><br>
-                            <?php esc_html_e( 'Go to', DCMM_PLUGIN_SLUG ); ?> <a href="https://developer.paypal.com/developer/applications/" target="_blank"><?php esc_html_e( 'My Apps & Credentials', DCMM_PLUGIN_SLUG ); ?></a> <?php esc_html_e( 'and click "Create App".', DCMM_PLUGIN_SLUG ); ?>
-                        </li>
-                        <li>
-                            <strong><?php esc_html_e( 'Configure Your App:', DCMM_PLUGIN_SLUG ); ?></strong><br>
-                            <?php esc_html_e( 'Choose "Default Application" and select your business account. Make sure to enable "Accept payments" feature.', DCMM_PLUGIN_SLUG ); ?>
-                        </li>
-                        <li>
-                            <strong><?php esc_html_e( 'Copy Credentials:', DCMM_PLUGIN_SLUG ); ?></strong><br>
-                            <?php esc_html_e( 'Copy the Client ID and Client Secret from your app details below.', DCMM_PLUGIN_SLUG ); ?>
-                        </li>
-                        <li>
-                            <strong><?php esc_html_e( 'Set Up Webhooks (Optional):', DCMM_PLUGIN_SLUG ); ?></strong><br>
-                            <?php esc_html_e( 'For real-time payment notifications, configure webhooks in your PayPal app using the webhook URL shown below.', DCMM_PLUGIN_SLUG ); ?>
-                        </li>
-                    </ol>
-                    <p><em><?php esc_html_e( 'Start with Sandbox environment for testing, then switch to Live when ready for production.', DCMM_PLUGIN_SLUG ); ?></em></p>
-                </div>
-            </section>
-            <?php
-        };
-        $paypal_section_callback();
-        
-        echo '<table class="form-table" role="presentation">';
-        do_settings_fields( 'dcmm_settings_group', 'dcmm_paypal_settings' );
-        echo '</table>';
-        
-        submit_button();
-        ?>
-    </form>
+    <h2><?php esc_html_e( 'Offline Payment Settings', 'dcmm-membership' ); ?></h2>
+    <table class="form-table" role="presentation">
+        <?php do_settings_fields( 'dcmm_settings_group', 'dcmm_offline_payment_settings' ); ?>
+    </table>
+
+    <h2><?php esc_html_e( 'PayPal Settings', 'dcmm-membership' ); ?></h2>
+    <table class="form-table" role="presentation">
+        <?php do_settings_fields( 'dcmm_settings_group', 'dcmm_paypal_settings' ); ?>
+    </table>
     <?php
 }
 
@@ -355,123 +307,6 @@ function render_premium_tab() {
             
         <?php endif; ?>
     </div>
-    
-    <style>
-    .dcmm-toggle-switch input:checked + .dcmm-slider {
-        background-color: #2196F3;
-    }
-    
-    .dcmm-toggle-switch input:focus + .dcmm-slider {
-        box-shadow: 0 0 1px #2196F3;
-    }
-    
-    .dcmm-toggle-switch input:checked + .dcmm-slider:before {
-        transform: translateX(26px);
-    }
-    
-    .dcmm-slider:before {
-        position: absolute;
-        content: "";
-        height: 26px;
-        width: 26px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-    }
-    
-    .dcmm-premium-feature {
-        transition: box-shadow 0.3s ease;
-    }
-    
-    .dcmm-premium-feature:hover {
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    #dcmm-connection-status.success {
-        color: #46b450;
-        font-weight: bold;
-    }
-    
-    #dcmm-connection-status.error {
-        color: #dc3232;
-        font-weight: bold;
-    }
-    
-    #dcmm-connection-status.testing {
-        color: #0073aa;
-    }
-    </style>
-    
-    <script type="text/javascript">
-    jQuery(document).ready(function($) {
-        // Handle MailChimp API form submission
-        $('#dcmm-mailchimp-api-form').on('submit', function(e) {
-            e.preventDefault();
-            
-            var apiKey = $('#dcmm_mailchimp_api_key').val();
-            var nonce = $('#dcmm_mailchimp_nonce').val();
-            
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'dcmm_save_mailchimp_api_key',
-                    api_key: apiKey,
-                    nonce: nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $('#dcmm-connection-status').html('<span class="success">✓ ' + response.data.message + '</span>');
-                    } else {
-                        $('#dcmm-connection-status').html('<span class="error">✗ ' + response.data.message + '</span>');
-                    }
-                },
-                error: function() {
-                    $('#dcmm-connection-status').html('<span class="error">✗ Failed to save API key</span>');
-                }
-            });
-        });
-        
-        // Handle connection test
-        $('#dcmm-test-connection').on('click', function() {
-            var apiKey = $('#dcmm_mailchimp_api_key').val();
-            var nonce = $('#dcmm_mailchimp_nonce').val();
-            
-            if (!apiKey) {
-                $('#dcmm-connection-status').html('<span class="error">✗ Please enter an API key first</span>');
-                return;
-            }
-            
-            $('#dcmm-connection-status').html('<span class="testing">Testing connection...</span>');
-            $(this).prop('disabled', true);
-            
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'dcmm_test_mailchimp_connection',
-                    api_key: apiKey,
-                    nonce: nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $('#dcmm-connection-status').html('<span class="success">✓ ' + response.data.message + '</span>');
-                    } else {
-                        $('#dcmm-connection-status').html('<span class="error">✗ ' + response.data.message + '</span>');
-                    }
-                },
-                error: function() {
-                    $('#dcmm-connection-status').html('<span class="error">✗ Connection test failed</span>');
-                },
-                complete: function() {
-                    $('#dcmm-test-connection').prop('disabled', false);
-                }
-            });
-        });
-    });
-    </script>
     <?php
 }
 
@@ -480,85 +315,15 @@ function render_premium_tab() {
  */
 function render_emails_tab() {
     ?>
-    <form method="post" action="options.php">
-        <?php
-        settings_fields( 'dcmm_settings_group' );
-        
-        // Email Settings Section
-        echo '<h2>' . __('Email Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
-        
-        // Show the section description with merge tags
-        $email_section_callback = function() {
-            ?>
-            <section class="dcmm-email-settings-section">
-                <p><?php esc_html_e( 'Configure email notifications for member signups and renewals.', 'dcmm-membership' ); ?></p>
-                <div class="dcmm-email-merge-tags" style="background: #f9f9f9; border-left: 4px solid #0073aa; padding: 15px; margin: 20px 0;">
-                    <h4><?php esc_html_e( 'Available Merge Tags:', 'dcmm-membership' ); ?></h4>
-                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your email templates:', 'dcmm-membership' ); ?></p>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{first_name}">{first_name}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{last_name}">{last_name}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{full_name}">{full_name}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{email}">{email}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{membership_start_date}">{membership_start_date}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{membership_status}">{membership_status}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{renewal_date}">{renewal_date}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{site_name}">{site_name}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{site_url}">{site_url}</button>
-                        <button type="button" class="button button-small dcmm-merge-tag" data-tag="{payment_details}">{payment_details}</button>
-                    </div>
-                    <p style="margin-top: 15px; font-size: 12px; color: #666;">
-                        <strong>Note:</strong> <code>{payment_details}</code> will only show content in renewal emails when payment was made.
-                    </p>
-                </div>
-            </section>
-            <?php
-        };
-        $email_section_callback();
-        
-        echo '<table class="form-table" role="presentation">';
-        do_settings_fields( 'dcmm_settings_group', 'dcmm_email_settings' );
-        echo '</table>';
-        
-        // Expiration Notification Settings Section
-        echo '<h2>' . __('Expiration Notification Settings', DCMM_PLUGIN_SLUG ) . '</h2>';
-        
-        // Show the expiration section description
-        $expiration_section_callback = function() {
-            ?>
-            <section class="dcmm-expiration-notification-section">
-                <p><?php esc_html_e( 'Configure automated email notifications for membership expiration reminders.', 'dcmm-membership' ); ?></p>
-                <div class="dcmm-expiration-merge-tags" style="background: #f9f9f9; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
-                    <h4><?php esc_html_e( 'Available Merge Tags for Expiration Emails:', 'dcmm-membership' ); ?></h4>
-                    <p><?php esc_html_e( 'Click any merge tag below to insert it into your expiration email templates:', 'dcmm-membership' ); ?></p>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{first_name}">{first_name}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{last_name}">{last_name}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{full_name}">{full_name}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{email}">{email}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{membership_status}">{membership_status}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{expiration_date}">{expiration_date}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{days_until_expiration}">{days_until_expiration}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{renewal_url}">{renewal_url}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{site_name}">{site_name}</button>
-                        <button type="button" class="button button-small dcmm-expiration-merge-tag" data-tag="{site_url}">{site_url}</button>
-                    </div>
-                    <p style="margin-top: 15px; font-size: 12px; color: #666;">
-                        <strong>Note:</strong> <code>{renewal_url}</code> will link to your member dashboard renewal page.
-                    </p>
-                </div>
-            </section>
-            <?php
-        };
-        $expiration_section_callback();
-        
-        echo '<table class="form-table" role="presentation">';
-        do_settings_fields( 'dcmm_settings_group', 'dcmm_expiration_notification_settings' );
-        echo '</table>';
-        
-        submit_button();
-        ?>
-    </form>
+    <h2><?php esc_html_e( 'Email Settings', 'dcmm-membership' ); ?></h2>
+    <table class="form-table" role="presentation">
+        <?php do_settings_fields( 'dcmm_settings_group', 'dcmm_email_settings' ); ?>
+    </table>
+
+    <h2><?php esc_html_e( 'Expiration Notification Settings', 'dcmm-membership' ); ?></h2>
+    <table class="form-table" role="presentation">
+        <?php do_settings_fields( 'dcmm_settings_group', 'dcmm_expiration_notification_settings' ); ?>
+    </table>
     <?php
 }
 
@@ -676,7 +441,7 @@ function handle_mailchimp_connection_test() {
         } else {
             wp_send_json_error(array('message' => $result['message']));
         }
-    } catch (Exception $e) {
+    } catch ( \Exception $e ) {
         wp_send_json_error(array('message' => __('Connection test failed: ', DCMM_PLUGIN_SLUG ) . $e->getMessage()));
     }
 }
@@ -1604,165 +1369,6 @@ function register_settings() {
         'dcmm_settings_group',
         'dcmm_membership_settings'
     );
-
-    // Add JavaScript to show/hide the specific date field based on the join policy selection
-    add_action( 'admin_footer', function() {
-        // Only run this JavaScript on the settings page
-        if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'dcmm_settings' ) {
-            return;
-        }
-        ?>
-        <script type="text/javascript">
-            jQuery(document).ready(function($) {
-                // Function to toggle the dues amount field based on the dues enabled checkbox
-                function toggleDuesAmountField() {
-                    var amountRow = $('#dcmm_dues_amount').closest('tr');
-                    var duesEnabledElement = document.getElementById('dcmm_enable_dues');
-                    if (duesEnabledElement) {
-                        var duesEnabled = duesEnabledElement.checked;
-                        if (duesEnabled) {
-                            amountRow.show();
-                            console.debug('on');
-                        } else {
-                            amountRow.hide();
-                            console.debug('off');
-                        }
-                    }
-                }
-
-                // Function to toggle the specific date field based on the join policy selection
-                function toggleSpecificDateField() {
-                    var dateRow = $('#dcmm_anchor_date').closest('tr');
-                    var joinPolicy = $('#dcmm_join_policy').val();
-                    if (joinPolicy === 'anchored_full_term') {
-                        dateRow.show();
-                    } else {
-                        dateRow.hide();
-                    }
-                }
-
-                // Function to update anchor date field based on membership term length
-                function updateAnchorDateField() {
-                    var termLength = $('#dcmm_membership_term_length').val();
-                    var anchorInput = $('#dcmm_anchor_date');
-                    var description = $('#dcmm-anchor-date-description');
-                    
-                    if (termLength === 'monthly') {
-                        anchorInput.attr('placeholder', '15');
-                        description.html('<?php esc_html_e( "Enter the day of the month (1-31) when memberships expire. Example: \"15\" for the 15th of each month.", "dcmm-membership" ); ?>');
-                    } else {
-                        anchorInput.attr('placeholder', '08-15');
-                        description.html('<?php esc_html_e( "Enter the month and day (MM-DD format) when memberships expire. Example: \"08-15\" for August 15th each year.", "dcmm-membership" ); ?>');
-                    }
-                }
-
-                // Initial check
-                toggleDuesAmountField();
-                toggleSpecificDateField();
-                updateAnchorDateField();
-
-                // Bind change event
-                $('#dcmm_enable_dues').change(function() {
-                    toggleDuesAmountField();
-                });
-
-                $('#dcmm_join_policy').change(function() {
-                    toggleSpecificDateField();
-                });
-
-                $('#dcmm_membership_term_length').change(function() {
-                    updateAnchorDateField();
-                });
-
-                // Handle merge tag button clicks
-                $('.dcmm-merge-tag, .dcmm-expiration-merge-tag').on('click', function(e) {
-                    e.preventDefault();
-                    var tag = $(this).data('tag');
-                    
-                    // Try to insert into the active TinyMCE editor
-                    if (typeof tinymce !== 'undefined') {
-                        var activeEditor = tinymce.activeEditor;
-                        if (activeEditor && !activeEditor.isHidden()) {
-                            activeEditor.execCommand('mceInsertContent', false, tag);
-                            return;
-                        }
-                    }
-                    
-                    // Fallback: find the last focused textarea
-                    var $activeTextarea = $('.dcmm-email-template-editor textarea:focus, .dcmm-email-template-editor textarea').last();
-                    if ($activeTextarea.length) {
-                        var textarea = $activeTextarea[0];
-                        var startPos = textarea.selectionStart;
-                        var endPos = textarea.selectionEnd;
-                        var textValue = textarea.value;
-                        
-                        textarea.value = textValue.substring(0, startPos) + tag + textValue.substring(endPos);
-                        textarea.selectionStart = textarea.selectionEnd = startPos + tag.length;
-                        textarea.focus();
-                    }
-                });
-            });
-        </script>
-        
-        <style>
-        .dcmm-email-template-editor {
-            margin-bottom: 20px;
-        }
-        
-        .dcmm-merge-tag, .dcmm-expiration-merge-tag {
-            font-family: monospace;
-            font-size: 11px;
-            margin: 2px;
-            white-space: nowrap;
-        }
-        
-        .dcmm-merge-tag:hover, .dcmm-expiration-merge-tag:hover {
-            background-color: #0073aa;
-            color: white;
-        }
-        
-        .dcmm-expiration-merge-tag {
-            background-color: #f0f8f0;
-            border-color: #28a745;
-        }
-        
-        .dcmm-expiration-merge-tag:hover {
-            background-color: #28a745;
-            color: white;
-        }
-        
-        .dcmm-email-merge-tags {
-            border-radius: 4px;
-        }
-        
-        .dcmm-notification-field {
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .dcmm-notification-field label {
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
-        .dcmm-notification-details {
-            border-top: 1px solid #ddd;
-            padding-top: 15px;
-        }
-        
-        .dcmm-expiration-notification-section {
-            margin-bottom: 20px;
-        }
-        
-        .dcmm-expiration-merge-tags {
-            border-radius: 4px;
-        }
-        </style>
-        <?php
-    });
 
     // if membership period is specific date, add a date field; but only have it show if the membership period is set to specific date
     // the date field will be hidden by default and shown only when the specific date option is selected, dynamically using JavaScript
