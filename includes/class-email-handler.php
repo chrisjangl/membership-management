@@ -690,10 +690,132 @@ class DCMM_Email_Handler {
     }
     
     /**
+     * Generate a preview of the given email type using sample data.
+     *
+     * Accepts an optional template override (e.g. the unsaved editor content)
+     * so admins can preview without saving first. Falls back to the saved
+     * custom template, then to the built-in default.
+     *
+     * @param string $type             welcome|renewal|30_days|7_days|1_day|expired
+     * @param string $template_override Raw HTML to use instead of saved/default template.
+     * @return string Rendered HTML with sample merge-tag values substituted.
+     * @since 1.1.0
+     */
+    public function get_preview_html( $type, $template_override = '' ) {
+        $expiration_types = array( '30_days', '7_days', '1_day', 'expired' );
+
+        if ( in_array( $type, array( 'welcome', 'renewal' ), true ) ) {
+            if ( ! empty( $template_override ) ) {
+                $template = $template_override;
+            } else {
+                $settings = get_option( 'dcmm_email_settings', array() );
+                $template = $this->get_email_template_content( $type, $settings );
+            }
+            return $this->replace_merge_tags_with_sample( $template, $type );
+        }
+
+        if ( in_array( $type, $expiration_types, true ) ) {
+            if ( ! empty( $template_override ) ) {
+                $template = $template_override;
+            } else {
+                $settings = get_option( 'dcmm_expiration_notification_settings', array() );
+                $template = $this->get_expiration_template_content( $type, $settings );
+            }
+            return $this->replace_expiration_merge_tags_with_sample( $template );
+        }
+
+        return '';
+    }
+
+    /**
+     * Resolve the saved or default template for welcome/renewal emails.
+     *
+     * @param string $type     welcome|renewal
+     * @param array  $settings dcmm_email_settings option value.
+     * @return string HTML template.
+     */
+    private function get_email_template_content( $type, $settings ) {
+        $key = $type . '_template';
+        if ( ! empty( $settings[ $key ] ) ) {
+            return $settings[ $key ];
+        }
+        return $this->get_default_template( $type );
+    }
+
+    /**
+     * Resolve the saved or default template for expiration notification emails.
+     *
+     * @param string $type     30_days|7_days|1_day|expired
+     * @param array  $settings dcmm_expiration_notification_settings option value.
+     * @return string HTML template.
+     */
+    private function get_expiration_template_content( $type, $settings ) {
+        if ( ! empty( $settings['notifications'][ $type ]['template'] ) ) {
+            return $settings['notifications'][ $type ]['template'];
+        }
+        return $this->get_default_expiration_template( $type );
+    }
+
+    /**
+     * Replace welcome/renewal merge tags with sample data for preview purposes.
+     *
+     * @param string $template Raw HTML template.
+     * @param string $type     welcome|renewal — controls whether {payment_details} is populated.
+     * @return string HTML with sample values substituted.
+     */
+    private function replace_merge_tags_with_sample( $template, $type = '' ) {
+        $payment_details = '';
+        if ( $type === 'renewal' ) {
+            $payment_details =
+                '<p><strong>Amount Paid:</strong> $50.00</p>' .
+                '<p><strong>Payment Method:</strong> PayPal</p>' .
+                '<p><strong>Transaction ID:</strong> TXN123456789</p>';
+        }
+
+        $replacements = array(
+            '{first_name}'            => 'Jane',
+            '{last_name}'             => 'Smith',
+            '{full_name}'             => 'Jane Smith',
+            '{email}'                 => 'jane.smith@example.com',
+            '{membership_start_date}' => date( 'F j, Y', strtotime( '-1 year' ) ),
+            '{membership_status}'     => 'Active',
+            '{renewal_date}'          => date( 'F j, Y' ),
+            '{site_name}'             => get_bloginfo( 'name' ),
+            '{site_url}'              => get_site_url(),
+            '{payment_details}'       => $payment_details,
+        );
+
+        return str_replace( array_keys( $replacements ), array_values( $replacements ), $template );
+    }
+
+    /**
+     * Replace expiration merge tags with sample data for preview purposes.
+     *
+     * @param string $template Raw HTML template.
+     * @return string HTML with sample values substituted.
+     */
+    private function replace_expiration_merge_tags_with_sample( $template ) {
+        $replacements = array(
+            '{first_name}'            => 'Jane',
+            '{last_name}'             => 'Smith',
+            '{full_name}'             => 'Jane Smith',
+            '{email}'                 => 'jane.smith@example.com',
+            '{membership_status}'     => 'Active',
+            '{expiration_date}'       => date( 'F j, Y', strtotime( '+30 days' ) ),
+            '{days_until_expiration}' => '30',
+            '{renewal_url}'           => '#renew-membership',
+            '{site_name}'             => get_bloginfo( 'name' ),
+            '{site_url}'              => get_site_url(),
+        );
+
+        return str_replace( array_keys( $replacements ), array_values( $replacements ), $template );
+    }
+
+    /**
      * Get available merge tags for emails
-     * 
+     *
      * TODO: Should this be combined with get_merge_tags()?
-     * 
+     *
      * @return array Associative array of merge tags and their descriptions
      * @since 1.1.0
      */

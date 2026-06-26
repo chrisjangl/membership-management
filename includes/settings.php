@@ -60,6 +60,10 @@ function enqueue_admin_assets( $hook_suffix ) {
         array(
             'anchorDateMonthly' => __( 'Enter the day of the month (1-31) when memberships expire. Example: "15" for the 15th of each month.', 'dcmm-membership' ),
             'anchorDateYearly'  => __( 'Enter the month and day (MM-DD format) when memberships expire. Example: "08-15" for August 15th each year.', 'dcmm-membership' ),
+            'previewNonce'      => wp_create_nonce( 'dcmm_preview_email' ),
+            'previewLabel'      => __( 'Preview Email', 'dcmm-membership' ),
+            'previewLoading'    => __( 'Loading…', 'dcmm-membership' ),
+            'previewError'      => __( 'Preview failed. Please try again.', 'dcmm-membership' ),
         )
     );
 }
@@ -446,6 +450,60 @@ function handle_mailchimp_connection_test() {
     }
 }
 add_action('wp_ajax_dcmm_test_mailchimp_connection', __NAMESPACE__ . '\handle_mailchimp_connection_test');
+
+/**
+ * Render a preview of an email template and return the HTML via AJAX.
+ *
+ * Accepts an optional `template` parameter containing the current (possibly
+ * unsaved) editor content so admins can preview without saving first.
+ */
+function handle_preview_email() {
+    check_ajax_referer( 'dcmm_preview_email', 'nonce' );
+
+    if ( ! current_user_can( 'manage_dcmm_settings' ) ) {
+        wp_send_json_error( array( 'message' => __( 'Permission denied.', 'dcmm-membership' ) ) );
+    }
+
+    $valid_types   = array( 'welcome', 'renewal', '30_days', '7_days', '1_day', 'expired' );
+    $email_type    = isset( $_POST['email_type'] ) ? sanitize_text_field( $_POST['email_type'] ) : '';
+    $template_override = isset( $_POST['template'] ) ? wp_kses_post( wp_unslash( $_POST['template'] ) ) : '';
+
+    if ( ! in_array( $email_type, $valid_types, true ) ) {
+        wp_send_json_error( array( 'message' => __( 'Invalid email type.', 'dcmm-membership' ) ) );
+    }
+
+    $email_handler = \DCMM_Email_Handler::get_instance();
+    $html          = $email_handler->get_preview_html( $email_type, $template_override );
+
+    // Resolve subject from saved settings for display in the preview window.
+    if ( in_array( $email_type, array( 'welcome', 'renewal' ), true ) ) {
+        $settings = get_option( 'dcmm_email_settings', array() );
+        $defaults = array(
+            'welcome' => __( 'Welcome to Your Membership!', 'dcmm-membership' ),
+            'renewal' => __( 'Membership Renewal Confirmation', 'dcmm-membership' ),
+        );
+        $subject = ! empty( $settings[ $email_type . '_subject' ] )
+            ? $settings[ $email_type . '_subject' ]
+            : $defaults[ $email_type ];
+    } else {
+        $settings = get_option( 'dcmm_expiration_notification_settings', array() );
+        $defaults = array(
+            '30_days' => __( 'Your membership expires in 30 days', 'dcmm-membership' ),
+            '7_days'  => __( 'Your membership expires in 7 days', 'dcmm-membership' ),
+            '1_day'   => __( 'Your membership expires tomorrow', 'dcmm-membership' ),
+            'expired' => __( 'Your membership has expired', 'dcmm-membership' ),
+        );
+        $subject = ! empty( $settings['notifications'][ $email_type ]['subject'] )
+            ? $settings['notifications'][ $email_type ]['subject']
+            : ( isset( $defaults[ $email_type ] ) ? $defaults[ $email_type ] : '' );
+    }
+
+    wp_send_json_success( array(
+        'html'    => $html,
+        'subject' => esc_html( $subject ),
+    ) );
+}
+add_action( 'wp_ajax_dcmm_preview_email', __NAMESPACE__ . '\handle_preview_email' );
 
 /**
  * Register settings for the Membership Management plugin.
@@ -1046,6 +1104,9 @@ function register_settings() {
                     <?php esc_html_e( 'HTML template for welcome emails. Leave blank to use default template.', 'dcmm-membership' ); ?><br>
                     <strong><?php esc_html_e( 'Tip:', 'dcmm-membership' ); ?></strong> <?php esc_html_e( 'Use the merge tags listed above to personalize your emails.', 'dcmm-membership' ); ?>
                 </p>
+                <button type="button" class="button dcmm-preview-email" data-email-type="welcome" data-editor-id="dcmm_welcome_email_template">
+                    <?php esc_html_e( 'Preview Email', 'dcmm-membership' ); ?>
+                </button>
             </div>
             <?php
         },
@@ -1116,6 +1177,9 @@ function register_settings() {
                     <?php esc_html_e( 'HTML template for renewal emails. Leave blank to use default template.', 'dcmm-membership' ); ?><br>
                     <strong><?php esc_html_e( 'Tip:', 'dcmm-membership' ); ?></strong> <?php esc_html_e( 'Use the merge tags listed above to personalize your emails.', 'dcmm-membership' ); ?>
                 </p>
+                <button type="button" class="button dcmm-preview-email" data-email-type="renewal" data-editor-id="dcmm_renewal_email_template">
+                    <?php esc_html_e( 'Preview Email', 'dcmm-membership' ); ?>
+                </button>
             </div>
             <?php
         },
@@ -1210,6 +1274,9 @@ function register_settings() {
                             )
                         ));
                         ?>
+                        <button type="button" class="button dcmm-preview-email" data-email-type="30_days" data-editor-id="dcmm_30_day_template">
+                            <?php esc_html_e( 'Preview Email', 'dcmm-membership' ); ?>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1251,6 +1318,9 @@ function register_settings() {
                             )
                         ));
                         ?>
+                        <button type="button" class="button dcmm-preview-email" data-email-type="7_days" data-editor-id="dcmm_7_day_template">
+                            <?php esc_html_e( 'Preview Email', 'dcmm-membership' ); ?>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1292,6 +1362,9 @@ function register_settings() {
                             )
                         ));
                         ?>
+                        <button type="button" class="button dcmm-preview-email" data-email-type="1_day" data-editor-id="dcmm_1_day_template">
+                            <?php esc_html_e( 'Preview Email', 'dcmm-membership' ); ?>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1333,6 +1406,9 @@ function register_settings() {
                             )
                         ));
                         ?>
+                        <button type="button" class="button dcmm-preview-email" data-email-type="expired" data-editor-id="dcmm_expired_template">
+                            <?php esc_html_e( 'Preview Email', 'dcmm-membership' ); ?>
+                        </button>
                     </div>
                 </div>
             </div>
