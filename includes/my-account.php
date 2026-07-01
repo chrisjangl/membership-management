@@ -136,8 +136,10 @@ function dcmm_render_dashboard() {
     // Check if the user is an organizational member
     include_once( 'functions-user-role.php' );
     if ( ! DCMM_Users\is_organizational_member( $user_id ) ) {
-        wp_redirect( home_url( '/member-login/' ) );
-        exit;
+        ob_start();
+        echo '<div class="dcmm-error"><p>You do not have an active membership account. If you believe this is an error, please contact support.</p></div>';
+        echo '<p><a href="' . esc_url( wp_logout_url( home_url( '/member-login/' ) ) ) . '">Log out</a></p>';
+        return ob_get_clean();
     }
 
     // get the member post ID for the current user
