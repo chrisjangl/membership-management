@@ -126,6 +126,7 @@ function dcmm_custom_columns( $default_columns ) {
 		'cb' => $default_columns['cb'],
 		'name' => 'Name',
 		'status' => __( 'Membership Status', DCMM_PLUGIN_SLUG ),
+		'renewal_status' => __( 'Renewal Status', DCMM_PLUGIN_SLUG ),
 		'email' => __( 'Email', DCMM_PLUGIN_SLUG ),
 		'address' => __( 'Address', DCMM_PLUGIN_SLUG ),
 		'phone' => __( 'Phone', DCMM_PLUGIN_SLUG ),
@@ -207,6 +208,26 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 				} elseif ($renewal_status === 'suspended') {
 					echo '<br><span class="dcmm-renewal-indicator dcmm-suspended" title="Membership suspended">🔴 Suspended</span>';
 				}
+			}
+			break;
+		case 'renewal_status':
+			$renewal_status = $member->get_renewal_status();
+			switch ($renewal_status) {
+				case 'available':
+					echo '<span class="dcmm-renewal-status dcmm-available" title="Renewal available">🟡 Renewal Available</span>';
+					break;
+				case 'too_early':
+					$days = $member->get_days_until_renewal_window();
+					echo '<span class="dcmm-renewal-status dcmm-pending" title="Renewal in ' . $days . ' days">🟢 Renewal Pending (' . $days . ' days)</span>';
+					break;
+				case 'grace':
+					echo '<span class="dcmm-renewal-status dcmm-grace" title="In grace period">🟠 Grace Period</span>';
+					break;
+				case 'suspended':
+					echo '<span class="dcmm-renewal-status dcmm-suspended" title="Membership suspended">🔴 Suspended</span>';
+					break;
+				default:
+					echo '<span class="dcmm-renewal-status dcmm-unknown" title="Unknown renewal status">⚪ Unknown</span>';
 			}
 			break;
 	}
