@@ -48,6 +48,12 @@ function register_action_hooks() {
 	// handle custom sorting
 	\add_action( 'pre_get_posts', '\DCMM_Post_Type\dcmm_sortable_columns_orderby' );
 
+	// add member status filter dropdown
+	\add_action( 'restrict_manage_posts', '\DCMM_Post_Type\dcmm_status_filter_dropdown' );
+
+	// apply member status filter to query
+	\add_action( 'pre_get_posts', '\DCMM_Post_Type\dcmm_filter_by_status' );
+
 	// add renewal method filter dropdown
 	\add_action( 'restrict_manage_posts', '\DCMM_Post_Type\dcmm_renewal_method_filter_dropdown' );
 
@@ -275,6 +281,57 @@ function dcmm_sortable_columns_orderby( $query ) {
 
 }
 
+
+/**
+ * Output the Member Status filter dropdown on the Members list screen.
+ */
+function dcmm_status_filter_dropdown() {
+	global $typenow;
+	if ( $typenow !== get_post_type() ) {
+		return;
+	}
+
+	$selected = isset( $_GET['dcmm_status'] ) ? sanitize_key( $_GET['dcmm_status'] ) : '';
+
+	echo '<select name="dcmm_status">';
+	echo '<option value="">' . esc_html__( 'All Statuses', DCMM_PLUGIN_SLUG ) . '</option>';
+	echo '<option value="active"' . selected( $selected, 'active', false ) . '>' . esc_html__( 'Active', DCMM_PLUGIN_SLUG ) . '</option>';
+	echo '<option value="inactive"' . selected( $selected, 'inactive', false ) . '>' . esc_html__( 'Inactive', DCMM_PLUGIN_SLUG ) . '</option>';
+	echo '</select>';
+}
+
+/**
+ * Filter the Members query by status when the dropdown is used.
+ *
+ * @param WP_Query $query
+ */
+function dcmm_filter_by_status( $query ) {
+	global $pagenow;
+
+	if ( ! is_admin() || ! $query->is_main_query() || $pagenow !== 'edit.php' ) {
+		return;
+	}
+
+	if ( $query->get( 'post_type' ) !== get_post_type() ) {
+		return;
+	}
+
+	$status = isset( $_GET['dcmm_status'] ) ? sanitize_key( $_GET['dcmm_status'] ) : '';
+
+	if ( empty( $status ) ) {
+		return;
+	}
+
+	$existing_meta_query = $query->get( 'meta_query' ) ?: array();
+
+	$query->set( 'meta_query', array_merge( $existing_meta_query, array(
+		array(
+			'key'     => 'dcmm_status',
+			'value'   => $status,
+			'compare' => '=',
+		),
+	) ) );
+}
 
 /**
  * Output the Renewal Method filter dropdown on the Members list screen.
