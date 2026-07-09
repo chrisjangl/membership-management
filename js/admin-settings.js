@@ -108,6 +108,72 @@
         });
     }
 
+    // --- Email template preview ---
+    function initEmailPreviews() {
+        $( document ).on( 'click', '.dcmm-preview-email', function ( e ) {
+            e.preventDefault();
+
+            var $btn      = $( this );
+            var emailType = $btn.data( 'email-type' );
+            var editorId  = $btn.data( 'editor-id' );
+
+            // Grab current editor content (may be unsaved).
+            var template = '';
+            if ( typeof tinymce !== 'undefined' ) {
+                var editor = tinymce.get( editorId );
+                if ( editor && ! editor.isHidden() ) {
+                    template = editor.getContent();
+                }
+            }
+            if ( ! template ) {
+                template = $( '#' + editorId ).val() || '';
+            }
+
+            $btn.prop( 'disabled', true ).text( dcmmSettings.previewLoading );
+
+            $.post( ajaxurl, {
+                action:     'dcmm_preview_email',
+                email_type: emailType,
+                template:   template,
+                nonce:      dcmmSettings.previewNonce,
+            } ).done( function ( response ) {
+                if ( response.success ) {
+                    var win = window.open( '', '_blank', 'width=720,height=640,scrollbars=yes,resizable=yes' );
+                    if ( ! win ) {
+                        alert( 'Please allow pop-ups for this site to preview emails.' );
+                        return;
+                    }
+                    win.document.write(
+                        '<!DOCTYPE html><html><head>' +
+                        '<meta charset="UTF-8">' +
+                        '<title>' + response.data.subject + '</title>' +
+                        '<style>' +
+                        'body{margin:0;padding:0;background:#f0f0f1;font-family:Arial,sans-serif;}' +
+                        '.dcmm-preview-bar{background:#1d2327;color:#f0f0f1;padding:12px 20px;}' +
+                        '.dcmm-preview-bar .subject{font-size:14px;font-weight:600;margin-bottom:3px;}' +
+                        '.dcmm-preview-bar .note{font-size:11px;color:#8c8f94;}' +
+                        '.dcmm-preview-body{max-width:680px;margin:24px auto;background:#fff;}' +
+                        '</style>' +
+                        '</head><body>' +
+                        '<div class="dcmm-preview-bar">' +
+                        '<div class="subject">Subject: ' + response.data.subject + '</div>' +
+                        '<div class="note">Preview with sample data &mdash; merge tags have been replaced with placeholder values.</div>' +
+                        '</div>' +
+                        '<div class="dcmm-preview-body">' + response.data.html + '</div>' +
+                        '</body></html>'
+                    );
+                    win.document.close();
+                } else {
+                    alert( dcmmSettings.previewError );
+                }
+            } ).fail( function () {
+                alert( dcmmSettings.previewError );
+            } ).always( function () {
+                $btn.prop( 'disabled', false ).text( dcmmSettings.previewLabel );
+            } );
+        } );
+    }
+
     // --- MailChimp AJAX ---
     function initMailChimp() {
         if ( ! $( '#dcmm-mailchimp-api-form' ).length ) {
@@ -170,6 +236,7 @@
         initFormSave();
         initGeneralTabBehavior();
         initMergeTags();
+        initEmailPreviews();
         initMailChimp();
     });
 
