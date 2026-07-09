@@ -1616,6 +1616,26 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
+	 * Checks whether Member is set to renew automatically (subscription)
+	 *
+	 * @return string|false 'Subscription' if member has active subscription, 'Manual' if not, false if not an active member
+	 */
+	public function get_renewal_method() {
+		if ( $this->has_active_subscription() ) {
+			return 'Subscription';
+		}
+
+		// if not an active member, return false
+		if ( $this->get( 'status' ) !== 'active' ) {
+			return false;
+		} else {
+
+			// if active member but no subscription, return 'Manual'
+			return 'Manual';
+		}
+	}
+
+	/**
 	 * Get renewal window days setting
 	 * 
 	 * @return int Number of days before expiration that renewal becomes available

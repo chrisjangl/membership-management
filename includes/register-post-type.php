@@ -48,6 +48,12 @@ function register_action_hooks() {
 	// handle custom sorting
 	\add_action( 'pre_get_posts', '\DCMM_Post_Type\dcmm_sortable_columns_orderby' );
 
+	// add renewal method filter dropdown
+	\add_action( 'restrict_manage_posts', '\DCMM_Post_Type\dcmm_renewal_method_filter_dropdown' );
+
+	// apply renewal method filter to query
+	\add_action( 'pre_get_posts', '\DCMM_Post_Type\dcmm_filter_by_renewal_method' );
+
 }
 
 /**
@@ -116,6 +122,8 @@ function dcmm_register_post_type() {
  * Add a Name column and a Membership Status column, and brings the 
  * cb column from what we were passed.
  * 
+ * TODO: If Join policy is "rolling", add expiration date column
+ * 
  * @param array $default_columns
  * 
  * @return array $columns
@@ -126,7 +134,7 @@ function dcmm_custom_columns( $default_columns ) {
 		'cb' => $default_columns['cb'],
 		'name' => 'Name',
 		'status' => __( 'Membership Status', DCMM_PLUGIN_SLUG ),
-		'renewal_status' => __( 'Renewal Status', DCMM_PLUGIN_SLUG ),
+		'renewal_method' => __( 'Renewal Method', DCMM_PLUGIN_SLUG ),
 		'email' => __( 'Email', DCMM_PLUGIN_SLUG ),
 		'address' => __( 'Address', DCMM_PLUGIN_SLUG ),
 		'phone' => __( 'Phone', DCMM_PLUGIN_SLUG ),
@@ -210,25 +218,9 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 				}
 			}
 			break;
-		case 'renewal_status':
-			$renewal_status = $member->get_renewal_status();
-			switch ($renewal_status) {
-				case 'available':
-					echo '<span class="dcmm-renewal-status dcmm-available" title="Renewal available">🟡 Renewal Available</span>';
-					break;
-				case 'too_early':
-					$days = $member->get_days_until_renewal_window();
-					echo '<span class="dcmm-renewal-status dcmm-pending" title="Renewal in ' . $days . ' days">🟢 Renewal Pending (' . $days . ' days)</span>';
-					break;
-				case 'grace':
-					echo '<span class="dcmm-renewal-status dcmm-grace" title="In grace period">🟠 Grace Period</span>';
-					break;
-				case 'suspended':
-					echo '<span class="dcmm-renewal-status dcmm-suspended" title="Membership suspended">🔴 Suspended</span>';
-					break;
-				default:
-					echo '<span class="dcmm-renewal-status dcmm-unknown" title="Unknown renewal status">⚪ Unknown</span>';
-			}
+		case 'renewal_method':
+			$renewal_method = $member->get_renewal_method();
+			echo $renewal_method ? esc_html( $renewal_method ) : '---';
 			break;
 	}
 }
@@ -285,8 +277,80 @@ function dcmm_sortable_columns_orderby( $query ) {
 
 
 /**
+ * Output the Renewal Method filter dropdown on the Members list screen.
+ */
+function dcmm_renewal_method_filter_dropdown() {
+	global $typenow;
+	if ( $typenow !== get_post_type() ) {
+		return;
+	}
+
+	$selected = isset( $_GET['dcmm_renewal_method'] ) ? sanitize_key( $_GET['dcmm_renewal_method'] ) : '';
+
+	echo '<select name="dcmm_renewal_method">';
+	echo '<option value="">' . esc_html__( 'All Renewal Types', DCMM_PLUGIN_SLUG ) . '</option>';
+	echo '<option value="subscription"' . selected( $selected, 'subscription', false ) . '>' . esc_html__( 'Subscription', DCMM_PLUGIN_SLUG ) . '</option>';
+	echo '<option value="manual"' . selected( $selected, 'manual', false ) . '>' . esc_html__( 'Manual', DCMM_PLUGIN_SLUG ) . '</option>';
+	echo '</select>';
+}
+
+/**
+ * Filter the Members query by renewal method when the dropdown is used.
+ *
+ * @param WP_Query $query
+ */
+function dcmm_filter_by_renewal_method( $query ) {
+	global $pagenow;
+
+	if ( ! is_admin() || ! $query->is_main_query() || $pagenow !== 'edit.php' ) {
+		return;
+	}
+
+	if ( $query->get( 'post_type' ) !== get_post_type() ) {
+		return;
+	}
+
+	$renewal_method = isset( $_GET['dcmm_renewal_method'] ) ? sanitize_key( $_GET['dcmm_renewal_method'] ) : '';
+
+	if ( empty( $renewal_method ) ) {
+		return;
+	}
+
+	if ( $renewal_method === 'subscription' ) {
+		$query->set( 'meta_query', array(
+			array(
+				'key'     => 'dcmm_subscription_status',
+				'value'   => array( 'active', 'trialing' ),
+				'compare' => 'IN',
+			),
+		) );
+	} elseif ( $renewal_method === 'manual' ) {
+		$query->set( 'meta_query', array(
+			'relation' => 'AND',
+			array(
+				'key'     => 'dcmm_status',
+				'value'   => 'active',
+				'compare' => '=',
+			),
+			array(
+				'relation' => 'OR',
+				array(
+					'key'     => 'dcmm_subscription_status',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'dcmm_subscription_status',
+					'value'   => array( 'active', 'trialing' ),
+					'compare' => 'NOT IN',
+				),
+			),
+		) );
+	}
+}
+
+/**
  * add our meta boxes to the edit Member screen
- * 
+ *
  * TODO: link to the metabox class
  * @return void
  */
