@@ -608,6 +608,11 @@ class DCMM_metaboxes {
                 continue;
             }
 
+            // get posted data, skipping if not present
+            if ( ! isset( $_POST[$meta_key] ) ) {
+                continue;
+            }
+
             // get posted data, checking if the field is an array...
             if ( is_array( $_POST[$meta_key] ) ) {
                 // ...if so, sanitize each value in the array...
