@@ -137,53 +137,11 @@ function settings_page_callback() {
  * Render General tab content
  */
 function render_general_tab() {
-    render_page_urls_section();
+
     ?>
     <h2><?php esc_html_e( 'Membership Settings', 'dcmm-membership' ); ?></h2>
     <table class="form-table" role="presentation">
         <?php do_settings_fields( 'dcmm_settings_group', 'dcmm_membership_settings' ); ?>
-    </table>
-    <?php
-}
-
-/**
- * Render the Page URLs info block at the top of the General tab.
- */
-function render_page_urls_section() {
-    $options = get_option( 'dcmm_settings' );
-
-    $dashboard_page_id = isset( $options['dcmm_my_account_page'] ) ? $options['dcmm_my_account_page'] : '';
-    $login_page_id     = isset( $options['dcmm_login_page'] )      ? $options['dcmm_login_page']      : '';
-
-    $dashboard_url = $dashboard_page_id ? get_permalink( $dashboard_page_id ) : false;
-    $login_url     = $login_page_id     ? get_permalink( $login_page_id )     : false;
-    ?>
-    <h2><?php esc_html_e( 'Page URLs', 'dcmm-membership' ); ?></h2>
-    <table class="form-table" role="presentation">
-        <tr>
-            <th scope="row"><?php esc_html_e( 'Member Dashboard', 'dcmm-membership' ); ?></th>
-            <td>
-                <?php if ( $dashboard_url ) : ?>
-                    <a href="<?php echo esc_url( $dashboard_url ); ?>" target="_blank">
-                        <code><?php echo esc_html( $dashboard_url ); ?></code>
-                    </a>
-                <?php else : ?>
-                    <em><?php esc_html_e( 'No page selected — choose one under "My Account Page" below.', 'dcmm-membership' ); ?></em>
-                <?php endif; ?>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row"><?php esc_html_e( 'Member Login', 'dcmm-membership' ); ?></th>
-            <td>
-                <?php if ( $login_url ) : ?>
-                    <a href="<?php echo esc_url( $login_url ); ?>" target="_blank">
-                        <code><?php echo esc_html( $login_url ); ?></code>
-                    </a>
-                <?php else : ?>
-                    <em><?php esc_html_e( 'No page selected — choose one under "Login Page" below.', 'dcmm-membership' ); ?></em>
-                <?php endif; ?>
-            </td>
-        </tr>
     </table>
     <?php
 }
@@ -1391,10 +1349,10 @@ function register_settings() {
         'capability' => 'manage_dcmm_settings'
     ) );
 
-    // My Account Page setting
+    // Member Dashboard setting
     add_settings_field(
         'dcmm_my_account_page',
-        __( 'My Account Page', DCMM_PLUGIN_SLUG ),
+        __( 'Member Dashboard Page', DCMM_PLUGIN_SLUG ),
         function() {
             $options = get_option( 'dcmm_settings' );
             $selected_page = isset( $options['dcmm_my_account_page'] ) ? $options['dcmm_my_account_page'] : '';
@@ -1406,6 +1364,7 @@ function register_settings() {
                 'option_none_value' => ''
             ) );
             ?>
+            <p class="description"><b>Page URL</b>: <span id="dcmm_dashboard_url"><?php echo esc_url( \DCMM_Settings\get_dashboard_url() ); ?></span></p>
             <p class="description"><?php esc_html_e( 'Select the page that contains your member dashboard shortcode. This will be used for renewal links in expiration emails.', 'dcmm-membership' ); ?></p>
             <?php
         },
@@ -1428,6 +1387,7 @@ function register_settings() {
                 'option_none_value' => ''
             ) );
             ?>
+            <p class="description"><b>Page URL</b>: <span id="dcmm_login_url"><?php echo esc_url( \DCMM_Settings\get_login_url() ); ?></span></p>
             <p class="description"><?php esc_html_e( 'Select the page that contains the [member_login] shortcode.', 'dcmm-membership' ); ?></p>
             <?php
         },
@@ -1650,8 +1610,75 @@ function get_renewal_notice_days() {
 }
 
 /**
+ * Get the member dashboard page URL.
+ *
+ * Falls back to /member-dashboard/ if no page is configured in settings.
+ *
+ * @since 1.1.0
+ * @return string
+ */
+function get_dashboard_url() {
+    
+    $settings = get_settings();
+    $page_id  = isset( $settings['dcmm_my_account_page'] ) ? (int) $settings['dcmm_my_account_page'] : 0;
+    if ( $page_id ) {
+        $url = get_permalink( $page_id );
+        if ( $url ) {
+            return $url;
+        }
+    }
+
+    // Fallback to default dashboard URL
+    return home_url( '/member-dashboard/' );
+}
+
+/**
+ * Get the member login page URL.
+ *
+ * Falls back to /member-login/ if no page is configured in settings.
+ *
+ * @since 1.1.0
+ * @return string
+ */
+function get_login_url() {
+    $settings = get_settings();
+    $page_id  = isset( $settings['dcmm_login_page'] ) ? (int) $settings['dcmm_login_page'] : 0;
+    if ( $page_id ) {
+        $url = get_permalink( $page_id );
+        if ( $url ) {
+            return $url;
+        }
+    }
+
+    // Fallback to default login URL
+    return home_url( '/member-login/' );
+}
+
+/**
+ * Get the member dashboard page ID from settings.
+ *
+ * @since 1.1.0
+ * @return int 0 if not configured.
+ */
+function get_dashboard_page_id() {
+    $settings = get_settings();
+    return isset( $settings['dcmm_my_account_page'] ) ? (int) $settings['dcmm_my_account_page'] : 0;
+}
+
+/**
+ * Get the member login page ID from settings.
+ *
+ * @since 1.1.0
+ * @return int 0 if not configured.
+ */
+function get_login_page_id() {
+    $settings = get_settings();
+    return isset( $settings['dcmm_login_page'] ) ? (int) $settings['dcmm_login_page'] : 0;
+}
+
+/**
  * Check if offline payments are enabled.
- * 
+ *
  * @since 1.1.0
  * @return bool True if offline payments are enabled, false otherwise.
  */

@@ -248,8 +248,9 @@ function dcmm_find_member_by_paypal_order( $order_id ) {
  * @return WP_REST_Response Redirect response.
  */
 function dcmm_redirect_with_success( $message ) {
-    
-    $dashboard_url = home_url( '/member-dashboard/' );
+
+    // Get Dashboard URL from plugin settings
+    $dashboard_url = \DCMM_Settings\get_dashboard_url();
     $redirect_url = add_query_arg( [
         'payment' => 'success',
         'message' => urlencode( $message )
@@ -405,7 +406,8 @@ function dcmm_find_member_by_paypal_subscription( $subscription_id ) {
  */
 function dcmm_redirect_with_error( $message ) {
     
-    $dashboard_url = home_url( '/member-dashboard/' );
+    // Get Dashboard URL from plugin settings
+    $dashboard_url = \DCMM_Settings\get_dashboard_url();
     $redirect_url = add_query_arg( [
         'payment' => 'error',
         'message' => urlencode( $message )

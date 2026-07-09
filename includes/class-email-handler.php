@@ -642,49 +642,15 @@ class DCMM_Email_Handler {
     
     /**
      * Get renewal URL for the member
-     * 
-     * TODO: This logic might be better placed in a utility class or the DCMM_Member class
-     * 
+     *
      * @param DCMM_Member $member The member object
      * @return string The renewal URL
      * @since 1.1.0
      */
     private function get_renewal_url($member) {
-        // Get the my account page from settings
-        $settings = get_option('dcmm_settings', array());
-        $my_account_page_id = isset($settings['dcmm_my_account_page']) ? $settings['dcmm_my_account_page'] : '';
-        
-        if ($my_account_page_id && get_post($my_account_page_id)) {
-            // Use the configured page
-            $renewal_url = get_permalink($my_account_page_id);
-        } else {
-            // Try to find a page with the member dashboard shortcode
-            $pages_with_shortcode = get_posts(array(
-                'post_type' => 'page',
-                'post_status' => 'publish',
-                'posts_per_page' => 1,
-                's' => 'dcmm_member_dashboard'
-            ));
-            
-            if (!empty($pages_with_shortcode)) {
-                $renewal_url = get_permalink($pages_with_shortcode[0]->ID);
-            } else {
-                // Fallback: try common page names
-                $fallback_pages = array('member-dashboard', 'my-account', 'member-login');
-                $renewal_url = home_url('/');
-                
-                foreach ($fallback_pages as $page_slug) {
-                    $page = get_page_by_path($page_slug);
-                    if ($page) {
-                        $renewal_url = get_permalink($page->ID);
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // Add renewal parameter if member needs to renew
-        $renewal_url = add_query_arg('dcmm_action', 'renew', $renewal_url);
+
+        // Get the dashboard URL from plugin settings and append the renewal action
+        $renewal_url = add_query_arg('dcmm_action', 'renew', \DCMM_Settings\get_dashboard_url());
         
         return apply_filters('dcmm_renewal_url', $renewal_url, $member);
     }

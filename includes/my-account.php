@@ -3,11 +3,13 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 /**
  * Functionality relating to the user's My Account page
+ * 
+ * TODO: rename to Member Dashboard, to keep consistent with the rest of the plugin
  */
 use \DCMM_Users\is_organizational_member;
 
 /**
- * Enqueue styles & scripts used on Member Account area (frontend)
+ * Enqueue styles & scripts used on Member Account area (front-end)
  */
 function dcmm_enqueue_member_dashboard_styles_scripts() {
 
@@ -54,18 +56,24 @@ add_action( 'wp_ajax_dcmm_cancel_subscription', 'ajax_cancel_subscription' );
  */
 function dcmm_render_login_form() {
 
+    // If user is logged in, redirect to Member Dashboard
     if ( is_user_logged_in() ) {
-        // Check if there's a redirect URL in the query string
-        $redirect_to = isset($_GET['redirect_to']) ? urldecode($_GET['redirect_to']) : home_url( '/member-dashboard/' );
-        
-        // Validate the redirect URL is from our site for security
-        if (strpos($redirect_to, home_url()) === 0) {
-            wp_redirect( $redirect_to );
-        } else {
-            // TODO: get Dashboard URL from settings
-            wp_redirect( home_url( '/member-dashboard/' ) );
+
+        // Skip redirect for editors/admins so the block editor iframe and admin-bar
+        // "Edit Page" link work without being bounced to the dashboard.
+        if ( ! current_user_can( 'edit_pages' ) && ! is_preview() ) {
+
+            // Check if there's a redirect URL in the query string
+            $redirect_to = isset($_GET['redirect_to']) ? urldecode($_GET['redirect_to']) : \DCMM_Settings\get_dashboard_url();
+
+            // Validate the redirect URL is from our site for security
+            if (strpos($redirect_to, home_url()) === 0) {
+                wp_redirect( $redirect_to );
+            } else {
+                wp_redirect( \DCMM_Settings\get_dashboard_url() );
+            }
+            exit;
         }
-        exit;
     }
 
     ob_start();
@@ -75,7 +83,7 @@ function dcmm_render_login_form() {
     }
 
     // Preserve the original destination URL if provided
-    $redirect_to = isset($_GET['redirect_to']) ? urldecode($_GET['redirect_to']) : home_url( '/member-dashboard/' );
+    $redirect_to = isset($_GET['redirect_to']) ? urldecode($_GET['redirect_to']) : \DCMM_Settings\get_dashboard_url();
 
     $args = [
         'echo'           => true,
@@ -125,7 +133,7 @@ add_action( 'wp_login_failed', 'dcmm_login_failed_redirect' );
 function dcmm_render_dashboard() {
 
     if ( ! is_user_logged_in() ) {
-        wp_redirect( home_url( '/member-login/' ) );
+        wp_redirect( \DCMM_Settings\get_login_url() );
         exit;
     }
 
@@ -138,7 +146,7 @@ function dcmm_render_dashboard() {
     if ( ! DCMM_Users\is_organizational_member( $user_id ) ) {
         ob_start();
         echo '<div class="dcmm-error"><p>You do not have an active membership account. If you believe this is an error, please contact support.</p></div>';
-        echo '<p><a href="' . esc_url( wp_logout_url( home_url( '/member-login/' ) ) ) . '">Log out</a></p>';
+        echo '<p><a href="' . esc_url( wp_logout_url( \DCMM_Settings\get_login_url() ) ) . '">Log out</a></p>';
         return ob_get_clean();
     }
 
@@ -393,12 +401,12 @@ function dcmm_render_dashboard() {
         echo '<p>No member record found.</p>';
     }
 
-    echo '<p><a href="' . esc_url( wp_logout_url( home_url( '/member-login/' ) ) ) . '">Log out</a></p>';
+    echo '<p><a href="' . esc_url( wp_logout_url( \DCMM_Settings\get_login_url() ) ) . '">Log out</a></p>';
 
     return ob_get_clean();
 
 }
-add_shortcode( 'dcmm_member_dashboard', 'dcmm_render_dashboard' );
+add_shortcode( 'member_dashboard', 'dcmm_render_dashboard' );
 
 /**
  * Preserve renewal parameters through login
@@ -410,15 +418,18 @@ add_shortcode( 'dcmm_member_dashboard', 'dcmm_render_dashboard' );
  */
 function dcmm_preserve_renewal_parameters() {
 
-    // TODO: get Login & Dashboard URLs from settings
-    // Only run on login pages or when redirecting for login
-    if (!is_user_logged_in() && (is_page('member-login') || is_page('member-dashboard'))) {
-        
-        // If someone visits member-dashboard with dcmm_action=renew but isn't logged in,
+    // Only run on login/dashboard pages when redirecting for login
+    $login_page_id     = \DCMM_Settings\get_login_page_id();
+    $dashboard_page_id = \DCMM_Settings\get_dashboard_page_id();
+    $on_relevant_page  = ( $login_page_id && is_page( $login_page_id ) )
+                      || ( $dashboard_page_id && is_page( $dashboard_page_id ) );
+    if (!is_user_logged_in() && $on_relevant_page) {
+
+        // If someone visits the Dashboard with dcmm_action=renew but isn't logged in,
         // redirect them to login with the original URL preserved
         if (isset($_GET['dcmm_action']) && $_GET['dcmm_action'] === 'renew' && !is_user_logged_in()) {
-            $current_url = home_url($_SERVER['REQUEST_URI']);
-            $login_url = home_url('/member-login/');
+            $current_url  = home_url($_SERVER['REQUEST_URI']);
+            $login_url    = \DCMM_Settings\get_login_url();
             $redirect_url = add_query_arg('redirect_to', urlencode($current_url), $login_url);
             
             wp_redirect($redirect_url);
@@ -447,7 +458,7 @@ function dcmm_login_redirect($redirect_to, $request, $user) {
     }
     
     // Default to member dashboard
-    return home_url('/member-dashboard/');
+    return \DCMM_Settings\get_dashboard_url();
 }
 add_filter('login_redirect', 'dcmm_login_redirect', 10, 3);
     
