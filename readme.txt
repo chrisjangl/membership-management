@@ -2,7 +2,7 @@
 Contributors: digitally-cultured
 Tags: membership management, CRM
 Requires at least: 5.0
-Stable tag: 1.3.3
+Stable tag: 1.4.0
 Tested up to: 7.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -28,8 +28,27 @@ A: While not available in the initial release, future updates will introduce mem
 
 == Changelog ==
 
-= 1.3.3 =
-* Add plugin slug definition
-* :sparkles: create GitHub release for each release
+= 1.4.0 =
+* add member status filter dropdown and query functionality
+* add renewal method functionality and filter to member management
+* add Page URLs section and Login Page setting to General tab in settings
+* add email template preview functionality with AJAX support
+* enhance settings page with tab navigation and dynamic form behavior
+* add SVN deployment script and configuration for WordPress.org
+* Fix: correct path to WordPress load file in email handler and notifications tests
+* Fix: skip processing for missing posted data in metaboxes
+* Fix: fix redirect loop if trying to access member dashboard with a non-member account
+* Fix: exclude tests directory & Claude.md in distribution and zip scripts in package.json
+* Fix: update tested up to WordPress 6.8
+* Fix: automate wp-repo commit and tag pushing before GitHub release
+* Update tested up to version in plugin files to 7.0
+* Merge branch 'feature/v1.3.4/enhanced-filters' into v1.3.4-candidate
+* Merge branch 'feature/v1.3.4/email-template-improvements' into v1.3.4-candidate
+* Centralize dashboard and login URL retrieval in settings
+* Enhanced dashaboard filters
+* Update CLAUDE.md and add CONTRIBUTING.md for improved project guidance and Git workflow
+* Merge branch 'fix/v1.3.4/ajax-settings-tabs' into development
+* Add CLAUDE.md for project guidance and development notes
+* Add test scripts for MailChimp integration, notifications, recurring billing, renewal logic, status system, and subscription flow
 
 
