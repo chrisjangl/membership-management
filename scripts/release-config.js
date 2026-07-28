@@ -3,7 +3,13 @@
  *
  * This file defines what should be included/excluded at different stages
  * of the release and deployment process.
+ *
+ * Machine-specific values (e.g. SVN local path) live in release-local.js,
+ * which is gitignored. Copy release-local.example.js to get started.
  */
+
+let localConfig = {};
+try { localConfig = require('./release-local.js'); } catch (e) {}
 
 module.exports = {
     // Plugin metadata
@@ -99,8 +105,8 @@ module.exports = {
 
     // SVN configuration
     svn: {
-        // Local path to SVN checkout
-        localPath: '/Users/chris/Developer/wordpress-plugins/membership-management',
+        // Local path to SVN checkout — set in release-local.js (gitignored)
+        localPath: localConfig.svnLocalPath || null,
         // WordPress.org SVN URL
         remoteUrl: 'https://plugins.svn.wordpress.org/membership-management',
     },

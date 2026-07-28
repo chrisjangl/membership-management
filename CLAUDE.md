@@ -91,6 +91,7 @@ Based on git branch `feature/v1.1.0/payments`, the plugin is actively developing
 - Dynamic gateway loading based on settings
 - Implement member status checking methods
 - Clean up mixed WP User and CPT ID handling
+- `npm run dist` and `npm run zip` in package.json don't exclude `scripts/` — they should, to match what `build:dist` and the release process produce
 
 ### Member Object Construction
 The `DCMM_Member` class supports construction by:

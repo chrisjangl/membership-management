@@ -4,6 +4,7 @@
  * SVN Deployment Script
  *
  * Deploys the wp-repo branch to WordPress.org SVN repository.
+ * Run from any branch — exports wp-repo cleanly via git archive.
  *
  * IMPORTANT: This script requires manual confirmation before committing!
  *
@@ -17,9 +18,9 @@ const config = require('./release-config.js');
 
 class SVNDeployer {
     constructor() {
-        this.wpRepoPath = process.cwd();
+        this.tmpPath = '/tmp/dc-membership-wp-repo-export';
         this.svnPath = config.svn.localPath;
-        this.svnTrunkPath = path.join(this.svnPath, 'trunk');
+        this.svnTrunkPath = this.svnPath ? path.join(this.svnPath, 'trunk') : null;
         this.version = null;
     }
 
@@ -27,84 +28,100 @@ class SVNDeployer {
         console.log('🚀 Starting WordPress.org SVN Deployment...\n');
 
         try {
-            // Step 1: Verify we're on wp-repo branch
-            await this.verifyWpRepoBranch();
+            // Step 1: Verify SVN local path is configured
+            await this.verifySVNPath();
 
-            // Step 2: Get version number
+            // Step 2: Export wp-repo branch to temp directory
+            await this.exportWpRepo();
+
+            // Step 3: Get version number
             await this.getVersion();
 
-            // Step 3: Verify SVN checkout exists
+            // Step 4: Verify SVN checkout exists
             await this.verifySVNCheckout();
 
-            // Step 4: Update SVN to latest
+            // Step 5: Update SVN to latest
             await this.updateSVN();
 
-            // Step 5: Sync files from wp-repo to SVN trunk
+            // Step 6: Sync files from temp to SVN trunk
             await this.syncToSVNTrunk();
 
-            // Step 6: Review changes
+            // Step 7: Review changes
             await this.reviewChanges();
 
-            // Step 7: Confirm deployment
+            // Step 8: Confirm deployment
             await this.confirmDeployment();
 
-            // Step 8: Commit trunk
+            // Step 9: Commit trunk
             await this.commitTrunk();
 
-            // Step 9: Create tag
+            // Step 10: Create tag
             await this.createTag();
+
+            // Step 11: Clean up temp directory
+            this.cleanup();
 
             console.log('\n✅ Deployment completed successfully!');
             console.log(`🎉 Version ${this.version} is now live on WordPress.org`);
             console.log(`🔗 https://wordpress.org/plugins/${config.pluginSlug}/\n`);
 
         } catch (error) {
+            this.cleanup();
             console.error('\n❌ Deployment failed:', error.message);
             process.exit(1);
         }
     }
 
-    async verifyWpRepoBranch() {
-        console.log('📋 Step 1: Verifying branch...');
+    async verifySVNPath() {
+        console.log('📋 Step 1: Verifying SVN configuration...');
 
-        try {
-            const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-
-            if (currentBranch !== config.git.wpRepoBranch) {
-                throw new Error(`Not on ${config.git.wpRepoBranch} branch. Current branch: ${currentBranch}\nPlease run: git checkout ${config.git.wpRepoBranch}`);
-            }
-
-            console.log(`✅ On ${config.git.wpRepoBranch} branch\n`);
-        } catch (error) {
-            throw new Error(`Could not verify git branch: ${error.message}`);
+        if (!this.svnPath) {
+            throw new Error(
+                'SVN local path is not configured.\n' +
+                'Copy scripts/release-local.example.js to scripts/release-local.js and set svnLocalPath.'
+            );
         }
+
+        console.log(`✅ SVN local path: ${this.svnPath}\n`);
+    }
+
+    async exportWpRepo() {
+        console.log('📋 Step 2: Exporting wp-repo branch...');
+
+        if (fs.existsSync(this.tmpPath)) {
+            fs.removeSync(this.tmpPath);
+        }
+        fs.mkdirpSync(this.tmpPath);
+
+        execSync(`git archive wp-repo | tar -x -C "${this.tmpPath}"`, { stdio: 'inherit' });
+
+        console.log(`✅ wp-repo exported to ${this.tmpPath}\n`);
     }
 
     async getVersion() {
-        console.log('📋 Step 2: Getting version number...');
+        console.log('📋 Step 3: Getting version number...');
 
-        try {
-            const mainFile = path.join(this.wpRepoPath, config.mainPluginFile);
-            const content = fs.readFileSync(mainFile, 'utf8');
+        const mainFile = path.join(this.tmpPath, config.mainPluginFile);
+        const content = fs.readFileSync(mainFile, 'utf8');
+        const versionMatch = content.match(/Version:\s*(.+)/);
 
-            const versionMatch = content.match(/Version:\s*(.+)/);
-            if (!versionMatch) {
-                throw new Error('Could not find version in plugin file');
-            }
-
-            this.version = versionMatch[1].trim();
-            console.log(`✅ Version: ${this.version}\n`);
-
-        } catch (error) {
-            throw new Error(`Could not read version: ${error.message}`);
+        if (!versionMatch) {
+            throw new Error('Could not find version in plugin file');
         }
+
+        this.version = versionMatch[1].trim();
+        console.log(`✅ Version: ${this.version}\n`);
     }
 
     async verifySVNCheckout() {
-        console.log('📋 Step 3: Verifying SVN checkout...');
+        console.log('📋 Step 4: Verifying SVN checkout...');
 
         if (!fs.existsSync(this.svnPath)) {
-            throw new Error(`SVN checkout not found at: ${this.svnPath}\nPlease checkout the SVN repository first.`);
+            throw new Error(
+                `SVN checkout not found at: ${this.svnPath}\n` +
+                `Please checkout the SVN repository:\n` +
+                `  svn checkout ${config.svn.remoteUrl} ${this.svnPath}`
+            );
         }
 
         if (!fs.existsSync(path.join(this.svnPath, '.svn'))) {
@@ -115,77 +132,50 @@ class SVNDeployer {
     }
 
     async updateSVN() {
-        console.log('📋 Step 4: Updating SVN to latest revision...');
+        console.log('📋 Step 5: Updating SVN to latest revision...');
 
-        try {
-            execSync('svn update', {
-                cwd: this.svnPath,
-                stdio: 'inherit'
-            });
-            console.log('✅ SVN updated\n');
-        } catch (error) {
-            throw new Error(`SVN update failed: ${error.message}`);
-        }
+        execSync('svn update', { cwd: this.svnPath, stdio: 'inherit' });
+        console.log('✅ SVN updated\n');
     }
 
     async syncToSVNTrunk() {
-        console.log('📋 Step 5: Syncing files to SVN trunk...');
+        console.log('📋 Step 6: Syncing files to SVN trunk...');
 
-        // Build exclude flags for rsync
         const excludeFlags = config.svnExcludePatterns
             .map(pattern => `--exclude='${pattern}'`)
             .join(' ');
 
-        const rsyncCommand = `rsync -av --delete ${excludeFlags} "${this.wpRepoPath}/" "${this.svnTrunkPath}/"`;
+        const rsyncCommand = `rsync -av --delete ${excludeFlags} "${this.tmpPath}/" "${this.svnTrunkPath}/"`;
 
-        console.log('Running rsync...');
-        console.log(`Source: ${this.wpRepoPath}`);
+        console.log(`Source: ${this.tmpPath}`);
         console.log(`Destination: ${this.svnTrunkPath}`);
 
-        try {
-            execSync(rsyncCommand, { stdio: 'inherit' });
-            console.log('✅ Files synced\n');
-        } catch (error) {
-            throw new Error(`Rsync failed: ${error.message}`);
-        }
+        execSync(rsyncCommand, { stdio: 'inherit' });
+        console.log('✅ Files synced\n');
     }
 
     async reviewChanges() {
-        console.log('📋 Step 6: Reviewing SVN changes...\n');
+        console.log('📋 Step 7: Reviewing SVN changes...\n');
         console.log('='.repeat(70));
 
         try {
-            // Add new files
-            console.log('Adding new files...');
             execSync('svn add --force * --auto-props --parents --depth infinity -q', {
                 cwd: this.svnTrunkPath,
                 stdio: 'inherit'
             });
 
-            // Show status
             console.log('\nSVN Status:');
             console.log('='.repeat(70));
-            const status = execSync('svn status', {
-                cwd: this.svnTrunkPath,
-                encoding: 'utf8'
-            });
-
-            if (status.trim()) {
-                console.log(status);
-            } else {
-                console.log('No changes detected.');
-            }
-
+            const status = execSync('svn status', { cwd: this.svnTrunkPath, encoding: 'utf8' });
+            console.log(status.trim() || 'No changes detected.');
             console.log('='.repeat(70) + '\n');
-
         } catch (error) {
-            // Non-fatal error for showing status
             console.log('⚠️  Could not fully review changes\n');
         }
     }
 
     async confirmDeployment() {
-        console.log('📋 Step 7: Confirm deployment');
+        console.log('📋 Step 8: Confirm deployment');
         console.log('='.repeat(70));
         console.log('⚠️  You are about to deploy to WordPress.org!');
         console.log(`Version: ${this.version}`);
@@ -196,71 +186,52 @@ class SVNDeployer {
         console.log('  2. Create SVN tag for version ' + this.version);
         console.log('  3. Make the plugin live on WordPress.org');
         console.log('\n⚠️  This action cannot be easily undone!\n');
-        console.log('To proceed, you must run the following commands manually:\n');
-        console.log('1. Review changes above');
-        console.log('2. If everything looks good, continue with the deployment\n');
-
-        // We'll pause here and require manual confirmation via stdin
         console.log('Press Ctrl+C to cancel, or press Enter to continue...');
 
-        // Wait for user input
         await this.waitForEnter();
     }
 
     waitForEnter() {
         return new Promise((resolve) => {
-            process.stdin.once('data', () => {
-                resolve();
-            });
+            process.stdin.once('data', () => resolve());
         });
     }
 
     async commitTrunk() {
-        console.log('\n📋 Step 8: Committing to SVN trunk...');
+        console.log('\n📋 Step 9: Committing to SVN trunk...');
         console.log('='.repeat(70));
 
         const commitMessage = `Update to version ${this.version}`;
-
         console.log(`Commit message: "${commitMessage}"`);
         console.log('This will prompt for your WordPress.org credentials...\n');
 
-        try {
-            execSync(`svn commit -m "${commitMessage}"`, {
-                cwd: this.svnTrunkPath,
-                stdio: 'inherit'
-            });
-
-            console.log('✅ Trunk committed\n');
-        } catch (error) {
-            throw new Error(`SVN commit failed: ${error.message}`);
-        }
+        execSync(`svn commit -m "${commitMessage}"`, { cwd: this.svnTrunkPath, stdio: 'inherit' });
+        console.log('✅ Trunk committed\n');
     }
 
     async createTag() {
-        console.log('📋 Step 9: Creating SVN tag...');
+        console.log('📋 Step 10: Creating SVN tag...');
 
         const tagUrl = `${config.svn.remoteUrl}/tags/${this.version}`;
         const trunkUrl = `${config.svn.remoteUrl}/trunk`;
-        const tagMessage = `Tagging version ${this.version}`;
 
         console.log(`Creating tag: ${this.version}`);
-        console.log(`From: ${trunkUrl}`);
-        console.log(`To: ${tagUrl}\n`);
 
-        try {
-            execSync(`svn copy ${trunkUrl} ${tagUrl} -m "${tagMessage}"`, {
-                cwd: this.svnPath,
-                stdio: 'inherit'
-            });
+        execSync(`svn copy ${trunkUrl} ${tagUrl} -m "Tagging version ${this.version}"`, {
+            cwd: this.svnPath,
+            stdio: 'inherit'
+        });
 
-            console.log('✅ Tag created\n');
-        } catch (error) {
-            throw new Error(`SVN tag creation failed: ${error.message}`);
+        console.log('✅ Tag created\n');
+    }
+
+    cleanup() {
+        if (fs.existsSync(this.tmpPath)) {
+            fs.removeSync(this.tmpPath);
         }
     }
 }
 
-// Run deployment if called directly
 if (require.main === module) {
     const deployer = new SVNDeployer();
     deployer.deploy();
