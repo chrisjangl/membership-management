@@ -100,7 +100,7 @@ module.exports = {
     // SVN configuration
     svn: {
         // Local path to SVN checkout
-        localPath: '/Users/chrisjangl/Developer/wordpress-plugins/membership-management',
+        localPath: '/Users/chris/Developer/wordpress-plugins/membership-management',
         // WordPress.org SVN URL
         remoteUrl: 'https://plugins.svn.wordpress.org/membership-management',
     },
