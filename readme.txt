@@ -3,7 +3,7 @@ Contributors: digitally-cultured
 Tags: membership management, CRM
 Requires at least: 5.0
 Stable tag: 1.3.3
-Tested up to: 6.8
+Tested up to: 7.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
