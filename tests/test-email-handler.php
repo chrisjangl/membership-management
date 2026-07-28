@@ -7,7 +7,7 @@
  */
 
 // Load WordPress
-require_once('../../../wp-load.php');
+require_once('../../../../wp-load.php');
 
 // Security check
 if (!current_user_can('manage_options')) {
