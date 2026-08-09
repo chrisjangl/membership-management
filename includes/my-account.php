@@ -407,6 +407,8 @@ function dcmm_render_dashboard() {
 
 }
 add_shortcode( 'member_dashboard', 'dcmm_render_dashboard' );
+// legacy
+add_shortcode( 'dcmm_member_dashboard', 'dcmm_render_dashboard' );
 
 /**
  * Preserve renewal parameters through login
