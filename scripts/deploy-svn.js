@@ -193,7 +193,10 @@ class SVNDeployer {
 
     waitForEnter() {
         return new Promise((resolve) => {
-            process.stdin.once('data', () => resolve());
+            process.stdin.once('data', () => {
+                process.stdin.pause();
+                resolve();
+            });
         });
     }
 
