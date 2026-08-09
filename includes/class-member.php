@@ -416,8 +416,11 @@ class DCMM_Member extends WP_User {
 
 			}
 		} else {
-			// if there is already a WP User, do nothing
 			$user_ID = $this->get_wp_user_id();
+			// Ensure the already-linked user has the member role (guards against role
+			// being stripped after the link was established, e.g. plugin deactivation)
+			include_once( 'functions-user-role.php' );
+			\DCMM_Users\add_member_role( $user_ID );
 		}
 
 		return $user_ID;
