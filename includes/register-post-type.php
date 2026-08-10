@@ -95,7 +95,7 @@ function dcmm_register_post_type() {
 		'slug'			=> 'member',
 		'exclude_from_search' => true,
 		'menu_position' => 5,
-		'menu_icon'		=> 'dashicons-money', 
+		'menu_icon'		=> 'data:image/svg+xml;base64,' . base64_encode( file_get_contents( DCMM_PATH . 'assets/images/dashicon.svg' ) ),
 		'supports'      => array( 'title', 'custom_fields' ),
 		'has_archive'   => false,
 		'capability_type' => 'dcmm_member',

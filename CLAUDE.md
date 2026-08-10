@@ -10,8 +10,14 @@ This is a WordPress Membership Management Plugin for managing organizational mem
 
 - `npm run css` - Compile SASS files to CSS (compressed)
 - `npm run watch` - Watch SASS files and auto-compile on changes
-- `npm run dist` - Create a tar.gz distribution package
-- `npm run zip` - Create a zip distribution package
+- `npm run dist` - Create a tar.gz distribution package (legacy; prefer `build:dist`)
+- `npm run zip` - Create a zip distribution package (legacy; prefer `build:dist`)
+- `npm run build:dist` - Build a clean `dist/` copy using the include-list in `scripts/build-dist.js` (this is the one the release pipeline actually uses)
+- `npm run prepare:wp-repo` - Build `dist/`, then sync it onto the `wp-repo` branch (see Git Workflow)
+- `npm run validate:release` - Run WordPress.org compliance checks (readme.txt headers, version consistency, required files, dev-file leakage)
+- `npm run release` / `version:patch` / `version:minor` / `version:major` - Bump version, update readme.txt, tag, and prep for deployment
+- `npm run deploy:svn` - Push the `wp-repo` branch to the WordPress.org SVN trunk and create a version tag
+- `npm run deploy:svn:assets` - Push `.wordpress-org/assets/` (icon, banner) to the SVN repo's `assets/` folder — see "WordPress.org Deployment" below
 
 ## Testing
 
@@ -172,3 +178,32 @@ git log --pretty=format:"%s" --grep="feat\|fix\|BREAKING" --since="last-release-
 # Get commit count for version
 git rev-list --count HEAD ^last-release-tag
 ```
+
+## WordPress.org Deployment
+
+### SVN Setup (one-time, per machine)
+`scripts/deploy-svn.js` needs a local SVN checkout of the plugin. Copy `scripts/release-local.example.js` to `scripts/release-local.js` (gitignored) and set `svnLocalPath` to that checkout. Without this file, both `deploy:svn` and `deploy:svn:assets` fail fast with a clear error rather than doing anything partial.
+
+### Two Different "assets" Directories — Don't Confuse Them
+- **`assets/images/`** — ships *inside* the plugin. Currently holds `dashicon.svg`, the admin-menu icon, loaded as a base64 SVG data URI in `includes/register-post-type.php` (the `dcmm-member` CPT's `menu_icon`, which is the plugin's one live top-level admin menu — the second menu registration in `admin-settings.php` is dead code, its `add_action` is commented out). `build-dist.js` explicitly includes `assets/images/**/*`.
+- **`.wordpress-org/assets/`** — never ships with the plugin. Holds the WordPress.org *repo listing* graphics: `icon-128x128.png`, `icon-256x256.png`, `banner-772x250.png`, `banner-1544x500.png`. These filenames are meaningful — WordPress.org auto-detects them by exact name. This directory is git-tracked (source of truth) but explicitly excluded from `dist/`, the `wp-repo` branch, and any zip — see "Keeping Exclude Lists in Sync" below.
+
+### Deploying Repo Assets (icon, banner)
+Icon/banner updates are independent of code releases — no version bump, no tag. Run:
+```bash
+npm run deploy:svn:assets
+```
+This reads from `.wordpress-org/assets/` in the current working tree (not the `wp-repo` branch export), rsyncs into the SVN checkout's root-level `assets/` folder (a sibling of `trunk/`, not `assets/images/`), shows you the `svn status` diff, waits for Enter, then commits. The rsync intentionally has no `--delete` — the SVN `assets/` folder may hold files (e.g. `screenshot-*.png`) that were never tracked in git, and a blind mirror would delete them.
+
+Regular code deploys (`npm run deploy:svn`) never touch the SVN `assets/` folder at all — that sync only happens via `deploy:svn:assets`.
+
+### Keeping Exclude Lists in Sync
+There is no single source of truth for "what doesn't ship" — it's duplicated across several places for historical reasons. If you ever add a new top-level directory that shouldn't reach WordPress.org (like `.wordpress-org/` itself), it needs to be added in all of these:
+- `scripts/release-config.js` — `buildExcludePatterns`, `zipExcludePatterns`, `svnExcludePatterns`
+- `scripts/build-dist.js` — its own local `excludePatterns` (belt-and-suspenders; `build-dist.js` actually works off an *include*-list, so anything not explicitly included is already excluded by default)
+- `scripts/validate-release.js` — `validateNoDevFiles()`'s `devFiles` list
+- `scripts/release.js` — `getZipExcludePatterns()`
+- `package.json` — the legacy `dist` and `zip` scripts' inline exclude flags
+
+### readme.txt Header Levels (gotcha)
+WordPress.org's readme parser only recognizes section headers with **two** equals signs (`== Description ==`), not three. `=== `is reserved for the plugin name on line 1. This file previously had `=== Description ===` and `=== FAQ ===` (three equals), which likely meant those sections weren't rendering on the actual plugin page — fixed. `scripts/release.js`'s own `ensureReadmeSections()` already validates against the correct two-equals format, so trust that over hand-edited headers.

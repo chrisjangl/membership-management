@@ -600,6 +600,7 @@ ${await this.generateChangelog()}
             'scripts/*',        // Build scripts (shouldn't be in wp-repo anyway)
             'tests/*',          // Tests (shouldn't be in wp-repo anyway)
             '*.config.js',      // Config files (shouldn't be in wp-repo anyway)
+            '.wordpress-org/*', // Repo display assets (shouldn't be in wp-repo anyway)
         ];
 
         // Convert to zip -x format

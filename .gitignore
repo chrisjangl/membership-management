@@ -2,3 +2,8 @@
 node_modules/
 dist/
 scripts/release-local.js
+
+# Note: assets/ (plugin-shipped images) and .wordpress-org/ (WordPress.org
+# repo display assets: icon, banner) are intentionally tracked, not ignored.
+# .wordpress-org/ is excluded from the plugin build/zip/SVN trunk itself —
+# see release-config.js, build-dist.js, and package.json.
