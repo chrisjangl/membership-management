@@ -140,6 +140,7 @@ function dcmm_custom_columns( $default_columns ) {
 		'cb' => $default_columns['cb'],
 		'name' => 'Name',
 		'status' => __( 'Membership Status', DCMM_PLUGIN_SLUG ),
+		'expiration_date' => __( 'Expiration Date', DCMM_PLUGIN_SLUG ),
 		'renewal_method' => __( 'Renewal Method', DCMM_PLUGIN_SLUG ),
 		'email' => __( 'Email', DCMM_PLUGIN_SLUG ),
 		'address' => __( 'Address', DCMM_PLUGIN_SLUG ),
@@ -224,6 +225,10 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 				}
 			}
 			break;
+		case 'expiration_date':
+			$expiration_date = $member->get_expiration_date();
+			echo $expiration_date ? esc_html( date_i18n( get_option( 'date_format' ), strtotime( $expiration_date ) ) ) : '---';
+			break;
 		case 'renewal_method':
 			$renewal_method = $member->get_renewal_method();
 			echo $renewal_method ? esc_html( $renewal_method ) : '---';
@@ -242,6 +247,7 @@ function dcmm_sortable_columns( $columns ) {
 	
 	$columns['name'] = 'dcmm_name';
 	$columns['status'] = 'dcmm_status';
+	$columns['expiration_date'] = 'dcmm_expiration_date';
 
 	return $columns;
 }
@@ -279,6 +285,11 @@ function dcmm_sortable_columns_orderby( $query ) {
 		$query->set( 'orderby', 'meta_value' );
 	}
 
+	if ( 'dcmm_expiration_date' == $orderby ) {
+		$meta_key = $meta_keys['expiration_date'];
+		$query->set( 'meta_key', $meta_key );
+		$query->set( 'orderby', 'meta_value' );
+	}
 }
 
 
