@@ -574,6 +574,96 @@ class Gateway_PayPal extends Abstract_Gateway {
 	}
 
 	/**
+	 * Suspend (pause) a PayPal subscription.
+	 *
+	 * @param int    $member_id       The member's CPT ID.
+	 * @param string $subscription_id The PayPal subscription ID.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	public function suspend_subscription( $member_id, $subscription_id ) {
+
+		// Get access token
+		$access_token = $this->get_access_token();
+		if ( is_wp_error( $access_token ) ) {
+			return $access_token;
+		}
+
+		// Suspend subscription with PayPal
+		$api_base = DCMM_Settings\get_paypal_api_base_url();
+
+		$response = wp_remote_post( $api_base . '/v1/billing/subscriptions/' . $subscription_id . '/suspend', [
+			'headers' => [
+				'Content-Type' => 'application/json',
+				'Authorization' => 'Bearer ' . $access_token,
+			],
+			'body' => json_encode([
+				'reason' => 'Membership subscription paused by admin'
+			]),
+			'timeout' => 30,
+		] );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+		if ( $response_code !== 204 ) {
+			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+			return new \WP_Error( 'paypal_suspend_failed', 'PayPal subscription suspension failed: ' . ( $body['message'] ?? 'Unknown error' ) );
+		}
+
+		// Log suspension
+		$this->log_subscription_event( $member_id, "PayPal subscription suspended by admin: " . $subscription_id );
+
+		return true;
+	}
+
+	/**
+	 * Resume a suspended PayPal subscription.
+	 *
+	 * @param int    $member_id       The member's CPT ID.
+	 * @param string $subscription_id The PayPal subscription ID.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	public function resume_subscription( $member_id, $subscription_id ) {
+
+		// Get access token
+		$access_token = $this->get_access_token();
+		if ( is_wp_error( $access_token ) ) {
+			return $access_token;
+		}
+
+		// Reactivate subscription with PayPal
+		$api_base = DCMM_Settings\get_paypal_api_base_url();
+
+		$response = wp_remote_post( $api_base . '/v1/billing/subscriptions/' . $subscription_id . '/activate', [
+			'headers' => [
+				'Content-Type' => 'application/json',
+				'Authorization' => 'Bearer ' . $access_token,
+			],
+			'body' => json_encode([
+				'reason' => 'Membership subscription resumed by admin'
+			]),
+			'timeout' => 30,
+		] );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+		if ( $response_code !== 204 ) {
+			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+			return new \WP_Error( 'paypal_resume_failed', 'PayPal subscription resumption failed: ' . ( $body['message'] ?? 'Unknown error' ) );
+		}
+
+		// Log resumption
+		$this->log_subscription_event( $member_id, "PayPal subscription resumed by admin: " . $subscription_id );
+
+		return true;
+	}
+
+	/**
 	 * Get PayPal subscription status.
 	 *
 	 * @param string $subscription_id The PayPal subscription ID.

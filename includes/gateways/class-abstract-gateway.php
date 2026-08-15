@@ -108,9 +108,39 @@ abstract class Abstract_Gateway implements Payment_Gateway_Interface {
 	 * @return WP_Error Always returns error for base implementation.
 	 */
 	public function get_subscription_status( $subscription_id ) {
-		return new \WP_Error( 
-			'subscription_not_supported', 
+		return new \WP_Error(
+			'subscription_not_supported',
 			sprintf( 'Subscription status checking is not supported by the %s gateway.', $this->get_name() )
+		);
+	}
+
+	/**
+	 * Default implementation for suspending subscriptions.
+	 * Subclasses should override this if they support recurring payments.
+	 *
+	 * @param int    $member_id       The member's CPT ID.
+	 * @param string $subscription_id The gateway's subscription ID.
+	 * @return WP_Error Always returns error for base implementation.
+	 */
+	public function suspend_subscription( $member_id, $subscription_id ) {
+		return new \WP_Error(
+			'subscription_not_supported',
+			sprintf( 'Subscription suspension is not supported by the %s gateway.', $this->get_name() )
+		);
+	}
+
+	/**
+	 * Default implementation for resuming subscriptions.
+	 * Subclasses should override this if they support recurring payments.
+	 *
+	 * @param int    $member_id       The member's CPT ID.
+	 * @param string $subscription_id The gateway's subscription ID.
+	 * @return WP_Error Always returns error for base implementation.
+	 */
+	public function resume_subscription( $member_id, $subscription_id ) {
+		return new \WP_Error(
+			'subscription_not_supported',
+			sprintf( 'Subscription resumption is not supported by the %s gateway.', $this->get_name() )
 		);
 	}
 

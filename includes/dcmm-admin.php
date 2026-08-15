@@ -11,6 +11,9 @@
 add_action( 'admin_post_dcmm_manual_renew', 'dcmm_handle_manual_renew' );
 add_action( 'admin_post_dcmm_manual_cancel', 'dcmm_handle_manual_cancel' );
 add_action( 'admin_post_dcmm_offline_payment', 'dcmm_handle_offline_payment' );
+add_action( 'admin_post_dcmm_pause_subscription', 'dcmm_handle_pause_subscription' );
+add_action( 'admin_post_dcmm_resume_subscription', 'dcmm_handle_resume_subscription' );
+add_action( 'admin_post_dcmm_cancel_subscription', 'dcmm_handle_cancel_subscription' );
 
 /**
  * Handles the manual renewal of a membership.
@@ -75,6 +78,94 @@ function dcmm_handle_manual_cancel() {
 	$member->log( 'cancel_membership', 'manual' );
 
 	wp_redirect( get_edit_post_link( $member->get_member_id(), 'url' ) . '&dcmm_msg=cancelled' );
+	exit;
+}
+
+/**
+ * Handles pausing (suspending) a member's recurring payment gateway subscription.
+ *
+ * @return void
+ */
+function dcmm_handle_pause_subscription() {
+	if (
+		! current_user_can( 'edit_dcmm_members' ) ||
+		! isset( $_GET['member_id'] ) ||
+		! wp_verify_nonce( $_GET['_wpnonce'], 'dcmm_pause_subscription_' . $_GET['member_id'] )
+	) {
+		wp_die( 'Unauthorized' );
+	}
+
+	$member = new DCMM_Member( (int) $_GET['member_id'] );
+	$result = $member->pause_subscription();
+
+	$redirect_url = get_edit_post_link( $member->get_member_id(), 'url' );
+	if ( is_wp_error( $result ) ) {
+		$redirect_url .= '&dcmm_msg=subscription_error&error=' . urlencode( $result->get_error_message() );
+	} else {
+		$redirect_url .= '&dcmm_msg=subscription_paused';
+	}
+
+	wp_redirect( $redirect_url );
+	exit;
+}
+
+/**
+ * Handles resuming a member's paused recurring payment gateway subscription.
+ *
+ * @return void
+ */
+function dcmm_handle_resume_subscription() {
+	if (
+		! current_user_can( 'edit_dcmm_members' ) ||
+		! isset( $_GET['member_id'] ) ||
+		! wp_verify_nonce( $_GET['_wpnonce'], 'dcmm_resume_subscription_' . $_GET['member_id'] )
+	) {
+		wp_die( 'Unauthorized' );
+	}
+
+	$member = new DCMM_Member( (int) $_GET['member_id'] );
+	$result = $member->resume_subscription();
+
+	$redirect_url = get_edit_post_link( $member->get_member_id(), 'url' );
+	if ( is_wp_error( $result ) ) {
+		$redirect_url .= '&dcmm_msg=subscription_error&error=' . urlencode( $result->get_error_message() );
+	} else {
+		$redirect_url .= '&dcmm_msg=subscription_resumed';
+	}
+
+	wp_redirect( $redirect_url );
+	exit;
+}
+
+/**
+ * Handles cancelling a member's recurring payment gateway subscription.
+ *
+ * Note: this only cancels the gateway subscription (e.g. stops future PayPal
+ * charges). It does not change the member's membership status - use
+ * dcmm_manual_cancel for that.
+ *
+ * @return void
+ */
+function dcmm_handle_cancel_subscription() {
+	if (
+		! current_user_can( 'edit_dcmm_members' ) ||
+		! isset( $_GET['member_id'] ) ||
+		! wp_verify_nonce( $_GET['_wpnonce'], 'dcmm_cancel_subscription_' . $_GET['member_id'] )
+	) {
+		wp_die( 'Unauthorized' );
+	}
+
+	$member = new DCMM_Member( (int) $_GET['member_id'] );
+	$result = $member->cancel_subscription();
+
+	$redirect_url = get_edit_post_link( $member->get_member_id(), 'url' );
+	if ( is_wp_error( $result ) ) {
+		$redirect_url .= '&dcmm_msg=subscription_error&error=' . urlencode( $result->get_error_message() );
+	} else {
+		$redirect_url .= '&dcmm_msg=subscription_cancelled';
+	}
+
+	wp_redirect( $redirect_url );
 	exit;
 }
 
@@ -199,6 +290,19 @@ function dcmm_admin_feedback_notices() {
 			case 'payment_error':
 				$error_message = isset( $_GET['error'] ) ? sanitize_text_field( $_GET['error'] ) : 'Unknown error occurred';
 				echo '<div class="notice notice-error is-dismissible"><p>Payment error: ' . esc_html( $error_message ) . '</p></div>';
+				break;
+			case 'subscription_paused':
+				echo '<div class="notice notice-success is-dismissible"><p>Subscription paused.</p></div>';
+				break;
+			case 'subscription_resumed':
+				echo '<div class="notice notice-success is-dismissible"><p>Subscription resumed.</p></div>';
+				break;
+			case 'subscription_cancelled':
+				echo '<div class="notice notice-warning is-dismissible"><p>Subscription cancelled.</p></div>';
+				break;
+			case 'subscription_error':
+				$error_message = isset( $_GET['error'] ) ? sanitize_text_field( $_GET['error'] ) : 'Unknown error occurred';
+				echo '<div class="notice notice-error is-dismissible"><p>Subscription error: ' . esc_html( $error_message ) . '</p></div>';
 				break;
 		}
 	}

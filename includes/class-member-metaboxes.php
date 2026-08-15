@@ -44,6 +44,7 @@ class DCMM_metaboxes {
      function add_metaboxes() {
         add_meta_box( 'contact_info', 'Contact Info', array( $this, 'create_metabox_contact_info' ), 'dcmm-member', 'normal', 'high' );
         add_meta_box( 'membership_status', "Membership Status", array( $this, 'create_metabox_membership_status' ), 'dcmm-member', 'side' );
+        add_meta_box( 'subscription', "Subscription", array( $this, 'create_metabox_subscription' ), 'dcmm-member', 'side' );
         add_meta_box( 'user_account', "User Account", array( $this, 'create_metabox_wp_user' ), 'dcmm-member', 'side' );
         add_meta_box( 'logs', "Action Log", array( $this, 'create_metabox_logs' ), 'dcmm-member', 'side' );
     }
@@ -492,8 +493,84 @@ class DCMM_metaboxes {
     }
 
     /**
+     * Create the metabox for managing the member's recurring payment gateway subscription
+     */
+    function create_metabox_subscription() {
+
+        require_once('class-member.php');
+        $CPT_post_id = get_the_id();
+
+        $member = new DCMM_Member( $CPT_post_id );
+        $member_id = $member->get_member_id();
+
+        // Live status is fetched from the gateway (e.g. PayPal), not just the cached copy
+        $subscription_info = $member->get_subscription_status_info();
+
+        if ( ! $subscription_info || empty( $subscription_info['id'] ) ) {
+            echo '<p>This member does not have a recurring subscription.</p>';
+            return;
+        }
+
+        $pause_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_pause_subscription&member_id=' . $member_id ),
+            'dcmm_pause_subscription_' . $member_id
+        );
+
+        $resume_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_resume_subscription&member_id=' . $member_id ),
+            'dcmm_resume_subscription_' . $member_id
+        );
+
+        $cancel_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_cancel_subscription&member_id=' . $member_id ),
+            'dcmm_cancel_subscription_' . $member_id
+        );
+        ?>
+
+        <p>
+            <strong>Status:</strong>
+            <?php echo esc_html( ucfirst( $subscription_info['status'] ) ); ?>
+        </p>
+        <p>
+            <strong>Gateway:</strong>
+            <?php echo esc_html( ucfirst( $subscription_info['gateway'] ) ); ?>
+            &nbsp;(<?php echo esc_html( ucfirst( $subscription_info['interval'] ?? 'monthly' ) ); ?>)
+        </p>
+        <?php if ( ! empty( $subscription_info['next_billing'] ) ) : ?>
+            <p>
+                <strong>Next Billing:</strong>
+                <?php echo esc_html( date( 'F j, Y', strtotime( $subscription_info['next_billing'] ) ) ); ?>
+            </p>
+        <?php endif; ?>
+        <?php if ( ! empty( $subscription_info['last_payment_amount'] ) ) : ?>
+            <p>
+                <strong>Last Payment:</strong>
+                $<?php echo esc_html( number_format( $subscription_info['last_payment_amount'], 2 ) ); ?>
+            </p>
+        <?php endif; ?>
+        <p>
+            <strong>Subscription ID:</strong>
+            <?php echo esc_html( $subscription_info['id'] ); ?>
+        </p>
+
+        <p>
+            <?php if ( 'active' === $subscription_info['status'] ) : ?>
+                <a href="<?php echo esc_url( $pause_url ); ?>" class="button">Pause Subscription</a>
+            <?php elseif ( 'suspended' === $subscription_info['status'] ) : ?>
+                <a href="<?php echo esc_url( $resume_url ); ?>" class="button">Resume Subscription</a>
+            <?php endif; ?>
+
+            <?php if ( 'cancelled' !== $subscription_info['status'] ) : ?>
+                <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Subscription</a>
+            <?php endif; ?>
+        </p>
+
+        <?php
+    }
+
+    /**
      * Create metabox for action logs
-     * 
+     *
      */
     function create_metabox_logs() {
 
