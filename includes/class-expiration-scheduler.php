@@ -92,8 +92,8 @@ class DCMM_Expiration_Scheduler {
      * expiration_date otherwise has no effect on - without it, expired members keep
      * whatever access 'active' status grants indefinitely.
      *
-     * Members with an active recurring subscription are skipped, since the gateway
-     * may still be about to renew them a few days late.
+     * Subscribers are treated like everyone else: a late payment is covered by the
+     * grace period, and a payment that arrives after expiry renews the member as usual.
      *
      * Called by WordPress cron.
      */
@@ -105,14 +105,7 @@ class DCMM_Expiration_Scheduler {
                 continue;
             }
 
-            // Don't cancel someone the gateway is still going to charge.
-            if ( $member->has_active_subscription() ) {
-                continue;
-            }
-
             $member->set_status( 'inactive' );
-            $member->save( 'end_date', current_time( 'Y-m-d' ) );
-            $member->save( 'expiration_date', '' );
             $member->log( 'expired', 'auto' );
 
             do_action( 'dcmm_member_cancelled', $member->get_member_id() );

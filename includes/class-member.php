@@ -1106,11 +1106,15 @@ class DCMM_Member extends WP_User {
 		// record the dues payment
 		$dues_result = $this->save( 'dues_payment', $today );
 
+		// Calculate the new expiration date before the hooks below fire, so welcome and
+		// renewal emails show it. Signups and renewals both come through here.
+		$new_expiration = $this->calculate_renewal_expiration();
+		if ( $new_expiration ) {
+			$this->save( 'expiration_date', $new_expiration );
+		}
+
 		// set member as active
 		$status_result = $this->save( 'status', 'active' );
-		
-		// Calculate and store expiration date
-		$this->get_expiration_date();
 
 		// Fire payment received hook
 		$payment_data = array(
@@ -1137,16 +1141,7 @@ class DCMM_Member extends WP_User {
 
 		$this->log( 'renew_membership', $context );
 
-		$result = $this->subscribe_to_membership( "renew:$context" );
-
-		// Advance the expiration date by one term - the only place a renewal is
-		// allowed to move a member's expiration forward.
-		$new_expiration = $this->calculate_renewal_expiration();
-		if ( $new_expiration ) {
-			$this->save( 'expiration_date', $new_expiration );
-		}
-
-		return $result;
+		return $this->subscribe_to_membership( "renew:$context" );
 
 	}
 
@@ -1329,8 +1324,8 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
-	 * Calculate anchored full term expiration: the next anchor occurrence after the
-	 * start timestamp. Renewals are advanced separately by calculate_renewal_expiration().
+	 * Calculate anchored full term expiration from a starting point - see
+	 * calculate_next_anchor_occurrence().
 	 *
 	 * @param int $start_timestamp Start date timestamp
 	 * @param string $term_length Term length (yearly, monthly, seasonal)
@@ -1372,17 +1367,21 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
-	 * Calculate the member's expiration date after an actual renewal.
+	 * Calculate the member's expiration date after a signup or renewal (a payment).
 	 *
 	 * This is the only place an expiration date is ever advanced by the member's own
 	 * activity - get_expiration_date() always leaves an existing date as-is, and
 	 * recalculate_expiration_date() only runs when an admin explicitly asks for it.
 	 *
-	 * fixed_term ignores the previous expiration entirely (everyone expires on the same
-	 * calendar date regardless of when they renew). anchored_full_term and rolling both
-	 * advance the existing expiration by one term; if there's nothing to advance from
-	 * (e.g. renewing after a cleared expiration), they fall back to a fresh calculation
-	 * as if this were a first-time signup.
+	 * A member is "current" if they have a stored expiration date and today is no later
+	 * than that date plus the grace period. Current members keep their schedule; anyone
+	 * else (a new signup, or a member who lapsed past the grace period) starts from today.
+	 *
+	 * - anchored_full_term: the first anchor date more than renewal-window days after the
+	 *   starting point, so anything paid between (anchor - renewal window) and
+	 *   (anchor + grace period) counts as paid on the anchor date.
+	 * - rolling: current members get stored date + one term; others get today + one term.
+	 * - fixed_term: always the fixed date for the current calendar period.
 	 *
 	 * @return string|null New expiration date in Y-m-d format, or null if it can't be calculated
 	 */
@@ -1390,20 +1389,31 @@ class DCMM_Member extends WP_User {
 
 		$join_policy = DCMM_Settings\get_settings( 'dcmm_join_policy' );
 		$term_length = DCMM_Settings\get_settings( 'dcmm_membership_term_length' );
+		$anchor_date = DCMM_Settings\get_settings( 'dcmm_anchor_date' );
 
 		if ( ! $join_policy ) $join_policy = 'rolling';
 		if ( ! $term_length ) $term_length = 'monthly';
 
+		$today = current_time( 'Y-m-d' );
+
 		if ( $join_policy === 'fixed_term' ) {
-			return $this->calculate_fixed_term_expiration( time(), $term_length );
+			return $this->calculate_fixed_term_expiration( strtotime( $today ), $term_length );
 		}
 
-		$current_expiration = $this->get( 'expiration_date' );
-		if ( $current_expiration && $current_expiration !== '' ) {
-			return $this->advance_expiration_by_duration( $current_expiration, $term_length );
+		$stored_expiration = $this->get( 'expiration_date' );
+		$is_current = $stored_expiration
+			&& date( 'Y-m-d', strtotime( $stored_expiration . ' +' . $this->get_grace_period_days() . ' days' ) ) >= $today;
+
+		if ( $join_policy === 'anchored_full_term' ) {
+			$starting_point = strtotime( $is_current ? $stored_expiration : $today );
+			return $this->calculate_anchored_expiration( $starting_point, $term_length, $anchor_date );
 		}
 
-		return $this->calculate_expiration_date();
+		if ( $is_current ) {
+			return $this->advance_expiration_by_duration( $stored_expiration, $term_length );
+		}
+
+		return $this->calculate_rolling_expiration( strtotime( $today ), $term_length );
 	}
 
 	/**
@@ -1473,7 +1483,7 @@ class DCMM_Member extends WP_User {
 		$timestamp = strtotime( $date );
 
 		if ( 'yearly' === $term_length || 'seasonal' === $term_length ) {
-			// Same anchor formats as calculate_next_yearly_anchor()
+			// Accepts MM-DD, or a legacy full YYYY-MM-DD date
 			if ( strlen( $anchor_date ) === 10 && strpos( $anchor_date, '-' ) !== false ) {
 				$anchor_date = date( 'm-d', strtotime( $anchor_date ) );
 			}
@@ -1487,7 +1497,7 @@ class DCMM_Member extends WP_User {
 			return $candidate >= $date ? $candidate : ( $year + 1 ) . '-' . $anchor_date;
 		}
 
-		// Monthly - same anchor formats as calculate_next_monthly_anchor()
+		// Monthly - accepts DD, or a legacy MM-DD / YYYY-MM-DD date
 		if ( strpos( $anchor_date, '-' ) !== false ) {
 			$parts = explode( '-', $anchor_date );
 			$anchor_date = end( $parts );
@@ -1509,115 +1519,22 @@ class DCMM_Member extends WP_User {
 	}
 
 	/**
-	 * Calculate next anchor occurrence from signup date
-	 * 
-	 * @param int $start_timestamp Start date timestamp
+	 * First anchor date more than renewal-window days after the starting point.
+	 *
+	 * Anything between (anchor - renewal window) and the anchor is treated as paid on
+	 * that anchor date, so it buys the following term rather than the one ending.
+	 *
+	 * @param int $start_timestamp Starting point timestamp
 	 * @param string $term_length Term length (yearly, monthly, seasonal)
 	 * @param string $anchor_date Anchor date setting
 	 * @return string Expiration date in Y-m-d format
 	 */
 	private function calculate_next_anchor_occurrence( $start_timestamp, $term_length, $anchor_date ) {
-		$start_date = date( 'Y-m-d', $start_timestamp );
-		
-		switch ( $term_length ) {
-			case 'yearly':
-			case 'seasonal':
-				return $this->calculate_next_yearly_anchor( $start_date, $anchor_date, $term_length );
-				
-			case 'monthly':
-				return $this->calculate_next_monthly_anchor( $start_date, $anchor_date );
-				
-			default:
-				return $this->calculate_next_monthly_anchor( $start_date, $anchor_date );
-		}
-	}
-	
-	/**
-	 * Calculate next yearly/seasonal anchor occurrence
-	 * 
-	 * @param string $start_date Start date (Y-m-d format)
-	 * @param string $anchor_date Anchor date (MM-DD format or full date for backward compatibility)
-	 * @param string $term_length Term length for calculating multiple periods if needed
-	 * @return string Expiration date in Y-m-d format
-	 */
-	private function calculate_next_yearly_anchor( $start_date, $anchor_date, $term_length ) {
-		// Handle backward compatibility with full dates (YYYY-MM-DD)
-		if ( strlen( $anchor_date ) === 10 && strpos( $anchor_date, '-' ) !== false ) {
-			// Extract MM-DD from full date
-			$anchor_date = date( 'm-d', strtotime( $anchor_date ) );
-		}
-		
-		// Ensure MM-DD format
-		if ( ! preg_match( '/^\d{2}-\d{2}$/', $anchor_date ) ) {
-			// Invalid format, fallback to fixed term
-			return $this->calculate_fixed_term_expiration( strtotime( $start_date ), $term_length );
-		}
-		
-		$start_year = date( 'Y', strtotime( $start_date ) );
-		$anchor_this_year = $start_year . '-' . $anchor_date;
+		$cutoff = date( 'Y-m-d', strtotime( '+' . ( $this->get_renewal_window_days() + 1 ) . ' days', $start_timestamp ) );
 
-		// calculate the renewal window by including the grace period
-		$grace_period_days = DCMM_Settings\get_settings( 'grace_period_days' );
-		$renewal_window_end_timestamp = strtotime( '+' . $grace_period_days . ' days', strtotime( $anchor_this_year ) );
-		$renewal_window_end = date( 'Y-m-d', $renewal_window_end_timestamp );
-		
-		// If signup is before this year's anchor date, use this year's anchor
-		// making sure to consider the grace period
-		if ( strtotime( $start_date ) <= strtotime( $renewal_window_end ) ) {
-			return $anchor_this_year;
-		}
-		
-		// Otherwise, use next year's anchor
-		return ( $start_year + 1 ) . '-' . $anchor_date;
+		return $this->anchor_on_or_after( $cutoff, $term_length, $anchor_date );
 	}
-	
-	/**
-	 * Calculate next monthly anchor occurrence
-	 * 
-	 * @param string $start_date Start date (Y-m-d format)
-	 * @param string $anchor_date Anchor day (DD format or MM-DD for backward compatibility)
-	 * @return string Expiration date in Y-m-d format
-	 */
-	private function calculate_next_monthly_anchor( $start_date, $anchor_date ) {
-		// Handle backward compatibility - extract day from MM-DD or YYYY-MM-DD
-		if ( strpos( $anchor_date, '-' ) !== false ) {
-			$parts = explode( '-', $anchor_date );
-			$anchor_day = end( $parts ); // Get the last part (day)
-		} else {
-			$anchor_day = $anchor_date;
-		}
-		
-		// Validate day format
-		if ( ! is_numeric( $anchor_day ) || $anchor_day < 1 || $anchor_day > 31 ) {
-			// Invalid day, fallback to fixed term
-			return $this->calculate_fixed_term_expiration( strtotime( $start_date ), 'monthly' );
-		}
-		
-		$start_year = date( 'Y', strtotime( $start_date ) );
-		$start_month = date( 'm', strtotime( $start_date ) );
-		$start_day = date( 'd', strtotime( $start_date ) );
-		
-		// Try this month's anchor day first
-		$days_in_month = date( 't', mktime( 0, 0, 0, $start_month, 1, $start_year ) );
-		$effective_day = min( $anchor_day, $days_in_month ); // Handle months with fewer days
-		
-		$anchor_this_month = sprintf( '%04d-%02d-%02d', $start_year, $start_month, $effective_day );
-		
-		// If signup is before this month's anchor day, use this month
-		if ( $start_day <= $effective_day ) {
-			return $anchor_this_month;
-		}
-		
-		// Otherwise, use next month's anchor day
-		$next_month_timestamp = mktime( 0, 0, 0, $start_month + 1, 1, $start_year );
-		$next_year = date( 'Y', $next_month_timestamp );
-		$next_month = date( 'm', $next_month_timestamp );
-		$days_in_next_month = date( 't', $next_month_timestamp );
-		$effective_next_day = min( $anchor_day, $days_in_next_month );
-		
-		return sprintf( '%04d-%02d-%02d', $next_year, $next_month, $effective_next_day );
-	}
-	
+
 	/**
 	 * Get valid membership statuses
 	 * 

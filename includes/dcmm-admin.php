@@ -71,11 +71,25 @@ function dcmm_handle_manual_cancel() {
 
 	$member = new DCMM_Member( (int) $_GET['member_id'] );
 	$member->set_status( 'inactive' ); // Use new simplified status system
-	$member->save( 'end_date', current_time( 'Y-m-d' ) );
-	$member->save( 'expiration_date', '' ); // Clear expiration date - canceled memberships don't expire
+
+	// The expiration date is kept as a record. If they had paid time left, the admin
+	// chooses whether they keep it (e.g. no refund) or it ends today.
+	$keep_paid_time = isset( $_GET['keep_paid_time'] ) && '1' === $_GET['keep_paid_time'];
+	$today = current_time( 'Y-m-d' );
+	$expiration_date = $member->get( 'expiration_date' );
+	$notes = '';
+
+	if ( $expiration_date && $expiration_date > $today ) {
+		if ( $keep_paid_time ) {
+			$notes = "kept paid time through $expiration_date";
+		} else {
+			$member->save( 'expiration_date', $today );
+			$notes = "expiration date $expiration_date → $today";
+		}
+	}
 
 	// Log the cancellation
-	$member->log( 'cancel_membership', 'manual' );
+	$member->log( 'cancel_membership', 'manual', $notes );
 
 	wp_redirect( get_edit_post_link( $member->get_member_id(), 'url' ) . '&dcmm_msg=cancelled' );
 	exit;
