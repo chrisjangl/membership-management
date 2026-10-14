@@ -88,9 +88,8 @@ foreach ($test_cases as $i => $test) {
     // Test initial expiration calculation
     echo "<p><strong>Signup Date:</strong> {$test['signup_date']}</p>";
     
-    // Clear any cached expiration data to force recalculation
+    // Clear any stored expiration date to force a fresh calculation
     $member->save('expiration_date', '');
-    $member->save('settings_hash', '');
     
     $initial_expiration = $member->get_expiration_date();
     echo "<p><strong>Initial Expiration:</strong> {$initial_expiration}</p>";
@@ -102,22 +101,20 @@ foreach ($test_cases as $i => $test) {
         echo "<p style='color: red;'>✗ Initial expiration calculation FAILED</p>";
     }
     
-    // Test renewal expiration calculation
-    // Simulate a renewal by calling get_expiration_date again (should advance the expiration)
-    $renewal_expiration = $member->get_expiration_date();
-    
-    // For renewal test, we need to simulate that there's already an expiration date
-    // and then call the calculation again
-    $member->save('expiration_date', $initial_expiration);
-    $member->save('settings_hash', ''); // Force recalculation 
-    
+    // Test renewal expiration calculation via an actual renewal. get_expiration_date()
+    // never advances a stored date - only renew_membership() does.
+    $member->renew_membership('test');
+
     $renewal_expiration = $member->get_expiration_date();
     echo "<p><strong>After Renewal:</strong> {$renewal_expiration}</p>";
     echo "<p><strong>Expected Renewal:</strong> {$test['expected_renewal']}</p>";
-    
-    // Note: The actual renewal test would need to call renew_membership() method
-    // For now, we'll just test that the helper methods work correctly
-    
+
+    if ($renewal_expiration === $test['expected_renewal']) {
+        echo "<p style='color: green;'>✓ Renewal expiration calculation PASSED</p>";
+    } else {
+        echo "<p style='color: red;'>✗ Renewal expiration calculation FAILED</p>";
+    }
+
     echo "<hr>";
     
     // Clean up test data

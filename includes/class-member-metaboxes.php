@@ -219,7 +219,7 @@ class DCMM_metaboxes {
 
         // Get the membership status
         $membership_status = $member->get( 'status' );
-        // By calling get_expiration_date(), we ensure that the expiration date is calculated if settings have changed
+        // By calling get_expiration_date(), we ensure an active member without a stored expiration date gets one calculated
         $expiration_date = $member->get_expiration_date();
 
         wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' );
@@ -589,7 +589,7 @@ class DCMM_metaboxes {
                     'user_id' => $log['user_id'],
                     'action' => $log['action'],
                     'context' => $log['context'],
-                    'message' => $log['action'] . ' (' . $log['context'] . ')'
+                    'message' => $log['action'] . ' (' . $log['context'] . ')' . ( ! empty( $log['notes'] ) ? ': ' . $log['notes'] : '' )
                 );
             }
         }
