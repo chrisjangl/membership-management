@@ -66,4 +66,22 @@ interface Payment_Gateway_Interface {
      */
     public function get_subscription_status( $subscription_id );
 
+    /**
+     * Suspend (pause) a recurring subscription.
+     *
+     * @param int    $member_id       The member's CPT ID.
+     * @param string $subscription_id The gateway's subscription ID.
+     * @return bool|WP_Error True on success, WP_Error on failure.
+     */
+    public function suspend_subscription( $member_id, $subscription_id );
+
+    /**
+     * Resume a previously suspended subscription.
+     *
+     * @param int    $member_id       The member's CPT ID.
+     * @param string $subscription_id The gateway's subscription ID.
+     * @return bool|WP_Error True on success, WP_Error on failure.
+     */
+    public function resume_subscription( $member_id, $subscription_id );
+
 }

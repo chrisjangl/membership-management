@@ -4,8 +4,8 @@
   "scripts": {
     "css": "sass src/scss/main.scss css/member-admin.css --style compressed",
     "watch": "npm run css -- --watch",
-    "dist": "tar -czf ../dc-membership.tar.gz --exclude='./assets/src/' --exclude='./.git/' --exclude='./node_modules' --exclude='./tests' --exclude='.gitignore' --exclude='package.json' --exclude='package-lock.json' --exclude='CLAUDE.md' --exclude='CONTRIBUTING.md' ./",
-    "zip": "zip -r ../dc-membership.zip ./ -x './assets/src/*' './.git/*' './node_modules/*' './tests/*' '.gitignore' 'package.json' 'package-lock.json' 'CLAUDE.md' 'CONTRIBUTING.md'",
+    "dist": "tar -czf ../dc-membership.tar.gz --exclude='./assets/src/' --exclude='./.wordpress-org/' --exclude='./.git/' --exclude='./node_modules' --exclude='./tests' --exclude='.gitignore' --exclude='package.json' --exclude='package-lock.json' --exclude='CLAUDE.md' --exclude='CONTRIBUTING.md' ./",
+    "zip": "zip -r ../dc-membership.zip ./ -x './assets/src/*' './.wordpress-org/*' './.git/*' './node_modules/*' './tests/*' '.gitignore' 'package.json' 'package-lock.json' 'CLAUDE.md' 'CONTRIBUTING.md'",
     "build:dist": "node scripts/build-dist.js",
     "prepare:wp-repo": "node scripts/prepare-wp-repo.js",
     "validate:release": "node scripts/validate-release.js",
@@ -13,7 +13,8 @@
     "version:minor": "npm run release -- minor",
     "version:major": "npm run release -- major",
     "release": "node scripts/release.js",
-    "deploy:svn": "node scripts/deploy-svn.js"
+    "deploy:svn": "node scripts/deploy-svn.js",
+    "deploy:svn:assets": "node scripts/deploy-svn.js --assets"
   },
   "dependencies": {
     "fs-extra": "^11.3.0",

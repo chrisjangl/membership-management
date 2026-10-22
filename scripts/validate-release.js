@@ -288,7 +288,8 @@ class ReleaseValidator {
             '.eslintrc',
             'tsconfig.json',
             'migrate-*.php',
-            'test-*.php'
+            'test-*.php',
+            '.wordpress-org'
         ];
         
         const foundDevFiles = devFiles.filter(file => {

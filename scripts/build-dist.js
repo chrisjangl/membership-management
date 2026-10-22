@@ -70,9 +70,13 @@ class DistBuilder {
             '**/test-*.php',
             '**/CLAUDE.md',
             '**/ROADMAP.md',
-            
+
             // Scripts directory
             '**/scripts/**',
+
+            // WordPress.org repo display assets (icon, banner) — not part
+            // of the plugin itself; synced separately via deploy-svn.js --assets
+            '**/.wordpress-org/**',
         ];
     }
     

@@ -291,20 +291,37 @@ function get_user_meta_key( $key = false ) {
  * 
  * TODO: adjust to fit here
  */
-function add_user_fields($user) { 
+function add_user_fields( $user ) {
     ob_start();
     ?>
 
     <hr>
-	
 
-    <h3>Personal Info</h3>
+    <h3>Membership Management</h3>
 
     <hr>
 
     <?php
-    // TODO: list the exams they are / have been registered
-    echo esc_html( ob_get_clean() );
+    if ( \current_user_can( 'edit_users' ) ) : ?>
+    <table class="form-table">
+        <tr>
+            <th><label for="dcmm_is_member"><?php esc_html_e( 'Organization Member', DCMM_PLUGIN_SLUG ); ?></label></th>
+            <td>
+                <input type="checkbox" name="dcmm_is_member" id="dcmm_is_member" value="1" <?php \checked( in_array( 'member', $user->roles ) ); ?> />
+                <span class="description"><?php esc_html_e( 'Grant this user the Organization Member role. Managed independently of the Role dropdown above.', DCMM_PLUGIN_SLUG ); ?></span>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="dcmm_is_org_admin"><?php esc_html_e( 'Organization Administrator', DCMM_PLUGIN_SLUG ); ?></label></th>
+            <td>
+                <input type="checkbox" name="dcmm_is_org_admin" id="dcmm_is_org_admin" value="1" <?php \checked( in_array( 'membership_administrator', $user->roles ) ); ?> />
+                <span class="description"><?php esc_html_e( 'Grant this user the Organization Administrator role. Managed independently of the Role dropdown above.', DCMM_PLUGIN_SLUG ); ?></span>
+            </td>
+        </tr>
+    </table>
+    <?php endif;
+
+    echo ob_get_clean();
 }
 add_action( 'show_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
 add_action( 'edit_user_profile', __NAMESPACE__ . '\\add_user_fields', 10 );
@@ -367,7 +384,11 @@ function create_member_as_user( $email, $cpt_id ) {
         // if not, create a WP user, giving it a role of "Member"
         $user_id = \wp_create_user( $email, \wp_generate_password(), $email );
         $user = new \WP_User( $user_id );
-        $user->add_role( 'member' );
+        // Use set_role (not add_role) so 'member' replaces the default 'subscriber'.
+        // This ensures roles[0] === 'member', preventing WP's Edit User screen from
+        // silently stripping the member role when the admin saves (it calls set_role
+        // with whatever the Role dropdown shows, which defaults to roles[0]).
+        $user->set_role( 'member' );
 
         // update the user meta with the CPT ID
         $cpt_id_saved = \update_user_meta( $user_id, $cpt_id_meta_key, $cpt_id );
@@ -556,4 +577,30 @@ function save_user_fields( $user_id ) {
 }
 add_action( 'personal_options_update', __NAMESPACE__ . '\\save_user_fields' );
 add_action( 'edit_user_profile_update', __NAMESPACE__ . '\\save_user_fields' );
+
+// Role checkboxes must be applied via profile_update, which fires inside wp_update_user()
+// *after* set_role() has already run. The earlier edit_user_profile_update /
+// personal_options_update hooks fire before wp_update_user(), so any role changes made
+// there are immediately overwritten by set_role() on the Role dropdown value.
+add_action( 'profile_update', function( $user_id ) {
+    if ( ! \current_user_can( 'edit_users' ) ) {
+        return;
+    }
+
+    $user = new \WP_User( $user_id );
+    $wants_member    = isset( $_POST['dcmm_is_member'] )    && '1' === $_POST['dcmm_is_member'];
+    $wants_org_admin = isset( $_POST['dcmm_is_org_admin'] ) && '1' === $_POST['dcmm_is_org_admin'];
+
+    if ( $wants_member && ! in_array( 'member', $user->roles ) ) {
+        $user->add_role( 'member' );
+    } elseif ( ! $wants_member && in_array( 'member', $user->roles ) ) {
+        $user->remove_role( 'member' );
+    }
+
+    if ( $wants_org_admin && ! in_array( 'membership_administrator', $user->roles ) ) {
+        $user->add_role( 'membership_administrator' );
+    } elseif ( ! $wants_org_admin && in_array( 'membership_administrator', $user->roles ) ) {
+        $user->remove_role( 'membership_administrator' );
+    }
+}, 20 );
 

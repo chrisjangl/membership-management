@@ -416,8 +416,11 @@ class DCMM_Member extends WP_User {
 
 			}
 		} else {
-			// if there is already a WP User, do nothing
 			$user_ID = $this->get_wp_user_id();
+			// Ensure the already-linked user has the member role (guards against role
+			// being stripped after the link was established, e.g. plugin deactivation)
+			include_once( 'functions-user-role.php' );
+			\DCMM_Users\add_member_role( $user_ID );
 		}
 
 		return $user_ID;
@@ -1049,10 +1052,6 @@ class DCMM_Member extends WP_User {
 	 * @return array|false Subscription status info or false if no subscription
 	 */
 	public function get_subscription_status_info() {
-		if ( ! $this->has_active_subscription() ) {
-			return false;
-		}
-
 		$subscription_data = $this->get_subscription_data();
 		if ( ! $subscription_data ) {
 			return false;
@@ -1835,6 +1834,72 @@ class DCMM_Member extends WP_User {
 
 		// Log the cancellation
 		$this->log( 'subscription_cancelled', 'recurring', "Subscription ID: {$subscription_data['id']}" );
+
+		return true;
+	}
+
+	/**
+	 * Pause (suspend) the member's recurring subscription
+	 *
+	 * @return bool|WP_Error True on success, WP_Error on failure
+	 */
+	public function pause_subscription() {
+		$subscription_data = $this->get_subscription_data();
+		if ( ! $subscription_data ) {
+			return new \WP_Error( 'no_subscription', 'Member has no subscription to pause' );
+		}
+
+		// Get the gateway that created the subscription
+		$gateway = Gateway_Manager::get_gateway( $subscription_data['gateway'] );
+		if ( ! $gateway ) {
+			return new \WP_Error( 'gateway_not_found', 'Original payment gateway not available' );
+		}
+
+		// Suspend through gateway
+		$result = $gateway->suspend_subscription( $this->get_member_id(), $subscription_data['id'] );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		// Update subscription status
+		$this->save( 'subscription_status', 'suspended' );
+
+		// Log the pause
+		$this->log( 'subscription_paused', 'admin', "Subscription ID: {$subscription_data['id']}" );
+
+		return true;
+	}
+
+	/**
+	 * Resume the member's paused (suspended) recurring subscription
+	 *
+	 * @return bool|WP_Error True on success, WP_Error on failure
+	 */
+	public function resume_subscription() {
+		$subscription_data = $this->get_subscription_data();
+		if ( ! $subscription_data ) {
+			return new \WP_Error( 'no_subscription', 'Member has no subscription to resume' );
+		}
+
+		// Get the gateway that created the subscription
+		$gateway = Gateway_Manager::get_gateway( $subscription_data['gateway'] );
+		if ( ! $gateway ) {
+			return new \WP_Error( 'gateway_not_found', 'Original payment gateway not available' );
+		}
+
+		// Reactivate through gateway
+		$result = $gateway->resume_subscription( $this->get_member_id(), $subscription_data['id'] );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		// Update subscription status
+		$this->save( 'subscription_status', 'active' );
+
+		// Log the resumption
+		$this->log( 'subscription_resumed', 'admin', "Subscription ID: {$subscription_data['id']}" );
 
 		return true;
 	}

@@ -59,6 +59,10 @@ module.exports = {
 
         // Scripts directory
         '**/scripts/**',
+
+        // WordPress.org repo display assets (icon, banner) — these live in
+        // the SVN repo's root /assets folder, not the plugin itself
+        '**/.wordpress-org/**',
     ],
 
     // Files to exclude when creating GitHub release zip (from wp-repo)
@@ -75,6 +79,7 @@ module.exports = {
         'scripts/*',        // Build scripts (shouldn't be in wp-repo anyway)
         'tests/*',          // Tests (shouldn't be in wp-repo anyway)
         '*.config.js',      // Config files (shouldn't be in wp-repo anyway)
+        '.wordpress-org/*', // Repo display assets (shouldn't be in wp-repo anyway)
     ],
 
     // Files to exclude when deploying to WordPress.org SVN (from wp-repo)
@@ -94,6 +99,7 @@ module.exports = {
         'scripts',              // Build scripts (shouldn't be in wp-repo anyway)
         'tests',                // Tests (shouldn't be in wp-repo anyway)
         '*.config.js',          // Config files (shouldn't be in wp-repo anyway)
+        '.wordpress-org',       // Repo display assets (synced separately, see deploy-svn.js --assets)
     ],
 
     // Files that MUST be present in WordPress.org distribution
