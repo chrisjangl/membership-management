@@ -14,8 +14,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once plugin_dir_path(__FILE__) . 'includes/class-member.php';
-require_once plugin_dir_path(__FILE__) . 'includes/settings.php';
+require_once DCMM_PATH . 'includes/class-member.php';
+require_once DCMM_PATH . 'includes/settings.php';
 
 echo "<h2>Testing Anchored Full-Term Renewal Logic</h2>";
 
