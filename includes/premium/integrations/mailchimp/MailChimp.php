@@ -222,7 +222,8 @@ class DCMM_MailChimp {
             $this->last_error = curl_error($ch);
         }
 
-        curl_close($ch);
+        // curl_close() is a no-op since PHP 8.0 and deprecated in 8.5; unset frees the handle on all versions.
+        unset($ch);
 
         return $this->interpretResponse($response);
     }

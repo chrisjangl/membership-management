@@ -40,7 +40,10 @@ if (isset($_GET['test_renewal_url'])) {
         // Use reflection to call the private method
         $reflection = new ReflectionClass($email_handler);
         $method = $reflection->getMethod('get_renewal_url');
-        $method->setAccessible(true);
+        // Required before PHP 8.1; deprecated (no-op) as of 8.5.
+        if (PHP_VERSION_ID < 80100) {
+            $method->setAccessible(true);
+        }
         $renewal_url = $method->invoke($email_handler, $member);
         
         echo "<p><strong>Generated renewal URL:</strong> <a href='" . esc_url($renewal_url) . "' target='_blank'>" . esc_html($renewal_url) . "</a></p>";
