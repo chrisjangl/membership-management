@@ -422,6 +422,11 @@ function is_organizational_member( $user_ID ) {
     // get WP_User object
     $user = \get_userdata( $user_ID );
 
+    // if user does not exist, return false
+    if ( ! $user ) {
+        return false;
+    }
+
     // check whether user is a Organizational Member
     if ( \is_array( $user->roles ) && \in_array( 'member', $user->roles ) 
         || is_organizational_manager( $user )
@@ -453,6 +458,11 @@ function is_organizational_manager( $user ) {
         $user = \get_userdata( $user );
     }
 
+    // if user does not exist, return false
+    if ( ! $user ) {
+        return false;
+    }
+
     // check whether user is a Organizational Member
     if ( \is_array( $user->roles ) && \in_array( 'membership_manager', $user->roles ) ) {
         return true;
@@ -479,6 +489,11 @@ function is_organizational_admin( $user ) {
     // if $user passed is not a WP_User object, get it
     if ( ! $user instanceof \WP_User ) {
         $user = \get_userdata( $user );
+    }
+
+    // if user does not exist, return false
+    if ( ! $user ) {
+        return false;
     }
 
     // check whether user is a Organizational Member
