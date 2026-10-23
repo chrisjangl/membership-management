@@ -70,4 +70,9 @@ A: When you save a change to any of these settings, you're asked whether to upda
 * Add CLAUDE.md for project guidance and development notes
 * Add test scripts for MailChimp integration, notifications, recurring billing, renewal logic, status system, and subscription flow
 
+== Upgrade Notice ==
+
+= 1.5.1 =
+Expired members are now set to inactive automatically. Before updating, check that active members' expiration dates are correct: the first daily check after updating deactivates anyone more than the grace period (default 30 days) past their expiration date. No email is sent.
+
 
