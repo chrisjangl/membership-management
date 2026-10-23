@@ -22,6 +22,7 @@ class DistBuilder {
         this.includePatterns = [
             'membership.php',              // Main plugin file
             'readme.txt',                  // WordPress readme
+            'changelog.txt',               // Older changelog entries moved out of readme.txt
             'includes/**/*',               // PHP source code
             'css/**/*',             // Compiled CSS
             'js/**/*',              // Production JS

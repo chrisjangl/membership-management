@@ -102,6 +102,14 @@ module.exports = {
         '.wordpress-org',       // Repo display assets (synced separately, see deploy-svn.js --assets)
     ],
 
+    // Changelog: readme.txt keeps only the newest entries (WordPress.org warns
+    // that readmes over 10k may cause errors); older ones move to changelog.txt
+    changelog: {
+        readmeEntries: 3,
+        file: 'changelog.txt',
+        url: 'https://github.com/chrisjangl/membership-management/blob/stable/changelog.txt',
+    },
+
     // Files that MUST be present in WordPress.org distribution
     requiredFiles: [
         'membership.php',       // Main plugin file

@@ -139,6 +139,11 @@ Use Conventional Commits format for all commits:
 **Types:** feat, fix, docs, style, refactor, test, chore
 **Scopes:** Member, Gateway, Admin, Settings, UX, etc.
 
+### What `npm run release` Does to the Changelog
+- Adds a `= X.Y.Z =` entry to the top of the readme.txt changelog from `git log <last-tag>..HEAD --no-merges`, listing only `feat` and `fix` commits. If an entry for that version already exists (hand-written, or from a failed earlier run), it's left as is.
+- Keeps only the newest `changelog.readmeEntries` entries (see `scripts/release-config.js`) in readme.txt and moves older ones to `changelog.txt`, because WordPress.org warns that readmes over 10k may cause errors. `changelog.txt` ships with the plugin.
+- GitHub release notes list all commit types, not just `feat`/`fix`. They're passed to `gh` with `--notes-file`.
+
 ### Changelog Generation Process
 1. **During Development**: Keep offline notes for major features
 2. **Pre-release**: Extract commits using `git log --pretty=format:"%s" --grep="feat\|fix\|BREAKING"`

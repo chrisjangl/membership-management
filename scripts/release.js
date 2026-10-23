@@ -13,7 +13,10 @@
 
 const semver = require('semver');
 const fs = require('fs-extra');
+const os = require('os');
+const path = require('path');
 const { execSync } = require('child_process');
+const config = require('./release-config.js');
 
 class ReleaseOrchestrator {
     constructor() {
@@ -245,6 +248,9 @@ class ReleaseOrchestrator {
         // Ensure required sections exist
         content = await this.ensureReadmeSections(content);
 
+        // Keep the readme small by moving older changelog entries out
+        content = await this.moveOlderChangelogEntries(content);
+
         await fs.writeFile('readme.txt', content);
         console.log('[OK] Updated readme.txt');
     }
@@ -305,17 +311,58 @@ ${await this.generateChangelog()}
             }
         }
 
-        // Update changelog if it exists
-        if (/== Changelog ==/i.test(content)) {
-            const newChangelog = await this.generateChangelog();
-            content = content.replace(
-                /(== Changelog ==[\s\S]*?)(?=== |$)/i,
-                `== Changelog ==\n\n${newChangelog}\n\n`
-            );
-            console.log('[OK] Updated changelog');
+        // Add this version's entry to the top of the changelog, keeping earlier entries
+        const changelogSection = content.match(/== Changelog ==([\s\S]*?)(?=\n== |$)/i);
+        if (changelogSection) {
+            const escapedVersion = this.newVersion.replace(/\./g, '\\.');
+            const versionHeader = new RegExp(`^= ${escapedVersion} =`, 'm');
+
+            if (versionHeader.test(changelogSection[1])) {
+                console.log(`[OK] Changelog already has a ${this.newVersion} entry, leaving it as is`);
+            } else {
+                const newChangelog = await this.generateChangelog();
+                content = content.replace(
+                    /== Changelog ==\s*/i,
+                    `== Changelog ==\n\n${newChangelog.trimEnd()}\n\n`
+                );
+                console.log('[OK] Updated changelog');
+            }
         }
 
         return content;
+    }
+
+    async moveOlderChangelogEntries(content) {
+        const { readmeEntries, file, url } = config.changelog;
+        const note = `Changelog entries for older versions are in ${file}: ${url}`;
+
+        const section = content.match(/(== Changelog ==\n)([\s\S]*?)(?=\n== |$)/i);
+        if (!section) return content;
+
+        const entries = this.splitChangelogEntries(section[2].replace(note, ''));
+        if (entries.length <= readmeEntries) return content;
+
+        // Newest first, after the file header; skip versions already in the file
+        const header = '=== Membership Management Changelog ===';
+        const existing = fs.existsSync(file)
+            ? this.splitChangelogEntries(fs.readFileSync(file, 'utf8').replace(header, ''))
+            : [];
+        const existingHeaders = existing.map(entry => entry.split('\n')[0]);
+        const moved = entries.slice(readmeEntries)
+            .filter(entry => !existingHeaders.includes(entry.split('\n')[0]));
+
+        await fs.writeFile(file, `${header}\n\n${[...moved, ...existing].join('\n\n')}\n`);
+        console.log(`[OK] Moved ${moved.length} older changelog entries to ${file}`);
+
+        const kept = entries.slice(0, readmeEntries).join('\n\n');
+        return content.replace(section[0], `${section[1]}\n${kept}\n\n${note}\n`);
+    }
+
+    splitChangelogEntries(text) {
+        return text
+            .split(/^(?== \S.* =\s*$)/m)
+            .map(entry => entry.trim())
+            .filter(entry => /^= \S.* =/.test(entry));
     }
 
     async generateSection(sectionName) {
@@ -329,13 +376,14 @@ ${await this.generateChangelog()}
         }
     }
 
-    async generateChangelog() {
+    // The readme changelog only lists feat/fix commits; GitHub release notes pass includeOthers to list everything
+    async generateChangelog({ includeOthers = false } = {}) {
         try {
             // Get commits since last tag
             const lastTag = this.getLastTag();
             const gitRange = lastTag ? `${lastTag}..HEAD` : 'HEAD';
 
-            const commits = execSync(`git log ${gitRange} --pretty=format:"%h|%s|%an|%ad" --date=short`, { encoding: 'utf8' })
+            const commits = execSync(`git log ${gitRange} --no-merges --pretty=format:"%h|%s|%an|%ad" --date=short`, { encoding: 'utf8' })
                 .split('\n')
                 .filter(line => line.trim())
                 .map(line => {
@@ -368,7 +416,7 @@ ${await this.generateChangelog()}
                 });
             }
 
-            if (others.length > 0) {
+            if (includeOthers && others.length > 0) {
                 others.forEach(commit => {
                     let cleanSubject = commit.subject.replace(/^[^:]*:\s*/, '');
                     cleanSubject = cleanSubject.charAt(0).toUpperCase() + cleanSubject.slice(1);
@@ -400,7 +448,11 @@ ${await this.generateChangelog()}
         try {
             // Add only the version-updated files, not dist/
             console.log('[GIT] Adding version files to git...');
-            execSync('git add package.json membership.php readme.txt', { stdio: 'inherit' });
+            const versionFiles = ['package.json', 'membership.php', 'readme.txt'];
+            if (fs.existsSync(config.changelog.file)) {
+                versionFiles.push(config.changelog.file);
+            }
+            execSync(`git add ${versionFiles.join(' ')}`, { stdio: 'inherit' });
 
             console.log(`[GIT] Committing release v${this.newVersion}...`);
             execSync(`git commit -m "Release v${this.newVersion}"`, { stdio: 'inherit' });
@@ -544,15 +596,22 @@ ${await this.generateChangelog()}
             // Create zip with exclusions
             execSync(`zip -r ${zipName} . ${excludePatterns}`, { stdio: 'inherit' });
 
-            // Generate release notes from changelog
+            // Generate release notes from changelog, passed via a file so quotes,
+            // backticks and $ in commit messages can't break the shell command
             const releaseNotes = await this.generateReleaseNotes();
+            const notesFile = path.join(os.tmpdir(), `dcmm-release-notes-${this.newVersion}.md`);
+            await fs.writeFile(notesFile, releaseNotes);
 
             // Create GitHub release
             console.log('[GITHUB] Creating release...');
-            execSync(
-                `gh release create v${this.newVersion} ${zipName} --title "Version ${this.newVersion}" --notes "${releaseNotes}"`,
-                { stdio: 'inherit' }
-            );
+            try {
+                execSync(
+                    `gh release create v${this.newVersion} ${zipName} --title "Version ${this.newVersion}" --notes-file "${notesFile}"`,
+                    { stdio: 'inherit' }
+                );
+            } finally {
+                fs.removeSync(notesFile);
+            }
 
             // Clean up zip file
             fs.removeSync(zipName);
@@ -609,11 +668,11 @@ ${await this.generateChangelog()}
 
     async generateReleaseNotes() {
         try {
-            const changelog = await this.generateChangelog();
+            const changelog = await this.generateChangelog({ includeOthers: true });
 
             // Format for GitHub release
             const notes = changelog
-                .replace(/^= .+ =$/, '') // Remove version header
+                .replace(/^= .+ =$/m, '') // Remove version header
                 .trim();
 
             return notes || 'Updates and improvements';
