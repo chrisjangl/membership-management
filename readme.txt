@@ -2,7 +2,7 @@
 Contributors: digitally-cultured
 Tags: membership management, CRM
 Requires at least: 5.0
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 Tested up to: 7.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -46,6 +46,21 @@ A: When you save a change to any of these settings, you're asked whether to upda
 
 
 == Changelog ==
+
+= 1.5.0 =
+* add process_expired_memberships method to transition inactive members after grace period
+* add bulk actions for pausing and resuming subscriptions in the Members list
+* add functionality to pause, resume, and cancel subscriptions in the membership management plugin
+* add expiration date column and sorting functionality
+* (re-)add support for legacy shortcode for member dashboard
+* Fix: restore settings page styles lost when compiling CSS & version the admin stylesheet with the plugin version
+* Fix: update curl_close usage for PHP 8 compatibility fix(tests): adjust reflection method accessibility for PHP 8.1 compatibility
+* Fix: add user existence check in organizational role functions
+* Fix: update membership cancellation process to retain expiration date and allow keeping paid time
+* Fix: improve expiration date handling and update settings change prompts
+* Fix: ensure linked users retain member role
+* Fix: pause stdin after data is received in waitForEnter method
+* Fix: fix SVN deploy script and move local path to gitignored config
 
 = 1.4.0 =
 * add member status filter dropdown and query functionality
