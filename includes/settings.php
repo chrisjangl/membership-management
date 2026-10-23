@@ -46,10 +46,13 @@ function enqueue_admin_assets( $hook_suffix ) {
     // member-admin.css is already enqueued globally by class-member-metaboxes.php
     // (handle: dcmm_admin_styles). Only the settings-page JS needs to be loaded here.
 
+    // jQuery UI dialog (bundled with WordPress) backs the "recalculate expiration dates?" prompt.
+    wp_enqueue_style( 'wp-jquery-ui-dialog' );
+
     wp_enqueue_script(
         'dcmm-admin-settings',
         DCMM_URL . 'js/admin-settings.js',
-        array( 'jquery' ),
+        array( 'jquery', 'jquery-ui-dialog' ),
         DCMM_VERSION,
         true
     );
@@ -64,9 +67,157 @@ function enqueue_admin_assets( $hook_suffix ) {
             'previewLabel'      => __( 'Preview Email', 'dcmm-membership' ),
             'previewLoading'    => __( 'Loading…', 'dcmm-membership' ),
             'previewError'      => __( 'Preview failed. Please try again.', 'dcmm-membership' ),
+            'activeMemberCount' => count_active_members(),
+            'recalcTitle'       => __( 'Update existing expiration dates?', 'dcmm-membership' ),
+            'recalcMessage'     => __( 'You changed settings that determine when memberships expire. There are %d active members. Should their expiration dates be updated to fit the new settings, or kept as they are?', 'dcmm-membership' ),
+            'recalcDetail'      => __( 'Dates are only ever extended, never shortened: each member moves to the first date on or after their current expiration that fits the new settings, so nobody loses time they\'ve paid for. Under the rolling join policy, existing dates stay as they are and the new term length applies at each member\'s next renewal. Each change is recorded in the member\'s Action Log, and no emails are sent. New signups and renewals always use the new settings.', 'dcmm-membership' ),
+            'recalcButton'      => __( 'Update dates', 'dcmm-membership' ),
+            'keepButton'        => __( 'Keep current dates', 'dcmm-membership' ),
+            'cancelButton'      => __( 'Cancel', 'dcmm-membership' ),
         )
     );
 }
+
+/**
+ * Count active members.
+ *
+ * @return int
+ */
+function count_active_members() {
+    $query = new \WP_Query( array(
+        'post_type'      => 'dcmm-member',
+        'post_status'    => 'publish',
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+        'meta_query'     => array(
+            array(
+                'key'   => 'dcmm_status',
+                'value' => 'active',
+            ),
+        ),
+    ) );
+
+    return (int) $query->found_posts;
+}
+
+/**
+ * Get the settings that determine a member's expiration date.
+ *
+ * The anchor date only matters under the anchored join policy, so it's left out
+ * otherwise - editing a hidden anchor field shouldn't count as a change.
+ *
+ * @param array $settings The dcmm_settings option value.
+ * @return array
+ */
+function get_expiration_settings( $settings ) {
+    $settings = is_array( $settings ) ? $settings : array();
+
+    $expiration_settings = array(
+        'join_policy' => isset( $settings['dcmm_join_policy'] ) ? $settings['dcmm_join_policy'] : '',
+        'term_length' => isset( $settings['dcmm_membership_term_length'] ) ? $settings['dcmm_membership_term_length'] : '',
+        'anchor_date' => '',
+    );
+
+    if ( 'anchored_full_term' === $expiration_settings['join_policy'] && isset( $settings['dcmm_anchor_date'] ) ) {
+        $expiration_settings['anchor_date'] = $settings['dcmm_anchor_date'];
+    }
+
+    return $expiration_settings;
+}
+
+/**
+ * When the expiration settings change, apply the admin's choice about existing members.
+ *
+ * Existing expiration dates are never changed unless the admin chose "Update
+ * dates" in the prompt shown on save (admin-settings.js), which posts
+ * dcmm_recalculate_expirations=1. Without that (including with JS disabled), dates
+ * are kept and only new signups and renewals use the new settings.
+ *
+ * options.php has already checked the nonce and capability before the option is
+ * updated; the option_page check keeps this from firing on programmatic updates.
+ *
+ * @param mixed $old_value Previous dcmm_settings value.
+ * @param mixed $new_value New dcmm_settings value.
+ */
+function handle_expiration_settings_change( $old_value, $new_value ) {
+    if ( ! isset( $_POST['option_page'] ) || 'dcmm_settings_group' !== $_POST['option_page'] ) {
+        return;
+    }
+
+    $old_expiration_settings = get_expiration_settings( $old_value );
+    $new_expiration_settings = get_expiration_settings( $new_value );
+
+    if ( $old_expiration_settings === $new_expiration_settings ) {
+        return;
+    }
+
+    $recalculate = isset( $_POST['dcmm_recalculate_expirations'] ) && '1' === $_POST['dcmm_recalculate_expirations'];
+
+    if ( ! $recalculate ) {
+        add_settings_error(
+            'dcmm_settings',
+            'dcmm_expirations_kept',
+            __( 'Settings saved. Existing members\' expiration dates were left unchanged; new signups and renewals will use the new settings.', 'dcmm-membership' ),
+            'success'
+        );
+        return;
+    }
+
+    $member_ids = get_posts( array(
+        'post_type'      => 'dcmm-member',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'meta_query'     => array(
+            array(
+                'key'   => 'dcmm_status',
+                'value' => 'active',
+            ),
+        ),
+    ) );
+
+    $setting_labels = array(
+        'join_policy' => 'join policy',
+        'term_length' => 'term length',
+        'anchor_date' => 'anchor date',
+    );
+    $changed = array();
+    foreach ( $setting_labels as $key => $label ) {
+        if ( $old_expiration_settings[ $key ] !== $new_expiration_settings[ $key ] ) {
+            $changed[] = $label;
+        }
+    }
+    $reason = 'changed ' . implode( ', ', $changed );
+
+    $updated = 0;
+
+    foreach ( $member_ids as $member_id ) {
+        $member = new \DCMM_Member( $member_id );
+        if ( $member->recalculate_expiration_date( $reason ) ) {
+            $updated++;
+        }
+    }
+
+    $message = sprintf(
+        /* translators: %d: number of members */
+        _n( 'Settings saved. Extended the expiration date for %d active member to fit the new settings.', 'Settings saved. Extended expiration dates for %d active members to fit the new settings.', $updated, 'dcmm-membership' ),
+        $updated
+    );
+
+    $unchanged = count( $member_ids ) - $updated;
+    if ( $unchanged > 0 ) {
+        $message .= ' ' . sprintf(
+            /* translators: %d: number of members */
+            _n( '%d member\'s date already fit and was left unchanged.', '%d members\' dates already fit and were left unchanged.', $unchanged, 'dcmm-membership' ),
+            $unchanged
+        );
+    }
+
+    $message .= ' ' . __( 'Each change is recorded in the member\'s Action Log. No emails were sent.', 'dcmm-membership' );
+
+    add_settings_error( 'dcmm_settings', 'dcmm_expirations_recalculated', $message, 'success' );
+}
+add_action( 'update_option_dcmm_settings', __NAMESPACE__ . '\handle_expiration_settings_change', 10, 2 );
 add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_admin_assets' );
 
 /**
@@ -110,6 +261,8 @@ function settings_page_callback() {
             <?php // eliminating the hidden-field workarounds and data-loss between tabs. ?>
             <form method="post" action="options.php" id="dcmm-settings-form">
                 <?php settings_fields( 'dcmm_settings_group' ); ?>
+                <?php // Set by the "recalculate expiration dates?" prompt in admin-settings.js. ?>
+                <input type="hidden" name="dcmm_recalculate_expirations" id="dcmm_recalculate_expirations" value="" />
 
                 <div id="dcmm-tab-general" class="dcmm-tab-panel" role="tabpanel" data-tab="general"<?php echo $current_tab !== 'general' ? ' style="display:none"' : ''; ?>>
                     <?php render_general_tab(); ?>

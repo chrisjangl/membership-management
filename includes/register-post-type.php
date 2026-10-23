@@ -60,6 +60,15 @@ function register_action_hooks() {
 	// apply renewal method filter to query
 	\add_action( 'pre_get_posts', '\DCMM_Post_Type\dcmm_filter_by_renewal_method' );
 
+	// add Pause/Resume Subscriptions to the bulk actions dropdown
+	\add_filter( "bulk_actions-edit-{$our_post_type}", '\DCMM_Post_Type\dcmm_register_subscription_bulk_actions' );
+
+	// handle the Pause/Resume Subscriptions bulk actions
+	\add_filter( "handle_bulk_actions-edit-{$our_post_type}", '\DCMM_Post_Type\dcmm_handle_subscription_bulk_actions', 10, 3 );
+
+	// show a notice with the results of a subscription bulk action
+	\add_action( 'admin_notices', '\DCMM_Post_Type\dcmm_bulk_action_notices' );
+
 }
 
 /**
@@ -95,7 +104,7 @@ function dcmm_register_post_type() {
 		'slug'			=> 'member',
 		'exclude_from_search' => true,
 		'menu_position' => 5,
-		'menu_icon'		=> 'dashicons-money', 
+		'menu_icon'		=> 'data:image/svg+xml;base64,' . base64_encode( file_get_contents( DCMM_PATH . 'assets/images/dashicon.svg' ) ),
 		'supports'      => array( 'title', 'custom_fields' ),
 		'has_archive'   => false,
 		'capability_type' => 'dcmm_member',
@@ -140,6 +149,7 @@ function dcmm_custom_columns( $default_columns ) {
 		'cb' => $default_columns['cb'],
 		'name' => 'Name',
 		'status' => __( 'Membership Status', DCMM_PLUGIN_SLUG ),
+		'expiration_date' => __( 'Expiration Date', DCMM_PLUGIN_SLUG ),
 		'renewal_method' => __( 'Renewal Method', DCMM_PLUGIN_SLUG ),
 		'email' => __( 'Email', DCMM_PLUGIN_SLUG ),
 		'address' => __( 'Address', DCMM_PLUGIN_SLUG ),
@@ -224,6 +234,10 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 				}
 			}
 			break;
+		case 'expiration_date':
+			$expiration_date = $member->get_expiration_date();
+			echo $expiration_date ? esc_html( date_i18n( get_option( 'date_format' ), strtotime( $expiration_date ) ) ) : '---';
+			break;
 		case 'renewal_method':
 			$renewal_method = $member->get_renewal_method();
 			echo $renewal_method ? esc_html( $renewal_method ) : '---';
@@ -242,6 +256,7 @@ function dcmm_sortable_columns( $columns ) {
 	
 	$columns['name'] = 'dcmm_name';
 	$columns['status'] = 'dcmm_status';
+	$columns['expiration_date'] = 'dcmm_expiration_date';
 
 	return $columns;
 }
@@ -279,6 +294,11 @@ function dcmm_sortable_columns_orderby( $query ) {
 		$query->set( 'orderby', 'meta_value' );
 	}
 
+	if ( 'dcmm_expiration_date' == $orderby ) {
+		$meta_key = $meta_keys['expiration_date'];
+		$query->set( 'meta_key', $meta_key );
+		$query->set( 'orderby', 'meta_value' );
+	}
 }
 
 
@@ -403,6 +423,109 @@ function dcmm_filter_by_renewal_method( $query ) {
 			),
 		) );
 	}
+}
+
+/**
+ * Add "Pause Subscriptions" and "Resume Subscriptions" to the bulk actions
+ * dropdown on the Members list screen.
+ *
+ * @param array $bulk_actions
+ *
+ * @return array $bulk_actions
+ */
+function dcmm_register_subscription_bulk_actions( $bulk_actions ) {
+
+	$bulk_actions['dcmm_pause_subscriptions'] = __( 'Pause Subscriptions', DCMM_PLUGIN_SLUG );
+	$bulk_actions['dcmm_resume_subscriptions'] = __( 'Resume Subscriptions', DCMM_PLUGIN_SLUG );
+
+	return $bulk_actions;
+}
+
+/**
+ * Handle the "Pause Subscriptions" / "Resume Subscriptions" bulk actions.
+ *
+ * Members with no gateway subscription are silently skipped. Gateway
+ * failures are counted and reported back via the redirect URL instead of
+ * halting the rest of the batch.
+ *
+ * @param string $redirect_to
+ * @param string $doaction
+ * @param int[]  $post_ids
+ *
+ * @return string $redirect_to
+ */
+function dcmm_handle_subscription_bulk_actions( $redirect_to, $doaction, $post_ids ) {
+
+	if ( ! in_array( $doaction, array( 'dcmm_pause_subscriptions', 'dcmm_resume_subscriptions' ), true ) ) {
+		return $redirect_to;
+	}
+
+	if ( ! current_user_can( 'edit_dcmm_members' ) ) {
+		return $redirect_to;
+	}
+
+	$succeeded = 0;
+	$failed = 0;
+
+	foreach ( $post_ids as $post_id ) {
+		$member = new \DCMM_Member( $post_id );
+
+		// skip members with no subscription to act on
+		if ( ! $member->get_subscription_data() ) {
+			continue;
+		}
+
+		$result = ( 'dcmm_pause_subscriptions' === $doaction )
+			? $member->pause_subscription()
+			: $member->resume_subscription();
+
+		if ( is_wp_error( $result ) ) {
+			$failed++;
+		} else {
+			$succeeded++;
+		}
+	}
+
+	$redirect_to = remove_query_arg( array( 'dcmm_bulk_action', 'dcmm_bulk_succeeded', 'dcmm_bulk_failed' ), $redirect_to );
+
+	return add_query_arg( array(
+		'dcmm_bulk_action'    => $doaction,
+		'dcmm_bulk_succeeded' => $succeeded,
+		'dcmm_bulk_failed'    => $failed,
+	), $redirect_to );
+}
+
+/**
+ * Show an admin notice with the results of a subscription bulk action.
+ *
+ * @return void
+ */
+function dcmm_bulk_action_notices() {
+	global $pagenow;
+
+	if ( $pagenow !== 'edit.php' || ! isset( $_GET['dcmm_bulk_action'] ) ) {
+		return;
+	}
+
+	$action = sanitize_key( $_GET['dcmm_bulk_action'] );
+	if ( ! in_array( $action, array( 'dcmm_pause_subscriptions', 'dcmm_resume_subscriptions' ), true ) ) {
+		return;
+	}
+
+	$succeeded = isset( $_GET['dcmm_bulk_succeeded'] ) ? (int) $_GET['dcmm_bulk_succeeded'] : 0;
+	$failed = isset( $_GET['dcmm_bulk_failed'] ) ? (int) $_GET['dcmm_bulk_failed'] : 0;
+	$verb = ( 'dcmm_pause_subscriptions' === $action ) ? 'paused' : 'resumed';
+
+	$message = sprintf( '%d subscription(s) %s.', $succeeded, $verb );
+	if ( $failed > 0 ) {
+		$message .= ' ' . sprintf( '%d failed.', $failed );
+	}
+
+	printf(
+		'<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
+		esc_attr( $failed > 0 ? 'warning' : 'success' ),
+		esc_html( $message )
+	);
 }
 
 /**

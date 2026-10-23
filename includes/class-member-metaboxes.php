@@ -44,6 +44,7 @@ class DCMM_metaboxes {
      function add_metaboxes() {
         add_meta_box( 'contact_info', 'Contact Info', array( $this, 'create_metabox_contact_info' ), 'dcmm-member', 'normal', 'high' );
         add_meta_box( 'membership_status', "Membership Status", array( $this, 'create_metabox_membership_status' ), 'dcmm-member', 'side' );
+        add_meta_box( 'subscription', "Subscription", array( $this, 'create_metabox_subscription' ), 'dcmm-member', 'side' );
         add_meta_box( 'user_account', "User Account", array( $this, 'create_metabox_wp_user' ), 'dcmm-member', 'side' );
         add_meta_box( 'logs', "Action Log", array( $this, 'create_metabox_logs' ), 'dcmm-member', 'side' );
     }
@@ -64,7 +65,7 @@ class DCMM_metaboxes {
             && 'post-new.php' != $hook ) {
             return;
         }
-        wp_enqueue_style( 'dcmm_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'css/member-admin.css', array(), '1.0' );
+        wp_enqueue_style( 'dcmm_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'css/member-admin.css', array(), DCMM_VERSION );
     }
 
     /** 
@@ -218,7 +219,7 @@ class DCMM_metaboxes {
 
         // Get the membership status
         $membership_status = $member->get( 'status' );
-        // By calling get_expiration_date(), we ensure that the expiration date is calculated if settings have changed
+        // By calling get_expiration_date(), we ensure an active member without a stored expiration date gets one calculated
         $expiration_date = $member->get_expiration_date();
 
         wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' );
@@ -252,6 +253,10 @@ class DCMM_metaboxes {
                 <input type="date" name="dcmm_expiration_date" id="dcmm_expiration_date" value="<?php echo esc_attr( $expiration_date ); ?>"  />
             </p>
             <?php
+        } elseif ( $expiration_date ) {
+            ?>
+            <p>Membership ended: <?php echo esc_html( $expiration_date ); ?></p>
+            <?php
         }
 
         // Renew link with email option
@@ -265,6 +270,7 @@ class DCMM_metaboxes {
             admin_url( 'admin-post.php?action=dcmm_manual_cancel&member_id=' . $member_id ),
             'dcmm_manual_cancel_' . $member_id
         );
+        $has_paid_time_left = 'active' === $membership_status && $expiration_date && $expiration_date > current_time( 'Y-m-d' );
         ?>
 
         <div class="dcmm-renewal-options">
@@ -275,7 +281,14 @@ class DCMM_metaboxes {
                 ?>
                 <p>
                     <a href="#" class="button button-primary dcmm-show-payment-form">Renew Membership</a>
-                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button dcmm-cancel-button" data-base-url="<?php echo esc_url( $cancel_url ); ?>">Cancel Membership</a>
+                    <?php if ( $has_paid_time_left ) : ?>
+                        <br>
+                        <label for="dcmm_keep_paid_time">
+                            <input type="checkbox" id="dcmm_keep_paid_time">
+                            Keep remaining paid time through <?php echo esc_html( $expiration_date ); ?> (no refund issued)
+                        </label>
+                    <?php endif; ?>
                 </p>
                 
                 <div id="dcmm-payment-form" style="display: none; margin-top: 15px; padding: 15px; border: 1px solid #ddd; background: #f9f9f9;">
@@ -362,7 +375,14 @@ class DCMM_metaboxes {
                 <p>
                     <a href="#" class="button button-primary dcmm-renew-button" data-base-url="<?php echo esc_url( $renew_url_base ); ?>">Renew Membership</a>
                     <br><br>
-                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button dcmm-cancel-button" data-base-url="<?php echo esc_url( $cancel_url ); ?>">Cancel Membership</a>
+                    <?php if ( $has_paid_time_left ) : ?>
+                        <br>
+                        <label for="dcmm_keep_paid_time">
+                            <input type="checkbox" id="dcmm_keep_paid_time">
+                            Keep remaining paid time through <?php echo esc_html( $expiration_date ); ?> (no refund issued)
+                        </label>
+                    <?php endif; ?>
                 </p>
                 <?php
             }
@@ -485,6 +505,12 @@ class DCMM_metaboxes {
                 window.location.href = finalUrl;
             });
             <?php endif; ?>
+
+            $('.dcmm-cancel-button').on('click', function(e) {
+                e.preventDefault();
+                var keepPaidTime = $('#dcmm_keep_paid_time').is(':checked') ? '1' : '0';
+                window.location.href = $(this).data('base-url') + '&keep_paid_time=' + keepPaidTime;
+            });
         });
         </script>
 
@@ -492,8 +518,84 @@ class DCMM_metaboxes {
     }
 
     /**
+     * Create the metabox for managing the member's recurring payment gateway subscription
+     */
+    function create_metabox_subscription() {
+
+        require_once('class-member.php');
+        $CPT_post_id = get_the_id();
+
+        $member = new DCMM_Member( $CPT_post_id );
+        $member_id = $member->get_member_id();
+
+        // Live status is fetched from the gateway (e.g. PayPal), not just the cached copy
+        $subscription_info = $member->get_subscription_status_info();
+
+        if ( ! $subscription_info || empty( $subscription_info['id'] ) ) {
+            echo '<p>This member does not have a recurring subscription.</p>';
+            return;
+        }
+
+        $pause_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_pause_subscription&member_id=' . $member_id ),
+            'dcmm_pause_subscription_' . $member_id
+        );
+
+        $resume_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_resume_subscription&member_id=' . $member_id ),
+            'dcmm_resume_subscription_' . $member_id
+        );
+
+        $cancel_url = wp_nonce_url(
+            admin_url( 'admin-post.php?action=dcmm_cancel_subscription&member_id=' . $member_id ),
+            'dcmm_cancel_subscription_' . $member_id
+        );
+        ?>
+
+        <p>
+            <strong>Status:</strong>
+            <?php echo esc_html( ucfirst( $subscription_info['status'] ) ); ?>
+        </p>
+        <p>
+            <strong>Gateway:</strong>
+            <?php echo esc_html( ucfirst( $subscription_info['gateway'] ) ); ?>
+            &nbsp;(<?php echo esc_html( ucfirst( $subscription_info['interval'] ?? 'monthly' ) ); ?>)
+        </p>
+        <?php if ( ! empty( $subscription_info['next_billing'] ) ) : ?>
+            <p>
+                <strong>Next Billing:</strong>
+                <?php echo esc_html( date( 'F j, Y', strtotime( $subscription_info['next_billing'] ) ) ); ?>
+            </p>
+        <?php endif; ?>
+        <?php if ( ! empty( $subscription_info['last_payment_amount'] ) ) : ?>
+            <p>
+                <strong>Last Payment:</strong>
+                $<?php echo esc_html( number_format( $subscription_info['last_payment_amount'], 2 ) ); ?>
+            </p>
+        <?php endif; ?>
+        <p>
+            <strong>Subscription ID:</strong>
+            <?php echo esc_html( $subscription_info['id'] ); ?>
+        </p>
+
+        <p>
+            <?php if ( 'active' === $subscription_info['status'] ) : ?>
+                <a href="<?php echo esc_url( $pause_url ); ?>" class="button">Pause Subscription</a>
+            <?php elseif ( 'suspended' === $subscription_info['status'] ) : ?>
+                <a href="<?php echo esc_url( $resume_url ); ?>" class="button">Resume Subscription</a>
+            <?php endif; ?>
+
+            <?php if ( 'cancelled' !== $subscription_info['status'] ) : ?>
+                <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Subscription</a>
+            <?php endif; ?>
+        </p>
+
+        <?php
+    }
+
+    /**
      * Create metabox for action logs
-     * 
+     *
      */
     function create_metabox_logs() {
 
@@ -512,7 +614,7 @@ class DCMM_metaboxes {
                     'user_id' => $log['user_id'],
                     'action' => $log['action'],
                     'context' => $log['context'],
-                    'message' => $log['action'] . ' (' . $log['context'] . ')'
+                    'message' => $log['action'] . ' (' . $log['context'] . ')' . ( ! empty( $log['notes'] ) ? ': ' . $log['notes'] : '' )
                 );
             }
         }
