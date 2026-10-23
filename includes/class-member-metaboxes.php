@@ -65,7 +65,7 @@ class DCMM_metaboxes {
             && 'post-new.php' != $hook ) {
             return;
         }
-        wp_enqueue_style( 'dcmm_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'css/member-admin.css', array(), '1.0' );
+        wp_enqueue_style( 'dcmm_admin_styles', plugin_dir_url( dirname(__FILE__)  ) . 'css/member-admin.css', array(), DCMM_VERSION );
     }
 
     /** 

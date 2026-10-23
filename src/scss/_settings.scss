@@ -1,0 +1,143 @@
+// settings page tabs
+.dcmm-settings-nav {
+    margin-bottom: 0;
+}
+
+.dcmm-tab-content {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-top: none;
+    padding: 20px;
+    margin-top: 0;
+}
+
+// email template editors & merge tags
+.dcmm-email-template-editor {
+    margin-bottom: 20px;
+}
+
+.dcmm-merge-tag,
+.dcmm-expiration-merge-tag {
+    font-family: monospace;
+    font-size: 11px;
+    margin: 2px;
+    white-space: nowrap;
+
+    &:hover {
+        background-color: #0073aa;
+        color: #fff;
+    }
+}
+
+.dcmm-expiration-merge-tag {
+    background-color: #f0f8f0;
+    border-color: #28a745;
+
+    &:hover {
+        background-color: #28a745;
+        color: #fff;
+    }
+}
+
+.dcmm-email-merge-tags,
+.dcmm-expiration-merge-tags {
+    border-radius: 4px;
+}
+
+// expiration notification fields
+.dcmm-notification-field {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+
+    label {
+        font-weight: bold;
+        font-size: 14px;
+    }
+}
+
+.dcmm-notification-details {
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.dcmm-expiration-notification-section {
+    margin-bottom: 20px;
+}
+
+// MailChimp connection status
+#dcmm-connection-status {
+    .success {
+        color: #46b450;
+        font-weight: bold;
+    }
+
+    .error {
+        color: #dc3232;
+        font-weight: bold;
+    }
+
+    .testing {
+        color: #0073aa;
+    }
+}
+
+// premium features toggle switch
+.dcmm-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+
+        &:checked + .dcmm-slider {
+            background-color: #2196f3;
+
+            &::before {
+                transform: translateX(26px);
+            }
+        }
+
+        &:focus + .dcmm-slider {
+            box-shadow: 0 0 1px #2196f3;
+        }
+    }
+}
+
+.dcmm-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+
+    &::before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: #fff;
+        transition: .4s;
+        border-radius: 50%;
+    }
+}
+
+.dcmm-premium-feature {
+    transition: box-shadow 0.3s ease;
+
+    &:hover {
+        box-shadow: 0 2px 5px rgba(0,0,0,.1);
+    }
+}
