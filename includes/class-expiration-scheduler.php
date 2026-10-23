@@ -25,8 +25,9 @@ class DCMM_Expiration_Scheduler {
      */
     public static function init() {
         add_action( self::CRON_HOOK, array( __CLASS__, 'process_expiration_notifications' ) );
+        add_action( self::CRON_HOOK, array( __CLASS__, 'process_expired_memberships' ) );
         add_action( 'init', array( __CLASS__, 'schedule_cron_job' ) );
-        
+
         // Clear notifications when member status changes
         add_action( 'dcmm_member_cancelled', array( __CLASS__, 'clear_member_notifications' ) );
         add_action( 'dcmm_member_renewed', array( __CLASS__, 'clear_member_notifications' ) );
@@ -83,6 +84,70 @@ class DCMM_Expiration_Scheduler {
                 }
             }
         }
+    }
+
+    /**
+     * Transition active members to inactive once their expiration date, plus the
+     * configured grace period, has fully passed. This is the enforcement step that
+     * expiration_date otherwise has no effect on - without it, expired members keep
+     * whatever access 'active' status grants indefinitely.
+     *
+     * Subscribers are treated like everyone else: a late payment is covered by the
+     * grace period, and a payment that arrives after expiry renews the member as usual.
+     *
+     * Called by WordPress cron.
+     */
+    public static function process_expired_memberships() {
+        foreach ( self::get_members_past_grace_period() as $member_post ) {
+            $member = new DCMM_Member( $member_post->ID );
+
+            if ( ! $member->exists() ) {
+                continue;
+            }
+
+            $member->set_status( 'inactive' );
+            $member->log( 'expired', 'auto' );
+
+            do_action( 'dcmm_member_cancelled', $member->get_member_id() );
+        }
+    }
+
+    /**
+     * Get active members whose expiration date, plus the configured grace period,
+     * has fully passed.
+     *
+     * @return array Array of member post objects
+     */
+    public static function get_members_past_grace_period() {
+        $grace_period_days = DCMM_Settings\get_settings( 'grace_period_days' );
+        $grace_period_days = $grace_period_days !== null ? intval( $grace_period_days ) : 30;
+
+        $cutoff_date = date( 'Y-m-d', strtotime( "-{$grace_period_days} days" ) );
+
+        $args = array(
+            'post_type' => 'dcmm-member',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => 'dcmm_expiration_date',
+                    'value' => '',
+                    'compare' => '!=',
+                ),
+                array(
+                    'key' => 'dcmm_expiration_date',
+                    'value' => $cutoff_date,
+                    'compare' => '<',
+                    'type' => 'DATE'
+                ),
+                array(
+                    'key' => 'dcmm_status',
+                    'value' => 'active',
+                    'compare' => '='
+                )
+            )
+        );
+
+        return get_posts( $args );
     }
 
     /**

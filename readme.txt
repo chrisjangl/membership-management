@@ -34,6 +34,8 @@ Q: How does the plugin track membership status?
 A: The plugin provides a user-friendly interface within the WordPress dashboard to mark members as active or inactive based on your organization's criteria.
 Q: Can members update their own information?
 A: Yes. Members get a self-service dashboard where they can update their contact information, renew their membership, and manage their subscription without contacting an administrator.
+Q: What happens to existing members when I change the join policy, term length, or anchor date?
+A: When you save a change to any of these settings, you're asked whether to update existing members' expiration dates or keep them as they are. New signups and renewals always use the new settings either way. If you choose to update, dates are only ever extended, never shortened: each active member moves to the first date on or after their current expiration that fits the new settings, so nobody loses time they've paid for and no settings change can cause a membership to expire. For example, a member paid through January 1 whose anchor date changes to July 1 is extended to July 1. Under the rolling join policy there's no calendar date to align to, so existing dates stay as they are and the new term length applies at each member's next renewal. Each change is recorded in the member's Action Log, and no emails are sent to members.
 
 == Installation ==
 
@@ -67,5 +69,10 @@ A: Yes. Members get a self-service dashboard where they can update their contact
 * Merge branch 'fix/v1.3.4/ajax-settings-tabs' into development
 * Add CLAUDE.md for project guidance and development notes
 * Add test scripts for MailChimp integration, notifications, recurring billing, renewal logic, status system, and subscription flow
+
+== Upgrade Notice ==
+
+= 1.5.1 =
+Expired members are now set to inactive automatically. Before updating, check that active members' expiration dates are correct: the first daily check after updating deactivates anyone more than the grace period (default 30 days) past their expiration date. No email is sent.
 
 

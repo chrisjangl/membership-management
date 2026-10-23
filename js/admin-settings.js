@@ -82,6 +82,63 @@
         $( '#dcmm_membership_term_length' ).on('change', updateAnchorDateField);
     }
 
+    // --- General tab: ask whether expiration setting changes apply to existing members ---
+    // Mirrors get_expiration_settings() in settings.php: the anchor date only counts
+    // under the anchored join policy.
+    function getExpirationSettings() {
+        var joinPolicy = $( '#dcmm_join_policy' ).val() || '';
+        return [
+            joinPolicy,
+            $( '#dcmm_membership_term_length' ).val() || '',
+            joinPolicy === 'anchored_full_term' ? ( $( '#dcmm_anchor_date' ).val() || '' ) : ''
+        ].join('|');
+    }
+
+    function initExpirationChangePrompt() {
+        var $form  = $( '#dcmm-settings-form' );
+        var $input = $( '#dcmm_recalculate_expirations' );
+
+        if ( ! $form.length || ! $input.length || ! $.fn.dialog || ! ( dcmmSettings.activeMemberCount > 0 ) ) {
+            return;
+        }
+
+        var initialSettings = getExpirationSettings();
+        var answered        = false;
+
+        var $dialog = $( '<div>' )
+            .append( $( '<p>' ).text( dcmmSettings.recalcMessage.replace( '%d', dcmmSettings.activeMemberCount ) ) )
+            .append( $( '<p class="description">' ).text( dcmmSettings.recalcDetail ) );
+
+        function submitWith( recalculate ) {
+            $input.val( recalculate ? '1' : '0' );
+            answered = true;
+            $dialog.dialog('close');
+            // Native submit skips the jQuery handlers, which already ran for this submit.
+            $form[0].submit();
+        }
+
+        $dialog.dialog({
+            autoOpen:    false,
+            modal:       true,
+            width:       480,
+            title:       dcmmSettings.recalcTitle,
+            dialogClass: 'wp-dialog',
+            buttons: [
+                { text: dcmmSettings.recalcButton, 'class': 'button button-primary', click: function () { submitWith( true ); } },
+                { text: dcmmSettings.keepButton,   'class': 'button',                click: function () { submitWith( false ); } },
+                { text: dcmmSettings.cancelButton, 'class': 'button-link',           click: function () { $dialog.dialog('close'); } }
+            ]
+        });
+
+        $form.on('submit', function (e) {
+            if ( answered || getExpirationSettings() === initialSettings ) {
+                return;
+            }
+            e.preventDefault();
+            $dialog.dialog('open');
+        });
+    }
+
     // --- Email merge tag insertion ---
     function initMergeTags() {
         $( document ).on('click', '.dcmm-merge-tag, .dcmm-expiration-merge-tag', function (e) {
@@ -235,6 +292,7 @@
         initTabs();
         initFormSave();
         initGeneralTabBehavior();
+        initExpirationChangePrompt();
         initMergeTags();
         initEmailPreviews();
         initMailChimp();

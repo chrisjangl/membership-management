@@ -219,7 +219,7 @@ class DCMM_metaboxes {
 
         // Get the membership status
         $membership_status = $member->get( 'status' );
-        // By calling get_expiration_date(), we ensure that the expiration date is calculated if settings have changed
+        // By calling get_expiration_date(), we ensure an active member without a stored expiration date gets one calculated
         $expiration_date = $member->get_expiration_date();
 
         wp_nonce_field( $nonce_prefix, 'dcmm_status_nonce' );
@@ -253,6 +253,10 @@ class DCMM_metaboxes {
                 <input type="date" name="dcmm_expiration_date" id="dcmm_expiration_date" value="<?php echo esc_attr( $expiration_date ); ?>"  />
             </p>
             <?php
+        } elseif ( $expiration_date ) {
+            ?>
+            <p>Membership ended: <?php echo esc_html( $expiration_date ); ?></p>
+            <?php
         }
 
         // Renew link with email option
@@ -266,6 +270,7 @@ class DCMM_metaboxes {
             admin_url( 'admin-post.php?action=dcmm_manual_cancel&member_id=' . $member_id ),
             'dcmm_manual_cancel_' . $member_id
         );
+        $has_paid_time_left = 'active' === $membership_status && $expiration_date && $expiration_date > current_time( 'Y-m-d' );
         ?>
 
         <div class="dcmm-renewal-options">
@@ -276,7 +281,14 @@ class DCMM_metaboxes {
                 ?>
                 <p>
                     <a href="#" class="button button-primary dcmm-show-payment-form">Renew Membership</a>
-                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button dcmm-cancel-button" data-base-url="<?php echo esc_url( $cancel_url ); ?>">Cancel Membership</a>
+                    <?php if ( $has_paid_time_left ) : ?>
+                        <br>
+                        <label for="dcmm_keep_paid_time">
+                            <input type="checkbox" id="dcmm_keep_paid_time">
+                            Keep remaining paid time through <?php echo esc_html( $expiration_date ); ?> (no refund issued)
+                        </label>
+                    <?php endif; ?>
                 </p>
                 
                 <div id="dcmm-payment-form" style="display: none; margin-top: 15px; padding: 15px; border: 1px solid #ddd; background: #f9f9f9;">
@@ -363,7 +375,14 @@ class DCMM_metaboxes {
                 <p>
                     <a href="#" class="button button-primary dcmm-renew-button" data-base-url="<?php echo esc_url( $renew_url_base ); ?>">Renew Membership</a>
                     <br><br>
-                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button">Cancel Membership</a>
+                    <a href="<?php echo esc_url( $cancel_url ); ?>" class="button dcmm-cancel-button" data-base-url="<?php echo esc_url( $cancel_url ); ?>">Cancel Membership</a>
+                    <?php if ( $has_paid_time_left ) : ?>
+                        <br>
+                        <label for="dcmm_keep_paid_time">
+                            <input type="checkbox" id="dcmm_keep_paid_time">
+                            Keep remaining paid time through <?php echo esc_html( $expiration_date ); ?> (no refund issued)
+                        </label>
+                    <?php endif; ?>
                 </p>
                 <?php
             }
@@ -486,6 +505,12 @@ class DCMM_metaboxes {
                 window.location.href = finalUrl;
             });
             <?php endif; ?>
+
+            $('.dcmm-cancel-button').on('click', function(e) {
+                e.preventDefault();
+                var keepPaidTime = $('#dcmm_keep_paid_time').is(':checked') ? '1' : '0';
+                window.location.href = $(this).data('base-url') + '&keep_paid_time=' + keepPaidTime;
+            });
         });
         </script>
 
@@ -589,7 +614,7 @@ class DCMM_metaboxes {
                     'user_id' => $log['user_id'],
                     'action' => $log['action'],
                     'context' => $log['context'],
-                    'message' => $log['action'] . ' (' . $log['context'] . ')'
+                    'message' => $log['action'] . ' (' . $log['context'] . ')' . ( ! empty( $log['notes'] ) ? ': ' . $log['notes'] : '' )
                 );
             }
         }

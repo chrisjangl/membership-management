@@ -14,59 +14,77 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once plugin_dir_path(__FILE__) . 'includes/class-member.php';
-require_once plugin_dir_path(__FILE__) . 'includes/settings.php';
+require_once DCMM_PATH . 'includes/class-member.php';
+require_once DCMM_PATH . 'includes/settings.php';
 
 echo "<h2>Testing Anchored Full-Term Renewal Logic</h2>";
 
-// Test scenarios
+// Dates are set in future years so the renewal step always treats the member as
+// current (not lapsed), keeping results independent of when the test is run.
+$y = (int) date('Y') + 1;
+
+// Test scenarios (10-day renewal window, 30-day grace period)
 $test_cases = [
     [
         'name' => 'Yearly membership with August 15th anchor',
         'join_policy' => 'anchored_full_term',
         'term_length' => 'yearly',
         'anchor_date' => '08-15',
-        'signup_date' => '2025-07-01',
-        'expected_initial' => '2025-08-15',
-        'expected_renewal' => '2026-08-15'
+        'signup_date' => "$y-07-01",
+        'expected_initial' => "$y-08-15",
+        'expected_renewal' => ($y + 1) . '-08-15'
+    ],
+    [
+        'name' => 'Yearly membership signup inside renewal window',
+        'join_policy' => 'anchored_full_term',
+        'term_length' => 'yearly',
+        'anchor_date' => '08-15',
+        'signup_date' => "$y-08-10",
+        'expected_initial' => ($y + 1) . '-08-15',
+        'expected_renewal' => ($y + 2) . '-08-15'
     ],
     [
         'name' => 'Monthly membership with 15th day anchor',
-        'join_policy' => 'anchored_full_term', 
+        'join_policy' => 'anchored_full_term',
         'term_length' => 'monthly',
         'anchor_date' => '15',
-        'signup_date' => '2025-07-10',
-        'expected_initial' => '2025-07-15',
-        'expected_renewal' => '2025-08-15'
+        'signup_date' => "$y-07-01",
+        'expected_initial' => "$y-07-15",
+        'expected_renewal' => "$y-08-15"
     ],
     [
         'name' => 'Yearly membership signup after anchor date',
         'join_policy' => 'anchored_full_term',
-        'term_length' => 'yearly', 
+        'term_length' => 'yearly',
         'anchor_date' => '08-15',
-        'signup_date' => '2025-09-01',
-        'expected_initial' => '2026-08-15',
-        'expected_renewal' => '2027-08-15'
+        'signup_date' => "$y-09-01",
+        'expected_initial' => ($y + 1) . '-08-15',
+        'expected_renewal' => ($y + 2) . '-08-15'
     ],
     [
         'name' => 'Monthly membership signup after anchor day',
         'join_policy' => 'anchored_full_term',
         'term_length' => 'monthly',
-        'anchor_date' => '15', 
-        'signup_date' => '2025-07-20',
-        'expected_initial' => '2025-08-15',
-        'expected_renewal' => '2025-09-15'
+        'anchor_date' => '15',
+        'signup_date' => "$y-07-20",
+        'expected_initial' => "$y-08-15",
+        'expected_renewal' => "$y-09-15"
     ]
 ];
 
+// Restored after the run so the test doesn't wipe the site's real settings
+$original_settings = get_option('dcmm_settings', []);
+
 foreach ($test_cases as $i => $test) {
     echo "<h3>Test Case " . ($i + 1) . ": {$test['name']}</h3>";
-    
+
     // Mock settings for this test
     update_option('dcmm_settings', [
         'dcmm_join_policy' => $test['join_policy'],
         'dcmm_membership_term_length' => $test['term_length'],
-        'dcmm_anchor_date' => $test['anchor_date']
+        'dcmm_anchor_date' => $test['anchor_date'],
+        'renewal_window_days' => 10,
+        'grace_period_days' => 30
     ]);
     
     // Create a test member post
@@ -88,9 +106,8 @@ foreach ($test_cases as $i => $test) {
     // Test initial expiration calculation
     echo "<p><strong>Signup Date:</strong> {$test['signup_date']}</p>";
     
-    // Clear any cached expiration data to force recalculation
+    // Clear any stored expiration date to force a fresh calculation
     $member->save('expiration_date', '');
-    $member->save('settings_hash', '');
     
     $initial_expiration = $member->get_expiration_date();
     echo "<p><strong>Initial Expiration:</strong> {$initial_expiration}</p>";
@@ -102,27 +119,27 @@ foreach ($test_cases as $i => $test) {
         echo "<p style='color: red;'>✗ Initial expiration calculation FAILED</p>";
     }
     
-    // Test renewal expiration calculation
-    // Simulate a renewal by calling get_expiration_date again (should advance the expiration)
-    $renewal_expiration = $member->get_expiration_date();
-    
-    // For renewal test, we need to simulate that there's already an expiration date
-    // and then call the calculation again
-    $member->save('expiration_date', $initial_expiration);
-    $member->save('settings_hash', ''); // Force recalculation 
-    
+    // Test renewal expiration calculation via an actual renewal. get_expiration_date()
+    // never advances a stored date - only renew_membership() does.
+    $member->renew_membership('test');
+
     $renewal_expiration = $member->get_expiration_date();
     echo "<p><strong>After Renewal:</strong> {$renewal_expiration}</p>";
     echo "<p><strong>Expected Renewal:</strong> {$test['expected_renewal']}</p>";
-    
-    // Note: The actual renewal test would need to call renew_membership() method
-    // For now, we'll just test that the helper methods work correctly
-    
+
+    if ($renewal_expiration === $test['expected_renewal']) {
+        echo "<p style='color: green;'>✓ Renewal expiration calculation PASSED</p>";
+    } else {
+        echo "<p style='color: red;'>✗ Renewal expiration calculation FAILED</p>";
+    }
+
     echo "<hr>";
     
     // Clean up test data
     wp_delete_post($member_post_id, true);
 }
+
+update_option('dcmm_settings', $original_settings);
 
 echo "<h3>Summary</h3>";
 echo "<p>The new anchored full-term renewal logic has been implemented with the following improvements:</p>";
