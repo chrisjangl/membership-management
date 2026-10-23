@@ -46,6 +46,10 @@ class ReleaseOrchestrator {
             // Step 5: Run validation
             await this.runValidation();
             
+            // Generate GitHub release notes now, on stable and before tagging:
+            // later, on wp-repo, the last tag git finds is the previous release's
+            this.releaseNotes = await this.generateReleaseNotes();
+
             // Step 6: Commit version changes before building
             await this.commitVersionChanges();
 
@@ -574,9 +578,6 @@ ${await this.generateChangelog()}
         console.log('-'.repeat(30));
 
         try {
-            // Get current branch to return to it
-            const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-
             // Switch to wp-repo branch to create zip
             console.log('[GIT] Switching to wp-repo branch...');
             execSync('git checkout wp-repo', { stdio: 'inherit' });
@@ -596,11 +597,10 @@ ${await this.generateChangelog()}
             // Create zip with exclusions
             execSync(`zip -r ${zipName} . ${excludePatterns}`, { stdio: 'inherit' });
 
-            // Generate release notes from changelog, passed via a file so quotes,
-            // backticks and $ in commit messages can't break the shell command
-            const releaseNotes = await this.generateReleaseNotes();
+            // Release notes are passed via a file so quotes, backticks and $ in
+            // commit messages can't break the shell command
             const notesFile = path.join(os.tmpdir(), `dcmm-release-notes-${this.newVersion}.md`);
-            await fs.writeFile(notesFile, releaseNotes);
+            await fs.writeFile(notesFile, this.releaseNotes);
 
             // Create GitHub release
             console.log('[GITHUB] Creating release...');
@@ -616,11 +616,9 @@ ${await this.generateChangelog()}
             // Clean up zip file
             fs.removeSync(zipName);
 
-            // Return to original branch (should be stable)
-            if (currentBranch !== 'wp-repo') {
-                console.log(`[GIT] Returning to ${currentBranch} branch...`);
-                execSync(`git checkout ${currentBranch}`, { stdio: 'inherit' });
-            }
+            // Finish on stable rather than leaving wp-repo checked out
+            console.log('[GIT] Returning to stable branch...');
+            execSync('git checkout stable', { stdio: 'inherit' });
 
             console.log('[OK] GitHub release created successfully\n');
 

@@ -118,17 +118,20 @@ class WpRepoPreparator {
     async syncDistributionToWpRepo() {
         console.log('🔄 Syncing distribution to wp-repo branch...');
         
-        // Remove all files except .git and dist
-        const items = await fs.readdir('./');
-        const toRemove = items.filter(item => 
-            item !== '.git' && 
-            item !== 'dist' && 
-            item !== 'node_modules' // Keep if exists to prevent npm issues
-        );
-        
-        for (const item of toRemove) {
-            console.log(`🗑️  Removing ${item}`);
-            await fs.remove(item);
+        // Remove only files git would commit on wp-repo: tracked files, plus
+        // untracked ones that aren't ignored. Ignored files (node_modules,
+        // scripts/release-local.js, etc.) can't be restored by git, so keep them.
+        const listFiles = args => execSync(`git ls-files -z ${args}`, { encoding: 'utf8' })
+            .split('\0')
+            .filter(file => file && !file.startsWith('dist/'));
+        const toRemove = [
+            ...listFiles(''),
+            ...listFiles('--others --exclude-standard'),
+        ];
+
+        console.log(`🗑️  Removing ${toRemove.length} files`);
+        for (const file of toRemove) {
+            await fs.remove(file);
         }
         
         // Copy distribution contents to root
