@@ -62,15 +62,16 @@ class Gateway_Offline extends Abstract_Gateway {
 			'status'           => 'completed'
 		];
 
-		// Store payment data
+		// Store payment data. The dues payment date itself is saved by renew_membership() below.
 		update_post_meta( $member_id, 'dcmm_last_payment', $payment_record );
-		update_post_meta( $member_id, 'dcmm_last_dues_payment', $payment_record['payment_date'] );
 
-		// Log the payment
+		// Log the payment. The log entry is timestamped when it's recorded, so include the
+		// date it was actually paid in the message.
 		$log_message = sprintf(
-			'Offline payment recorded: %s for $%s',
+			'Offline payment recorded: %s for $%s, paid %s',
 			$payment_record['method'],
-			number_format( $payment_record['amount'], 2 )
+			number_format( $payment_record['amount'], 2 ),
+			date( 'Y-m-d', strtotime( $payment_record['payment_date'] ) )
 		);
 
 		if ( ! empty( $payment_record['reference'] ) ) {
@@ -80,7 +81,7 @@ class Gateway_Offline extends Abstract_Gateway {
 		$this->log_payment_event( $member_id, $log_message );
 
 		// Renew membership
-		$member->renew_membership( 'offline' );
+		$member->renew_membership( 'offline', $payment_record['payment_date'] );
 
 		return $payment_record;
 	}

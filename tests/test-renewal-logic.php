@@ -139,6 +139,55 @@ foreach ($test_cases as $i => $test) {
     wp_delete_post($member_post_id, true);
 }
 
+// Back-dated renewal (e.g. an offline payment recorded after the fact): the dues
+// payment date and the new expiration must come from the payment date, not today.
+echo "<h3>Back-dated Renewal: lapsed rolling monthly member</h3>";
+
+update_option('dcmm_settings', [
+    'dcmm_join_policy' => 'rolling',
+    'dcmm_membership_term_length' => 'monthly',
+    'renewal_window_days' => 10,
+    'grace_period_days' => 0
+]);
+
+$member_post_id = wp_insert_post([
+    'post_type' => 'dcmm-member',
+    'post_title' => 'Test Member Back-dated',
+    'post_status' => 'publish'
+]);
+
+if (is_wp_error($member_post_id)) {
+    echo "<p style='color: red;'>Failed to create test member post</p>";
+} else {
+    $payment_date = date('Y-m-d', strtotime('-10 days', current_time('timestamp')));
+    $expected_dues = $payment_date . ' 00:00:00';
+    $expected_expiration = date('Y-m-d', strtotime($payment_date . ' +1 month'));
+
+    $member = new DCMM_Member($member_post_id);
+    $member->save('start_date', date('Y-m-d', strtotime('-2 years')));
+    $member->save('expiration_date', date('Y-m-d', strtotime('-1 year'))); // lapsed
+
+    $member->renew_membership('test', $payment_date);
+
+    $dues_payment = get_post_meta($member_post_id, 'dcmm_last_dues_payment', true);
+    $renewal_expiration = $member->get_expiration_date();
+
+    echo "<p><strong>Payment Date:</strong> {$payment_date}</p>";
+    echo "<p><strong>Last Dues Payment:</strong> {$dues_payment} (expected {$expected_dues})</p>";
+    echo $dues_payment === $expected_dues
+        ? "<p style='color: green;'>✓ Dues payment date PASSED</p>"
+        : "<p style='color: red;'>✗ Dues payment date FAILED</p>";
+
+    echo "<p><strong>After Renewal:</strong> {$renewal_expiration} (expected {$expected_expiration})</p>";
+    echo $renewal_expiration === $expected_expiration
+        ? "<p style='color: green;'>✓ Back-dated expiration PASSED</p>"
+        : "<p style='color: red;'>✗ Back-dated expiration FAILED</p>";
+
+    wp_delete_post($member_post_id, true);
+}
+
+echo "<hr>";
+
 update_option('dcmm_settings', $original_settings);
 
 echo "<h3>Summary</h3>";

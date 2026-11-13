@@ -1091,24 +1091,28 @@ class DCMM_Member extends WP_User {
 	 * @param $context (optional) Default: 'signup'.
 	 *
 	 */
-	private function subscribe_to_membership( $context = 'signup' ) {
+	private function subscribe_to_membership( $context = 'signup', $payment_date = null ) {
 
 		$cpt_id = $this->get_member_id();
 
 		$today = current_time( 'Y-m-d H:i:s' );
 
+		// A payment recorded after the fact (e.g. an offline payment) carries the date it
+		// was actually paid; everything else is paid now.
+		$paid_on = $payment_date ? date( 'Y-m-d H:i:s', strtotime( $payment_date ) ) : $today;
+
 		// store initial signup date, if it doesn't already exist - renewals must not
 		// overwrite the member's true original join date
 		if ( ! $this->get( 'start_date' ) ) {
-			$this->save( 'start_date', $today );
+			$this->save( 'start_date', $paid_on );
 		}
 
 		// record the dues payment
-		$dues_result = $this->save( 'dues_payment', $today );
+		$dues_result = $this->save( 'dues_payment', $paid_on );
 
 		// Calculate the new expiration date before the hooks below fire, so welcome and
 		// renewal emails show it. Signups and renewals both come through here.
-		$new_expiration = $this->calculate_renewal_expiration();
+		$new_expiration = $this->calculate_renewal_expiration( $paid_on );
 		if ( $new_expiration ) {
 			$this->save( 'expiration_date', $new_expiration );
 		}
@@ -1119,7 +1123,7 @@ class DCMM_Member extends WP_User {
 		// Fire payment received hook
 		$payment_data = array(
 			'amount' => \DCMM_Settings\get_dues_amount(),
-			'date' => $today,
+			'date' => $paid_on,
 			'context' => $context,
 			'method' => 'subscription'
 		);
@@ -1133,15 +1137,17 @@ class DCMM_Member extends WP_User {
 
 	/**
 	 * Renew a member's membership
-	 * 
+	 *
+	 * @param string      $context      Where the renewal came from, for the Action Log.
+	 * @param string|null $payment_date Date the dues were actually paid, when it isn't
+	 *                                  today (e.g. a back-dated offline payment). The dues
+	 *                                  payment date and new expiration are based on it.
 	 */
-	function renew_membership( $context = 'manual' ) {
-
-		$today = current_time( 'Y-m-d H:i:s' );
+	function renew_membership( $context = 'manual', $payment_date = null ) {
 
 		$this->log( 'renew_membership', $context );
 
-		return $this->subscribe_to_membership( "renew:$context" );
+		return $this->subscribe_to_membership( "renew:$context", $payment_date );
 
 	}
 
@@ -1383,9 +1389,13 @@ class DCMM_Member extends WP_User {
 	 * - rolling: current members get stored date + one term; others get today + one term.
 	 * - fixed_term: always the fixed date for the current calendar period.
 	 *
+	 * "Today" is the payment date when one is given, so a back-dated payment renews as
+	 * if it had been made on that date.
+	 *
+	 * @param string|null $payment_date Date the dues were paid; defaults to today
 	 * @return string|null New expiration date in Y-m-d format, or null if it can't be calculated
 	 */
-	private function calculate_renewal_expiration() {
+	private function calculate_renewal_expiration( $payment_date = null ) {
 
 		$join_policy = DCMM_Settings\get_settings( 'dcmm_join_policy' );
 		$term_length = DCMM_Settings\get_settings( 'dcmm_membership_term_length' );
@@ -1394,7 +1404,7 @@ class DCMM_Member extends WP_User {
 		if ( ! $join_policy ) $join_policy = 'rolling';
 		if ( ! $term_length ) $term_length = 'monthly';
 
-		$today = current_time( 'Y-m-d' );
+		$today = $payment_date ? date( 'Y-m-d', strtotime( $payment_date ) ) : current_time( 'Y-m-d' );
 
 		if ( $join_policy === 'fixed_term' ) {
 			return $this->calculate_fixed_term_expiration( strtotime( $today ), $term_length );
