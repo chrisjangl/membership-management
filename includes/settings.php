@@ -43,8 +43,10 @@ function enqueue_admin_assets( $hook_suffix ) {
         return;
     }
 
-    // member-admin.css is already enqueued globally by class-member-metaboxes.php
-    // (handle: dcmm_admin_styles). Only the settings-page JS needs to be loaded here.
+    // class-member-metaboxes.php only enqueues member-admin.css on edit/post screens,
+    // so load it here too (same handle, so it's never output twice). It provides the
+    // premium feature toggle-switch styles, among others.
+    wp_enqueue_style( 'dcmm_admin_styles', DCMM_URL . 'css/member-admin.css', array(), DCMM_VERSION );
 
     // jQuery UI dialog (bundled with WordPress) backs the "recalculate expiration dates?" prompt.
     wp_enqueue_style( 'wp-jquery-ui-dialog' );
@@ -389,12 +391,17 @@ function render_premium_tab() {
                                 <p style="margin: 5px 0 0 0; color: #666;"><?php echo esc_html($feature['description']); ?></p>
                             </div>
                             <div style="flex: 0 0 auto;">
-                                <label class="dcmm-toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 34px;">
-                                    <input type="checkbox" name="features[<?php echo esc_attr($feature_id); ?>][enabled]" 
+                                <?php // Styles live in member-admin.css; inline styles here would override the :checked state. ?>
+                                <label class="dcmm-toggle-switch">
+                                    <?php if ( $feature['dependencies_met'] ) : ?>
+                                        <?php // Ensures an "off" value is submitted when the checkbox is unchecked. ?>
+                                        <input type="hidden" name="features[<?php echo esc_attr($feature_id); ?>][enabled]" value="0">
+                                    <?php endif; ?>
+                                    <input type="checkbox" name="features[<?php echo esc_attr($feature_id); ?>][enabled]"
                                            value="1" <?php checked($feature['enabled']); ?>
-                                           <?php echo !$feature['dependencies_met'] ? 'disabled' : ''; ?>
-                                           style="opacity: 0; width: 0; height: 0;">
-                                    <span class="dcmm-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+                                           <?php disabled( ! $feature['dependencies_met'] ); ?>
+                                           aria-label="<?php echo esc_attr( sprintf( __( 'Enable %s', 'dcmm-membership' ), $feature['name'] ) ); ?>">
+                                    <span class="dcmm-slider"></span>
                                 </label>
                             </div>
                         </div>
