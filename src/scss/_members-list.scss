@@ -11,6 +11,25 @@
     .inline-edit-group:has(.inline-edit-password-input) {
         display: none;
     }
+}
+
+// Hiding those fields leaves their column containers in place: core's left
+// column (40%) now only holds the "Quick Edit" legend, and its right column
+// (39%) only held Status. Put the legend on its own row, drop the empty right
+// column, and give our fields the full width. #wpbody-content matches the
+// specificity of core's width rules in list-tables.css.
+#wpbody-content .quick-edit-row.inline-edit-dcmm-member {
+    .inline-edit-col-left,
+    .dcmm-quick-edit {
+        width: 100%;
+    }
+
+    .inline-edit-col-right:not(.dcmm-quick-edit) {
+        display: none;
+    }
+}
+
+.quick-edit-row.inline-edit-dcmm-member {
 
     .dcmm-quick-edit {
         .dcmm-qe-wp-user-linked {
