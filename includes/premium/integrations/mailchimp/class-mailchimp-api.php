@@ -302,14 +302,28 @@ class MailChimp_API {
                     'message' => sprintf( __( 'Member status: %s', 'dcmm' ), $status ),
                     'data' => $result
                 );
-            } else {
-                // If member not found, they're not subscribed
+            }
+
+            // A 404 means the email isn't on the list; anything else (bad
+            // API key, network failure, rate limit…) is an error, not "not found".
+            $response = $this->mailchimp->getLastResponse();
+            $http_code = isset( $response['headers']['http_code'] ) ? (int) $response['headers']['http_code'] : 0;
+
+            if ( 404 === $http_code ) {
                 return array(
                     'subscribed' => false,
                     'status' => 'not_found',
                     'message' => __( 'Email not found on list', 'dcmm' )
                 );
             }
+
+            $error = $this->mailchimp->getLastError();
+            return array(
+                'subscribed' => false,
+                'status' => 'error',
+                'message' => __( 'Error checking subscription: ', 'dcmm' ) . $error,
+                'error' => $error
+            );
         } catch ( \Exception $e ) {
             return array(
                 'subscribed' => false,
