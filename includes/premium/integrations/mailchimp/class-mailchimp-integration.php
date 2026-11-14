@@ -23,7 +23,12 @@ class MailChimp_Integration implements Premium_Feature_Interface {
      * @var bool Whether the feature is initialized
      */
     private $initialized = false;
-    
+
+    /**
+     * @var MailChimp_Sync_Status|null Admin UI for members' sync status
+     */
+    private $sync_status = null;
+
     /**
      * Get the unique feature ID
      * 
@@ -102,7 +107,14 @@ class MailChimp_Integration implements Premium_Feature_Interface {
         add_action( 'dcmm_member_status_changed', array( $this, 'handle_member_status_change' ), 10, 3 );
         add_action( 'dcmm_member_payment_received', array( $this, 'handle_member_payment' ), 10, 2 );
         add_action( 'dcmm_member_created', array( $this, 'handle_new_member' ), 10, 1 );
-        
+
+        // Show members' MailChimp sync status in the admin
+        if ( is_admin() && null === $this->sync_status ) {
+            require_once __DIR__ . '/class-mailchimp-sync-status.php';
+            $this->sync_status = new MailChimp_Sync_Status();
+            $this->sync_status->register_hooks();
+        }
+
         $this->initialized = true;
         
         return true;
@@ -118,7 +130,12 @@ class MailChimp_Integration implements Premium_Feature_Interface {
         remove_action( 'dcmm_member_status_changed', array( $this, 'handle_member_status_change' ) );
         remove_action( 'dcmm_member_payment_received', array( $this, 'handle_member_payment' ) );
         remove_action( 'dcmm_member_created', array( $this, 'handle_new_member' ) );
-        
+
+        if ( $this->sync_status ) {
+            $this->sync_status->unregister_hooks();
+            $this->sync_status = null;
+        }
+
         $this->initialized = false;
         
         return true;
@@ -303,13 +320,27 @@ class MailChimp_Integration implements Premium_Feature_Interface {
                     ucfirst( $member->get_status() )
                 );
                 $mailchimp_api->add_member_note( $list_id, $email, $note );
+                $this->refresh_sync_status( $member );
             }
-            
+
         } catch ( \Exception $e ) {
             // Note: Could log exceptions here if needed for debugging
         }
     }
-    
+
+    /**
+     * Update a member's cached MailChimp status after we change it on MailChimp
+     *
+     * Re-reads the member from MailChimp rather than trusting the write
+     * response, since tags are changed by separate requests.
+     *
+     * @param \DCMM_Member $member
+     */
+    private function refresh_sync_status( $member ) {
+        require_once __DIR__ . '/class-mailchimp-sync-status.php';
+        MailChimp_Sync_Status::refresh( $member->get_id() );
+    }
+
     /**
      * Remove member from MailChimp list
      * 
@@ -341,6 +372,7 @@ class MailChimp_Integration implements Premium_Feature_Interface {
                     ucfirst( $member->get_status() )
                 );
                 $mailchimp_api->add_member_note( $list_id, $email, $note );
+                $this->refresh_sync_status( $member );
             }
             
         } catch ( \Exception $e ) {

@@ -43,8 +43,10 @@ function enqueue_admin_assets( $hook_suffix ) {
         return;
     }
 
-    // member-admin.css is already enqueued globally by class-member-metaboxes.php
-    // (handle: dcmm_admin_styles). Only the settings-page JS needs to be loaded here.
+    // class-member-metaboxes.php only enqueues member-admin.css on edit/post screens,
+    // so load it here too (same handle, so it's never output twice). It provides the
+    // premium feature toggle-switch styles, among others.
+    wp_enqueue_style( 'dcmm_admin_styles', DCMM_URL . 'css/member-admin.css', array(), DCMM_VERSION );
 
     // jQuery UI dialog (bundled with WordPress) backs the "recalculate expiration dates?" prompt.
     wp_enqueue_style( 'wp-jquery-ui-dialog' );
@@ -389,12 +391,17 @@ function render_premium_tab() {
                                 <p style="margin: 5px 0 0 0; color: #666;"><?php echo esc_html($feature['description']); ?></p>
                             </div>
                             <div style="flex: 0 0 auto;">
-                                <label class="dcmm-toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 34px;">
-                                    <input type="checkbox" name="features[<?php echo esc_attr($feature_id); ?>][enabled]" 
+                                <?php // Styles live in member-admin.css; inline styles here would override the :checked state. ?>
+                                <label class="dcmm-toggle-switch">
+                                    <?php if ( $feature['dependencies_met'] ) : ?>
+                                        <?php // Ensures an "off" value is submitted when the checkbox is unchecked. ?>
+                                        <input type="hidden" name="features[<?php echo esc_attr($feature_id); ?>][enabled]" value="0">
+                                    <?php endif; ?>
+                                    <input type="checkbox" name="features[<?php echo esc_attr($feature_id); ?>][enabled]"
                                            value="1" <?php checked($feature['enabled']); ?>
-                                           <?php echo !$feature['dependencies_met'] ? 'disabled' : ''; ?>
-                                           style="opacity: 0; width: 0; height: 0;">
-                                    <span class="dcmm-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+                                           <?php disabled( ! $feature['dependencies_met'] ); ?>
+                                           aria-label="<?php echo esc_attr( sprintf( __( 'Enable %s', 'dcmm-membership' ), $feature['name'] ) ); ?>">
+                                    <span class="dcmm-slider"></span>
                                 </label>
                             </div>
                         </div>
@@ -935,29 +942,42 @@ function register_settings() {
         'dcmm_offline_payment_methods',
         __( 'Payment Methods', DCMM_PLUGIN_SLUG ),
         function() {
-            $options = get_option( 'dcmm_settings' );
-            $methods = isset( $options['dcmm_offline_payment_methods'] ) ? $options['dcmm_offline_payment_methods'] : array(
-                'cash' => 'Cash',
-                'check' => 'Check',
-                'transfer' => 'Bank Transfer',
-                'other' => 'Other'
-            );
+            $methods = get_offline_payment_methods();
             ?>
             <div class="dcmm-payment-methods">
                 <p><?php esc_html_e( 'Configure available payment methods for offline payments:', DCMM_PLUGIN_SLUG ); ?></p>
-                <table class="form-table">
+                <table class="form-table" id="dcmm-offline-payment-methods">
                     <?php foreach ( $methods as $key => $label ): ?>
                     <tr>
                         <td>
-                            <input type="text" name="dcmm_settings[dcmm_offline_payment_methods][<?php echo esc_attr( $key ); ?>]" 
-                                   value="<?php echo esc_attr( $label ); ?>" class="regular-text" 
+                            <input type="text" name="dcmm_settings[dcmm_offline_payment_methods][<?php echo esc_attr( $key ); ?>]"
+                                   value="<?php echo esc_attr( $label ); ?>" class="regular-text"
                                    placeholder="Payment method name" />
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </table>
-                <p class="description"><?php esc_html_e( 'These options will appear in the payment method dropdown when recording offline payments.', 'dcmm-membership' ); ?></p>
+                <p><button type="button" class="button" id="dcmm-add-payment-method"><?php esc_html_e( 'Add payment method', DCMM_PLUGIN_SLUG ); ?></button></p>
+                <p class="description"><?php esc_html_e( 'These options will appear in the payment method dropdown when recording offline payments. Clear a name to remove that method.', 'dcmm-membership' ); ?></p>
             </div>
+            <script>
+            ( function() {
+                var button = document.getElementById( 'dcmm-add-payment-method' );
+                var table = document.getElementById( 'dcmm-offline-payment-methods' );
+                if ( ! button || ! table ) return;
+                button.addEventListener( 'click', function() {
+                    var row = table.insertRow( -1 );
+                    var input = document.createElement( 'input' );
+                    input.type = 'text';
+                    // New methods get a key from their name when the settings are saved
+                    input.name = 'dcmm_settings[dcmm_offline_payment_methods][]';
+                    input.className = 'regular-text';
+                    input.placeholder = 'Payment method name';
+                    row.insertCell( 0 ).appendChild( input );
+                    input.focus();
+                } );
+            } )();
+            </script>
             <?php
         },
         'dcmm_settings_group',
@@ -1924,15 +1944,68 @@ function are_offline_payments_enabled() {
  */
 function get_offline_payment_methods() {
     $settings = get_settings();
-    $default_methods = array(
-        'cash' => 'Cash',
-        'check' => 'Check',
-        'transfer' => 'Bank Transfer',
-        'other' => 'Other'
-    );
-    
-    return isset( $settings['dcmm_offline_payment_methods'] ) ? $settings['dcmm_offline_payment_methods'] : $default_methods;
+
+    return ! empty( $settings['dcmm_offline_payment_methods'] ) && is_array( $settings['dcmm_offline_payment_methods'] )
+        ? $settings['dcmm_offline_payment_methods']
+        : get_default_offline_payment_methods();
 }
+
+/**
+ * Default offline payment methods, used until the admin saves their own list.
+ *
+ * @return array Method key => label.
+ */
+function get_default_offline_payment_methods() {
+    return array(
+        'cash'     => 'Cash',
+        'check'    => 'Check',
+        'transfer' => 'Bank Transfer',
+        'paypal'   => 'PayPal',
+        'other'    => 'Other'
+    );
+}
+
+/**
+ * Clean up the offline payment methods list before the settings are saved.
+ *
+ * Existing methods keep their key, so payments already recorded with them still
+ * match. Methods added in the settings page arrive with numeric keys and get one
+ * made from their name. Methods whose name was cleared are removed.
+ *
+ * @param mixed $value New value of the dcmm_settings option.
+ * @return mixed
+ */
+function sanitize_offline_payment_methods( $value ) {
+    if ( ! is_array( $value ) || ! isset( $value['dcmm_offline_payment_methods'] ) || ! is_array( $value['dcmm_offline_payment_methods'] ) ) {
+        return $value;
+    }
+
+    $methods = array();
+    foreach ( $value['dcmm_offline_payment_methods'] as $key => $label ) {
+        $label = sanitize_text_field( $label );
+        if ( '' === $label ) {
+            continue;
+        }
+
+        $key = is_int( $key ) ? sanitize_key( $label ) : sanitize_key( $key );
+        if ( '' === $key ) {
+            $key = 'method';
+        }
+
+        $unique_key = $key;
+        $suffix = 2;
+        while ( isset( $methods[ $unique_key ] ) ) {
+            $unique_key = $key . '-' . $suffix++;
+        }
+
+        $methods[ $unique_key ] = $label;
+    }
+
+    $value['dcmm_offline_payment_methods'] = $methods;
+
+    return $value;
+}
+add_filter( 'pre_update_option_dcmm_settings', __NAMESPACE__ . '\sanitize_offline_payment_methods' );
 
 /**
  * Check if reference numbers are required for offline payments.
