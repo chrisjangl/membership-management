@@ -174,6 +174,13 @@ function dcmm_populate_custom_columns( $column_name, $post_id ) {
 	switch ( $column_name ) {
 		case 'name':
 			echo $member->get('last_name') . ', ' . $member->get('first_name');
+
+			// Core only prints Quick Edit's hidden inline data in the Title
+			// column, which we replace; without it Quick Edit opens empty and
+			// saving blanks the post title.
+			if ( function_exists( 'get_inline_data' ) ) {
+				get_inline_data( get_post( $post_id ) );
+			}
 			break;
 		case 'email':
 			echo $member->get('email');
