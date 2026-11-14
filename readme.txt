@@ -2,7 +2,7 @@
 Contributors: digitally-cultured
 Tags: membership management, CRM
 Requires at least: 5.0
-Stable tag: 1.5.0
+Stable tag: 1.6.0
 Tested up to: 7.1
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -46,6 +46,19 @@ A: When you save a change to any of these settings, you're asked whether to upda
 
 
 == Changelog ==
+
+= 1.6.0 =
+* show members' MailChimp sync status
+* hide the Title field in Members Quick Edit
+* optimize Quick Edit and show WP User accounts on the Members list
+* enhance offline payment methods configuration and add dynamic method addition
+* support back-dated payments and update renewal logic
+* Fix: only report "not on list" when MailChimp returns a 404
+* Fix: make the premium feature toggles show their on/off state
+* Fix: tidy the Members Quick Edit field layout
+* Fix: let Members Quick Edit fields use the full width
+* Fix: restore Quick Edit data on the Members list
+* Fix: combine Renewal Method filter with other Members list filters
 
 = 1.5.0 =
 * add process_expired_memberships method to transition inactive members after grace period
