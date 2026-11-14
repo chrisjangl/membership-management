@@ -24,22 +24,64 @@
         width: 100%;
     }
 
-    .inline-edit-col-right:not(.dcmm-quick-edit) {
+    .inline-edit-col-right {
         display: none;
     }
-}
 
-.quick-edit-row.inline-edit-dcmm-member {
+    // Our fields: a two-column grid (names, then email + status), capped so
+    // inputs don't stretch across wide screens, with each label above its
+    // input instead of core's fixed 6em label beside it.
+    .dcmm-qe-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5em 1.5em;
+        max-width: 48rem;
 
-    .dcmm-quick-edit {
+        label {
+            margin: 0;
+        }
+
+        label span.title {
+            float: none;
+            display: block;
+            width: auto;
+            line-height: 1.5;
+            padding-bottom: 0.2em;
+        }
+
+        label span.input-text-wrap {
+            margin-left: 0;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        select {
+            width: 100%;
+            max-width: none;
+        }
+
+        .dcmm-qe-wp-user-linked,
+        .dcmm-qe-wp-user-create {
+            grid-column: 1 / -1;
+        }
+
         .dcmm-qe-wp-user-linked {
-            margin: 0.2em 0;
             line-height: 2.5;
+
+            .title {
+                padding-right: 0.5em;
+            }
         }
 
         .dcmm-qe-wp-user-create {
-            display: block;
-            margin-top: 0.5em;
+            line-height: 2.5;
         }
+    }
+}
+
+// Match core's Quick Edit breakpoint: one column on small screens.
+@media screen and (max-width: 782px) {
+    #wpbody-content .quick-edit-row.inline-edit-dcmm-member .dcmm-qe-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 }

@@ -701,8 +701,8 @@ function dcmm_quick_edit_fields( $column_name, $post_type ) {
 
 	wp_nonce_field( 'dcmm_quick_edit', 'dcmm_quick_edit_nonce', false );
 	?>
-	<fieldset class="inline-edit-col-right dcmm-quick-edit">
-		<div class="inline-edit-col">
+	<fieldset class="dcmm-quick-edit">
+		<div class="inline-edit-col dcmm-qe-grid">
 			<label>
 				<span class="title"><?php esc_html_e( 'First name', DCMM_PLUGIN_SLUG ); ?></span>
 				<span class="input-text-wrap"><input type="text" name="dcmm_qe_first_name" value="" /></span>
@@ -717,11 +717,13 @@ function dcmm_quick_edit_fields( $column_name, $post_type ) {
 			</label>
 			<label>
 				<span class="title"><?php esc_html_e( 'Membership status', DCMM_PLUGIN_SLUG ); ?></span>
-				<select name="dcmm_qe_status">
-					<?php foreach ( \DCMM_Member::get_valid_statuses() as $status ) : ?>
-						<option value="<?php echo esc_attr( $status ); ?>"><?php echo esc_html( ucfirst( $status ) ); ?></option>
-					<?php endforeach; ?>
-				</select>
+				<span class="input-text-wrap">
+					<select name="dcmm_qe_status">
+						<?php foreach ( \DCMM_Member::get_valid_statuses() as $status ) : ?>
+							<option value="<?php echo esc_attr( $status ); ?>"><?php echo esc_html( ucfirst( $status ) ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</span>
 			</label>
 			<div class="dcmm-qe-wp-user-linked">
 				<span class="title"><?php esc_html_e( 'WP User', DCMM_PLUGIN_SLUG ); ?></span>
