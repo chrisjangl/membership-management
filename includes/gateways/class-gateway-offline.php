@@ -102,19 +102,8 @@ class Gateway_Offline extends Abstract_Gateway {
 	 * @return array Available payment methods.
 	 */
 	public function get_payment_methods() {
-		$methods = DCMM_Settings\get_offline_payment_methods();
-		
-		// Default methods if none configured
-		if ( empty( $methods ) ) {
-			$methods = [
-				'cash'     => 'Cash',
-				'check'    => 'Check',
-				'transfer' => 'Bank Transfer',
-				'other'    => 'Other'
-			];
-		}
-
-		return $methods;
+		// Falls back to the default methods if none are configured
+		return DCMM_Settings\get_offline_payment_methods();
 	}
 
 	/**
