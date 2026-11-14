@@ -23,7 +23,8 @@ try {
     require_once DCMM_PATH . '/includes/premium/integrations/mailchimp/class-mailchimp-api.php';
     require_once DCMM_PATH . '/includes/premium/interface-premium-feature.php';
     require_once DCMM_PATH . '/includes/premium/class-premium-manager.php';
-    require_once DCMM_PATH . '/includes/premium/integrations/class-mailchimp-integration.php';
+    require_once DCMM_PATH . '/includes/premium/integrations/mailchimp/class-mailchimp-integration.php';
+    require_once DCMM_PATH . '/includes/premium/integrations/mailchimp/class-mailchimp-sync-status.php';
     
     echo "<h3>1. Testing MailChimp API Connection</h3>";
     
@@ -97,7 +98,42 @@ try {
         }
     }
     
-    echo "<h3>5. Configuration Summary</h3>";
+    echo "<h3>5. Testing Member Sync Status</h3>";
+
+    $list_id = get_option( 'dcmm_mailchimp_list_id' );
+    $member_ids = get_posts( array(
+        'post_type'      => \DCMM_Member::get_post_type(),
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+        'meta_key'       => \DCMM_Member::get_meta_keys( 'email' ),
+        'meta_compare'   => '!=',
+        'meta_value'     => '',
+    ) );
+
+    if ( empty( $api_key ) || empty( $list_id ) ) {
+        echo "<p style='color: orange;'>⚠️ Skipped: needs an API key and a selected list.</p>";
+    } elseif ( empty( $member_ids ) ) {
+        echo "<p style='color: orange;'>⚠️ Skipped: no members with an email address.</p>";
+    } else {
+        $member_id = $member_ids[0];
+        $sync = \DCMM\Premium\Integrations\MailChimp_Sync_Status::refresh( $member_id );
+
+        if ( is_wp_error( $sync ) ) {
+            echo "<p style='color: red;'>❌ Refresh failed for member {$member_id}: " . esc_html( $sync->get_error_message() ) . "</p>";
+        } else {
+            echo "<p style='color: green;'>✓ Member {$member_id} status: " . esc_html( $sync['status'] ) . "</p>";
+            echo "<p>Tags: " . esc_html( $sync['tags'] ? implode( ', ', $sync['tags'] ) : 'None' ) . "</p>";
+
+            $cached = \DCMM\Premium\Integrations\MailChimp_Sync_Status::get_cached( $member_id );
+            if ( $cached && $cached['status'] === $sync['status'] ) {
+                echo "<p style='color: green;'>✓ Status cached for the All Members column</p>";
+            } else {
+                echo "<p style='color: red;'>❌ Status was not cached</p>";
+            }
+        }
+    }
+
+    echo "<h3>6. Configuration Summary</h3>";
     echo "<ul>";
     echo "<li>MailChimp API Key: " . ( $api_key ? 'Configured' : 'Not configured' ) . "</li>";
     echo "<li>Selected List ID: " . ( get_option( 'dcmm_mailchimp_list_id' ) ?: 'Not selected' ) . "</li>";
