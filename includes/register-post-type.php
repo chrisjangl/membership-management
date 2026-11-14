@@ -685,7 +685,7 @@ function dcmm_add_quick_edit_inline_data( $post, $post_type_object ) {
  * Field names are prefixed with dcmm_qe_ because the Quick Edit row is moved
  * inside the list's filter form, which already uses names like dcmm_status.
  *
- * Core's Date, Password, Private and Status fields are hidden via CSS
+ * Core's Title, Date, Password, Private and Status fields are hidden via CSS
  * (src/scss/_members-list.scss).
  *
  * @param string $column_name
