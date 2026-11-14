@@ -1,0 +1,24 @@
+// Members list screen (edit.php?post_type=dcmm-member)
+
+// Quick Edit: hide core fields that don't apply to members.
+// Their inputs stay in the form with their current values, so saving
+// doesn't change them.
+.quick-edit-row.inline-edit-dcmm-member {
+    .inline-edit-date,
+    .inline-edit-status,
+    .inline-edit-group:has(.inline-edit-password-input) {
+        display: none;
+    }
+
+    .dcmm-quick-edit {
+        .dcmm-qe-wp-user-linked {
+            margin: 0.2em 0;
+            line-height: 2.5;
+        }
+
+        .dcmm-qe-wp-user-create {
+            display: block;
+            margin-top: 0.5em;
+        }
+    }
+}
