@@ -393,17 +393,19 @@ function dcmm_filter_by_renewal_method( $query ) {
 		return;
 	}
 
+	// merge with other filters' clauses (e.g. Membership Status) instead of replacing them
+	$existing_meta_query = $query->get( 'meta_query' ) ?: array();
+
 	if ( $renewal_method === 'subscription' ) {
-		$query->set( 'meta_query', array(
+		$query->set( 'meta_query', array_merge( $existing_meta_query, array(
 			array(
 				'key'     => 'dcmm_subscription_status',
 				'value'   => array( 'active', 'trialing' ),
 				'compare' => 'IN',
 			),
-		) );
+		) ) );
 	} elseif ( $renewal_method === 'manual' ) {
-		$query->set( 'meta_query', array(
-			'relation' => 'AND',
+		$query->set( 'meta_query', array_merge( $existing_meta_query, array(
 			array(
 				'key'     => 'dcmm_status',
 				'value'   => 'active',
@@ -421,7 +423,7 @@ function dcmm_filter_by_renewal_method( $query ) {
 					'compare' => 'NOT IN',
 				),
 			),
-		) );
+		) ) );
 	}
 }
 
