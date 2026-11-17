@@ -163,8 +163,8 @@ class MailChimp_Integration implements Premium_Feature_Interface {
         $fields['dcmm_mailchimp_remove_on_lapse'] = array(
             'title' => __( 'Remove on Membership Lapse', 'dcmm' ),
             'type' => 'checkbox',
-            'description' => __( 'Remove members from MailChimp list when membership lapses or is cancelled.', 'dcmm' ),
-            'default' => true,
+            'description' => __( 'Unsubscribe members from the MailChimp list when membership lapses or is cancelled. When off, they stay subscribed and their status tag changes to Inactive.', 'dcmm' ),
+            'default' => false,
         );
         
         $fields['dcmm_mailchimp_add_on_payment'] = array(
@@ -228,11 +228,48 @@ class MailChimp_Integration implements Premium_Feature_Interface {
             $this->add_member_to_list( $member, $list_id );
         }
         
-        // Remove from list when becoming inactive (if setting enabled)
-        if ( get_option( 'dcmm_mailchimp_remove_on_lapse', true ) ) {
-            if ( $new_status === 'inactive' && $old_status === 'active' ) {
+        // When becoming inactive, either unsubscribe (if the setting is on)
+        // or keep them subscribed and just swap the status tag.
+        if ( $new_status === 'inactive' && $old_status === 'active' ) {
+            if ( get_option( 'dcmm_mailchimp_remove_on_lapse', false ) ) {
                 $this->remove_member_from_list( $member, $list_id );
+            } else {
+                $this->tag_member_inactive( $member, $list_id );
             }
+        }
+    }
+
+    /**
+     * Keep a lapsed member subscribed but change their status tag to Inactive
+     *
+     * @param \DCMM_Member $member
+     * @param string $list_id
+     */
+    private function tag_member_inactive( $member, $list_id ) {
+        try {
+            require_once DCMM_PATH . '/includes/premium/integrations/mailchimp/class-mailchimp-api.php';
+
+            $mailchimp_api = new \DCMM\MailChimp\MailChimp_API();
+            $email = $member->get_email();
+
+            if ( empty( $email ) ) {
+                return;
+            }
+
+            $result = $mailchimp_api->set_membership_status_tag( $list_id, $email, 'inactive' );
+
+            if ( $result['success'] ) {
+                $plugin_name = defined( 'DCMM_PLUGIN_NAME' ) ? DCMM_PLUGIN_NAME : 'DC Membership';
+                $note = sprintf(
+                    '%s: Status changed to Inactive - Member remains subscribed',
+                    $plugin_name
+                );
+                $mailchimp_api->add_member_note( $list_id, $email, $note );
+                $this->refresh_sync_status( $member );
+            }
+
+        } catch ( \Exception $e ) {
+            // Note: Could log exceptions here if needed for debugging
         }
     }
     

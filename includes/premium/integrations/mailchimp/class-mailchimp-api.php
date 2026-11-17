@@ -275,6 +275,67 @@ class MailChimp_API {
     }
     
     /**
+     * Set a member's membership-status tag without changing their subscription
+     *
+     * Adds "<plugin name>: <Status>" and removes the other status tag in one
+     * request. Only works for contacts already on the list; the tags endpoint
+     * returns 404 otherwise, so nobody is added to the list by this call.
+     *
+     * @param string $list_id MailChimp list ID
+     * @param string $email Email address
+     * @param string $status Membership status: 'active' or 'inactive'
+     * @return array Result with success status and message
+     */
+    public function set_membership_status_tag( $list_id, $email, $status ) {
+        if ( ! $this->mailchimp->validateEmail( $email ) ) {
+            return array(
+                'success' => false,
+                'message' => __( 'Invalid email address', 'dcmm' )
+            );
+        }
+
+        $plugin_name = defined( 'DCMM_PLUGIN_NAME' ) ? DCMM_PLUGIN_NAME : 'DC Membership';
+        $tags = array();
+        foreach ( array( 'active', 'inactive' ) as $tag_status ) {
+            $tags[] = array(
+                'name'   => $plugin_name . ': ' . ucfirst( $tag_status ),
+                'status' => ( $tag_status === $status ) ? 'active' : 'inactive',
+            );
+        }
+
+        try {
+            $hashed_email = $this->mailchimp->subscriberHash( $email );
+            $this->mailchimp->post( "lists/{$list_id}/members/{$hashed_email}/tags", array( 'tags' => $tags ) );
+
+            // The tags endpoint answers 204 No Content, which the bundled
+            // client's success() reports as a failure (it expects a JSON
+            // body), so check the HTTP status code instead.
+            $response = $this->mailchimp->getLastResponse();
+            $http_code = isset( $response['headers']['http_code'] ) ? (int) $response['headers']['http_code'] : 0;
+
+            if ( $http_code >= 200 && $http_code < 300 ) {
+                return array(
+                    'success' => true,
+                    'message' => __( 'Membership status tag updated', 'dcmm' )
+                );
+            }
+
+            $error = $this->mailchimp->getLastError();
+            return array(
+                'success' => false,
+                'message' => __( 'Failed to update tags: ', 'dcmm' ) . $error,
+                'error' => $error
+            );
+        } catch ( \Exception $e ) {
+            return array(
+                'success' => false,
+                'message' => __( 'Exception during tag update: ', 'dcmm' ) . $e->getMessage(),
+                'error' => $e->getMessage()
+            );
+        }
+    }
+
+    /**
      * Check if a user is subscribed to a list
      * 
      * @param string $list_id MailChimp list ID
