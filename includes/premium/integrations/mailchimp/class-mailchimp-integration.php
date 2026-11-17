@@ -191,9 +191,12 @@ class MailChimp_Integration implements Premium_Feature_Interface {
             $validated['dcmm_mailchimp_list_id'] = sanitize_text_field( $settings['dcmm_mailchimp_list_id'] );
         }
         
-        // Validate checkboxes
-        $validated['dcmm_mailchimp_remove_on_lapse'] = isset( $settings['dcmm_mailchimp_remove_on_lapse'] );
-        $validated['dcmm_mailchimp_add_on_payment'] = isset( $settings['dcmm_mailchimp_add_on_payment'] );
+        // Validate checkboxes. Store '1'/'0' rather than true/false: update_option()
+        // skips the write when the new value === get_option()'s return, and a
+        // never-saved option returns false, so saving false would silently do
+        // nothing and the field would keep falling back to its default (#37).
+        $validated['dcmm_mailchimp_remove_on_lapse'] = isset( $settings['dcmm_mailchimp_remove_on_lapse'] ) ? '1' : '0';
+        $validated['dcmm_mailchimp_add_on_payment'] = isset( $settings['dcmm_mailchimp_add_on_payment'] ) ? '1' : '0';
         
         return $validated;
     }
